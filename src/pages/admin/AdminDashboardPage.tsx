@@ -146,7 +146,7 @@ export const AdminDashboardPage: React.FC = () => {
                   tickFormatter={(val) => `₹${(val / 100000).toFixed(0)}L`}
                 />
                 <Tooltip
-                  formatter={(val: number) => [formatCurrency(val), 'Revenue']}
+                  formatter={(val) => [formatCurrency(Number(val ?? 0)), 'Revenue']}
                   contentStyle={{ backgroundColor: '#111', color: '#fff', border: 'none', fontSize: '11px' }}
                 />
                 <Bar dataKey="revenue" fill="#18181b" radius={[2, 2, 0, 0]} />
@@ -183,7 +183,7 @@ export const AdminDashboardPage: React.FC = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(val: number) => [`${val}%`, 'Share']}
+                    formatter={(val) => [`${Number(val ?? 0)}%`, 'Share']}
                     contentStyle={{ backgroundColor: '#111', color: '#fff', border: 'none', fontSize: '11px' }}
                   />
                 </PieChart>
