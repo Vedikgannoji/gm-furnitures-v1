@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #FFFFFF;
+    --foreground: #111111;
+    --muted: #6B6B6B;
+    --muted-foreground: #8E8E93;
+    --border: #E5E5E5;
+    --surface: #F9F9F9;
+    --surface-subtle: #F3F3F3;
+    --surface-dark: #111111;
+    --surface-dark-foreground: #FFFFFF;
+    --accent: #111111;
+    --accent-foreground: #FFFFFF;
+    --ring: #111111;
+  }
+
+  * {
+    border-color: var(--border);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
+    font-weight: 500;
+  }
+
+  /* Accessible smooth scrolling unless user prefers reduced motion */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Custom minimal monochrome scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #E5E5E5;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C4C4C4;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .editorial-badge {
+    @apply text-[11px] font-medium uppercase tracking-[0.14em] text-muted;
+  }
+}
