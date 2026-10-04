@@ -126,7 +126,8 @@ export const AboutPage: React.FC = () => {
       </section>
 
       {/* 3. AWARDS SECTION (Compact & Refined) */}
-      <section className="w-full">
+      <section className="w-full space-y-4">
+        {/* Award 1 */}
         <div className="bg-surface border border-border p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-4 text-left">
             <div className="w-11 h-11 bg-white border border-border flex items-center justify-center shrink-0">
@@ -146,6 +147,30 @@ export const AboutPage: React.FC = () => {
             <span className="text-[10px] uppercase tracking-widest text-muted block">Presented By</span>
             <span className="text-xs font-semibold tracking-wider text-foreground uppercase block mt-0.5">
               Times of India
+            </span>
+          </div>
+        </div>
+
+        {/* Award 2 */}
+        <div className="bg-surface border border-border p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5">
+          <div className="flex items-center gap-4 text-left">
+            <div className="w-11 h-11 bg-white border border-border flex items-center justify-center shrink-0">
+              <Award className="w-5 h-5 text-foreground stroke-[1.5]" />
+            </div>
+            <div>
+              <span className="editorial-badge text-muted tracking-widest">Industry Recognition</span>
+              <h3 className="text-base sm:text-lg font-medium text-foreground mt-0.5">
+                Architecture & Interior Design Excellence Awards & Conference 2023
+              </h3>
+              <p className="text-xs text-muted mt-0.5 leading-relaxed max-w-xl">
+                Recognized for excellence in architecture and interior design.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 px-4 py-2 border border-border bg-white text-center">
+            <span className="text-[10px] uppercase tracking-widest text-muted block">Presented In</span>
+            <span className="text-xs font-semibold tracking-wider text-foreground uppercase block mt-0.5">
+              2023
             </span>
           </div>
         </div>
