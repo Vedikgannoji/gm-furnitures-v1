@@ -35,8 +35,8 @@ export const CustomerNavbar: React.FC = () => {
     <>
       <header className="sticky top-0 z-40 w-full bg-white border-b border-border shadow-[0_1px_0_0_#E5E5E5]">
         {/* Top minimal announcement banner */}
-        <div className="bg-white text-center py-1.5 px-4 text-[11px] font-medium tracking-widest uppercase text-muted border-b border-border">
-          <span>Complimentary White-Glove Assembly & Delivery across India on orders over ₹50,000</span>
+        <div className="bg-white text-center py-2 px-4 text-[10px] sm:text-[11px] font-medium tracking-[0.2em] uppercase text-zinc-600 border-b border-border">
+          <span>FROM THE HOUSE OF GM GROUP · INTERIORS & CONSTRUCTIONS</span>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -118,18 +118,23 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center gap-1.5">
-              <span>Rooms</span>
-              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
-                Soon
+            <div className="flex flex-col items-center justify-center cursor-not-allowed select-none py-1">
+              <span className="text-xs uppercase tracking-widest font-medium text-foreground">
+                Rooms
               </span>
-            </Link>
-            <Link to="/collections" className="hover:text-foreground transition-colors flex items-center gap-1.5">
-              <span>Collections</span>
-              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
-                Soon
+              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+                COMING SOON
               </span>
-            </Link>
+            </div>
+
+            <div className="flex flex-col items-center justify-center cursor-not-allowed select-none py-1">
+              <span className="text-xs uppercase tracking-widest font-medium text-foreground">
+                Collections
+              </span>
+              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+                COMING SOON
+              </span>
+            </div>
             <Link to="/about" className="hover:text-foreground transition-colors">
               Atelier
             </Link>

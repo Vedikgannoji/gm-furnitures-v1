@@ -1,7 +1,7 @@
 import React from 'react'
 import { mockRooms } from '@/data/mockData'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
-import { ComingSoon } from '@/components/ui/ComingSoon'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 
 export const RoomsPage: React.FC = () => {
   return (
@@ -12,47 +12,31 @@ export const RoomsPage: React.FC = () => {
       <div className="mb-12 pb-6 border-b border-border">
         <div className="flex items-center justify-between">
           <span className="editorial-badge">Spatial Architecture</span>
-          <span className="text-[10px] uppercase tracking-widest font-semibold bg-zinc-100 text-zinc-700 px-2.5 py-1">
-            Coming Soon
-          </span>
+          <ComingSoonBadge label="COMING SOON" />
         </div>
         <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-foreground mt-2">
           Shop by Room Inspiration
         </h1>
         <p className="mt-3 text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-          Explore complete architectural environments curated by our design directors. Room suite purchasing and immersive room views will launch in the upcoming release.
+          Explore complete architectural environments curated by our design directors. Preview our upcoming spatial suites below. Room-level purchasing will be active in an upcoming release.
         </p>
       </div>
 
-      {/* Global Coming Soon Banner */}
-      <div className="mb-12">
-        <ComingSoon
-          variant="section"
-          eyebrow="Architectural Living"
-          title="COMING SOON"
-          subtitle="Shop by Room is currently being prepared. Room-based purchasing is disabled for this preview."
-        />
-      </div>
-
-      {/* Rooms Showcase Cards (Non-navigable preview) */}
+      {/* Rooms Showcase Cards (Vibrant, non-navigable preview) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {mockRooms.map((room) => (
           <div
             key={room.id}
-            className="flex flex-col bg-background border border-border overflow-hidden select-none"
+            className="flex flex-col bg-background border border-border overflow-hidden select-none group"
           >
             <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+              {/* Full color image preserved */}
               <img
                 src={room.image}
                 alt={room.name}
-                className="w-full h-full object-cover grayscale contrast-125"
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-102"
               />
-              <div className="absolute inset-0 bg-black/30" />
-              <div className="absolute top-4 left-4">
-                <span className="text-[10px] tracking-widest uppercase bg-black text-white px-2.5 py-1 font-medium">
-                  Coming Soon
-                </span>
-              </div>
+              <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
             </div>
 
             <div className="p-6 sm:p-8 flex flex-col justify-between flex-1">
@@ -70,8 +54,8 @@ export const RoomsPage: React.FC = () => {
                 <span className="text-xs text-muted">
                   Spatial Environment Preview
                 </span>
-                <span className="h-10 px-5 bg-zinc-100 text-zinc-500 text-xs uppercase tracking-wider font-medium flex items-center gap-2 cursor-not-allowed">
-                  Coming Soon
+                <span className="h-10 px-5 bg-zinc-100 text-zinc-600 text-xs uppercase tracking-wider font-medium flex items-center gap-2 cursor-not-allowed border border-border">
+                  Preview Only
                 </span>
               </div>
             </div>

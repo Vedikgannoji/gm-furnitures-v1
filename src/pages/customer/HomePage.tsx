@@ -1,8 +1,8 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Award, Shield, Truck, Globe } from 'lucide-react'
 import { ProductCard } from '@/components/commerce/ProductCard'
-import { ComingSoon } from '@/components/ui/ComingSoon'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { mockProducts, mockCategories, mockRooms, mockCollections } from '@/data/mockData'
 import heroImage from '@/assets/hero.png'
 
@@ -24,12 +24,73 @@ const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 )
 
+// Hook for smooth metric count-up from zero
+function useMetricCountUp(target: number, suffix: string, duration: number = 1800) {
+  const [displayValue, setDisplayValue] = useState(`0${suffix}`)
+  const [hasAnimated, setHasAnimated] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    // Respect user's reduced motion preferences
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayValue(`${target}${suffix}`)
+      return
+    }
+
+    const node = containerRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true)
+          observer.disconnect()
+
+          let startTime: number | null = null
+          const animate = (currentTime: number) => {
+            if (!startTime) startTime = currentTime
+            const elapsed = currentTime - startTime
+            const progress = Math.min(elapsed / duration, 1)
+
+            // Quartic ease-out curve for natural deceleration
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4)
+            const current = Math.floor(easeOutQuart * target)
+
+            if (progress < 1) {
+              setDisplayValue(`${current}${suffix}`)
+              window.requestAnimationFrame(animate)
+            } else {
+              setDisplayValue(`${target}${suffix}`)
+            }
+          }
+
+          window.requestAnimationFrame(animate)
+        }
+      },
+      { threshold: 0.25 }
+    )
+
+    observer.observe(node)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [target, suffix, duration, hasAnimated])
+
+  return { displayValue, containerRef }
+}
+
 export const HomePage: React.FC = () => {
   const featuredProducts = mockProducts.filter((p) => p.featured).slice(0, 4)
   const newArrivals = mockProducts.filter((p) => p.newArrival).slice(0, 4)
 
   const signatureCollection = mockCollections.find((c) => c.slug === 'nordic-atelier') || mockCollections[1]
   const minimalistCollection = mockCollections.find((c) => c.slug === 'minimalist-line') || mockCollections[0]
+
+  // Metric animations for GM Group credibility section
+  const { displayValue: projectsCount, containerRef: metricsRef } = useMetricCountUp(700, '+', 1800)
+  const { displayValue: followersCount } = useMetricCountUp(276, 'K', 1800)
 
   return (
     <div className="flex flex-col space-y-24 sm:space-y-32 pb-24">
@@ -77,7 +138,48 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION */}
+      {/* 2. RESTORED TRUST / SERVICE ASSURANCE STRIP */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-6 sm:-mt-10 relative z-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border bg-white border border-border shadow-sm">
+          <div className="p-6 sm:p-8 flex items-start gap-4">
+            <Award className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                Architectural Integrity
+              </h4>
+              <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                Traditional mortise-and-tenon joinery and zero-VOC organic hardwax finishes.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 sm:p-8 flex items-start gap-4">
+            <Truck className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                White-Glove Assembly
+              </h4>
+              <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                Complimentary room placement, full assembly, and packaging recycling across India.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 sm:p-8 flex items-start gap-4">
+            <Shield className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                10-Year Framework Warranty
+              </h4>
+              <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                Engineered to endure generations of daily living and age with timeless grace.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="bg-white border border-border p-8 sm:p-14 lg:p-16 flex flex-col items-center text-center">
           {/* Logo Placeholder */}
@@ -95,10 +197,14 @@ export const HomePage: React.FC = () => {
             FROM THE HOUSE OF GM GROUP OF INTERIORS AND CONSTRUCTIONS
           </h2>
 
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 w-full max-w-2xl py-8 border-y border-border">
+          {/* Animated Metrics with Viewport Detection */}
+          <div
+            ref={metricsRef}
+            className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 w-full max-w-2xl py-8 border-y border-border"
+          >
             <div className="flex flex-col items-center">
-              <span className="text-4xl sm:text-5xl font-light text-foreground tracking-tight">
-                700+
+              <span className="text-4xl sm:text-5xl font-light text-foreground tracking-tight tabular-nums">
+                {projectsCount}
               </span>
               <span className="text-xs uppercase tracking-widest text-muted mt-2">
                 projects so far in interiors and constructions
@@ -106,8 +212,8 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="flex flex-col items-center">
-              <span className="text-4xl sm:text-5xl font-light text-foreground tracking-tight">
-                276K
+              <span className="text-4xl sm:text-5xl font-light text-foreground tracking-tight tabular-nums">
+                {followersCount}
               </span>
               <span className="text-xs uppercase tracking-widest text-muted mt-2">
                 followers on Instagram
@@ -115,7 +221,8 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-10 flex flex-col items-center gap-3">
+          {/* CTAs: Official Instagram & Official Website */}
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <a
               href="https://www.instagram.com/gm_interiors9/"
               target="_blank"
@@ -126,14 +233,24 @@ export const HomePage: React.FC = () => {
               <span>Follow Us on Instagram</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </a>
-            <span className="text-[11px] text-muted tracking-wider">
-              Official Instagram: @gm_interiors9
-            </span>
+            <a
+              href="https://gminteriors.co/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-12 px-8 bg-surface hover:bg-surface-subtle text-foreground border border-border text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors"
+            >
+              <Globe className="w-4 h-4 text-muted" />
+              <span>Visit Official Website</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-muted" />
+            </a>
           </div>
+          <span className="text-[11px] text-muted tracking-wider mt-3">
+            Official Instagram: @gm_interiors9 · gminteriors.co
+          </span>
         </div>
       </section>
 
-      {/* 3. FEATURED PIECES — ACTIVE */}
+      {/* 4. FEATURED PIECES — ACTIVE */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-3 border-b border-border">
           <div>
@@ -158,7 +275,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. SHOP BY CATEGORY — ACTIVE */}
+      {/* 5. SHOP BY CATEGORY — ACTIVE */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-3 border-b border-border">
           <div>
@@ -201,7 +318,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 5. SHOP BY ROOM — COMING SOON */}
+      {/* 6. SHOP BY ROOM — COMING SOON (Vibrant imagery with subtle unreleased badges) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-3 border-b border-border">
           <div>
@@ -210,57 +327,47 @@ export const HomePage: React.FC = () => {
               Shop by Room
             </h2>
           </div>
-          <span className="text-xs uppercase tracking-widest font-medium text-muted mt-3 sm:mt-0">
-            Coming Soon
-          </span>
+          <div className="flex items-center gap-2 mt-3 sm:mt-0">
+            <ComingSoonBadge label="COMING SOON" />
+          </div>
         </div>
 
-        <div className="relative">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 opacity-75 pointer-events-none select-none">
-            {mockRooms.slice(0, 2).map((room) => (
-              <div
-                key={room.id}
-                className="relative flex flex-col bg-background border border-border overflow-hidden"
-              >
-                <div className="aspect-[16/10] w-full overflow-hidden relative">
-                  <img
-                    src={room.image}
-                    alt={room.name}
-                    className="w-full h-full object-cover grayscale contrast-125"
-                  />
-                  <div className="absolute inset-0 bg-black/30" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 select-none">
+          {mockRooms.slice(0, 2).map((room) => (
+            <div
+              key={room.id}
+              className="relative flex flex-col bg-background border border-border overflow-hidden group"
+            >
+              <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                {/* Full-color vibrant image preserved */}
+                <img
+                  src={room.image}
+                  alt={room.name}
+                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-102"
+                />
+                <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
+              </div>
+              <div className="p-6 sm:p-8 flex flex-col justify-between flex-1">
+                <div>
+                  <span className="editorial-badge text-muted">Curated Space</span>
+                  <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
+                  <p className="text-xs text-muted mt-2 leading-relaxed">
+                    {room.description}
+                  </p>
                 </div>
-                <div className="p-6 sm:p-8 flex flex-col justify-between flex-1">
-                  <div>
-                    <span className="editorial-badge text-muted">Curated Space</span>
-                    <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
-                    <p className="text-xs text-muted mt-2 leading-relaxed">
-                      {room.description}
-                    </p>
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-border flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted">
-                    <span>Spatial Suite</span>
-                    <span className="text-[10px] tracking-widest bg-zinc-100 text-zinc-700 px-2 py-0.5">
-                      COMING SOON
-                    </span>
-                  </div>
+                <div className="mt-6 pt-4 border-t border-border flex items-center justify-between text-xs">
+                  <span className="text-muted">Spatial Environment Preview</span>
+                  <span className="text-[10px] tracking-widest uppercase bg-zinc-100 text-zinc-600 px-3 py-1 font-medium border border-border cursor-not-allowed">
+                    Preview Only
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-6">
-            <ComingSoon
-              variant="section"
-              eyebrow="Spatial Architecture"
-              title="COMING SOON"
-              subtitle="Curated room suites are currently being prepared. Room-level navigation and purchasing will be available in the upcoming release."
-            />
-          </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* 6. SIGNATURE COLLECTION — COMING SOON */}
+      {/* 7. SIGNATURE COLLECTION — COMING SOON (Vibrant imagery with subtle unreleased badges) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-3 border-b border-border">
           <div>
@@ -269,13 +376,13 @@ export const HomePage: React.FC = () => {
               Signature Collection
             </h2>
           </div>
-          <span className="text-xs uppercase tracking-widest font-medium text-muted mt-3 sm:mt-0">
-            Coming Soon
-          </span>
+          <div className="flex items-center gap-2 mt-3 sm:mt-0">
+            <ComingSoonBadge label="COMING SOON" />
+          </div>
         </div>
 
         <div className="relative border border-border bg-background overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 opacity-65 pointer-events-none select-none">
+          <div className="grid grid-cols-1 lg:grid-cols-2 select-none">
             <div className="p-8 sm:p-14 lg:p-16 flex flex-col justify-between">
               <div>
                 <span className="editorial-badge">Capsule Collection</span>
@@ -294,33 +401,26 @@ export const HomePage: React.FC = () => {
                 <span className="text-xs text-muted uppercase tracking-wider">
                   Handcrafted Atelier Series
                 </span>
-                <span className="text-[10px] uppercase font-semibold tracking-widest bg-zinc-200 text-zinc-700 px-2.5 py-1">
-                  Preview Only
+                <span className="text-[10px] uppercase font-semibold tracking-widest bg-zinc-100 text-zinc-700 px-3 py-1 border border-border">
+                  Unreleased Capsule · Preview Only
                 </span>
               </div>
             </div>
 
-            <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface">
+            <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface relative">
+              {/* Full-color vibrant image preserved */}
               <img
                 src={signatureCollection.image}
                 alt={signatureCollection.name}
-                className="w-full h-full object-cover grayscale"
+                className="w-full h-full object-cover"
               />
+              <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
             </div>
-          </div>
-
-          <div className="p-6 bg-white border-t border-border">
-            <ComingSoon
-              variant="section"
-              eyebrow="Signature Collection"
-              title="COMING SOON"
-              subtitle="This collection is being prepared. Stay tuned."
-            />
           </div>
         </div>
       </section>
 
-      {/* 7. THE MINIMALIST LINE — COMING SOON */}
+      {/* 8. THE MINIMALIST LINE — COMING SOON (Vibrant imagery with subtle unreleased badges) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-3 border-b border-border">
           <div>
@@ -329,19 +429,21 @@ export const HomePage: React.FC = () => {
               The Minimalist Line
             </h2>
           </div>
-          <span className="text-xs uppercase tracking-widest font-medium text-muted mt-3 sm:mt-0">
-            Coming Soon
-          </span>
+          <div className="flex items-center gap-2 mt-3 sm:mt-0">
+            <ComingSoonBadge label="COMING SOON" />
+          </div>
         </div>
 
         <div className="relative border border-border bg-background overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 opacity-65 pointer-events-none select-none">
-            <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface order-2 lg:order-1">
+          <div className="grid grid-cols-1 lg:grid-cols-2 select-none">
+            <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface order-2 lg:order-1 relative">
+              {/* Full-color vibrant image preserved */}
               <img
                 src={minimalistCollection.image}
                 alt={minimalistCollection.name}
-                className="w-full h-full object-cover grayscale"
+                className="w-full h-full object-cover"
               />
+              <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
             </div>
 
             <div className="p-8 sm:p-14 lg:p-16 flex flex-col justify-between order-1 lg:order-2">
@@ -362,25 +464,16 @@ export const HomePage: React.FC = () => {
                 <span className="text-xs text-muted uppercase tracking-wider">
                   Pure Geometric Grace
                 </span>
-                <span className="text-[10px] uppercase font-semibold tracking-widest bg-zinc-200 text-zinc-700 px-2.5 py-1">
-                  Preview Only
+                <span className="text-[10px] uppercase font-semibold tracking-widest bg-zinc-100 text-zinc-700 px-3 py-1 border border-border">
+                  Unreleased Capsule · Preview Only
                 </span>
               </div>
             </div>
           </div>
-
-          <div className="p-6 bg-white border-t border-border">
-            <ComingSoon
-              variant="section"
-              eyebrow="The Minimalist Line"
-              title="COMING SOON"
-              subtitle="This collection is being prepared. Stay tuned."
-            />
-          </div>
         </div>
       </section>
 
-      {/* 8. NEW ARRIVALS — ACTIVE */}
+      {/* 9. NEW ARRIVALS — ACTIVE */}
       <section id="new-arrivals" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full scroll-mt-24">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-3 border-b border-border">
           <div>

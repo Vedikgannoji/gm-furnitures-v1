@@ -1,7 +1,8 @@
 import React from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
-import { ComingSoon } from '@/components/ui/ComingSoon'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { mockCollections } from '@/data/mockData'
 
 export const CollectionDetailPage: React.FC = () => {
@@ -21,14 +22,53 @@ export const CollectionDetailPage: React.FC = () => {
         className="mb-8"
       />
 
-      <ComingSoon
-        variant="page"
-        eyebrow="Curated Collection Capsule"
-        title="COMING SOON"
-        subtitle={`The ${collectionName} is currently being prepared. Collection-level purchasing will be active in the upcoming release.`}
-        actionLabel="Explore Available Furniture"
-        actionHref="/shop"
-      />
+      <div className="bg-white border border-border overflow-hidden">
+        {collection && (
+          <div className="aspect-[21/9] w-full overflow-hidden relative bg-surface">
+            <img
+              src={collection.image}
+              alt={collection.name}
+              className="w-full h-full object-cover"
+            />
+            <ComingSoonBadge label="COMING SOON" className="absolute top-6 left-6 z-10" />
+          </div>
+        )}
+
+        <div className="p-8 sm:p-14 max-w-3xl">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="editorial-badge text-muted">
+              {collection?.tagline || 'Curated Capsule'}
+            </span>
+            <ComingSoonBadge label="COMING SOON" />
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-foreground">
+            {collectionName}
+          </h1>
+
+          <p className="mt-4 text-sm sm:text-base text-muted leading-relaxed">
+            {collection?.description || 'This limited architectural collection is currently being handcrafted in our atelier.'}
+          </p>
+
+          <div className="mt-8 p-6 bg-surface border border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                Unreleased Design Capsule
+              </p>
+              <p className="text-xs text-muted mt-0.5">
+                Collection purchasing and custom finishes will be enabled with public release.
+              </p>
+            </div>
+            <Link
+              to="/shop"
+              className="inline-flex items-center gap-2 h-10 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest transition-colors shrink-0"
+            >
+              <span>Explore Active Pieces</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

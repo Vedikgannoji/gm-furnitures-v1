@@ -23,32 +23,26 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
             <span>All Furniture</span>
             <ArrowRight className="w-4 h-4 text-muted" />
           </Link>
-          <Link
-            to="/rooms"
-            onClick={onClose}
-            className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
-          >
-            <div className="flex items-center gap-2">
-              <span>Rooms</span>
-              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
-                Soon
+          <div className="py-2 flex items-center justify-between border-b border-border/40 select-none">
+            <div className="flex flex-col items-start">
+              <span className="text-sm uppercase tracking-widest font-medium text-foreground">
+                Rooms
+              </span>
+              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+                COMING SOON
               </span>
             </div>
-            <ArrowRight className="w-4 h-4 text-muted" />
-          </Link>
-          <Link
-            to="/collections"
-            onClick={onClose}
-            className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
-          >
-            <div className="flex items-center gap-2">
-              <span>Collections</span>
-              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
-                Soon
+          </div>
+          <div className="py-2 flex items-center justify-between border-b border-border/40 select-none">
+            <div className="flex flex-col items-start">
+              <span className="text-sm uppercase tracking-widest font-medium text-foreground">
+                Collections
+              </span>
+              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+                COMING SOON
               </span>
             </div>
-            <ArrowRight className="w-4 h-4 text-muted" />
-          </Link>
+          </div>
         </div>
 
         {/* Categories Section */}
