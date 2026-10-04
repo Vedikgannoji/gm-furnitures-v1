@@ -11,6 +11,14 @@ import {
 
 export const mockCategories: Category[] = [
   {
+    id: 'cat-dining',
+    slug: 'dining',
+    name: 'Dining & Entertaining',
+    description: 'Generously scaled solid wood dining tables paired with feather-weight sculptured dining chairs.',
+    image: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
+    itemCount: 2,
+  },
+  {
     id: 'cat-sofas',
     slug: 'sofas',
     name: 'Sofas & Sectionals',
@@ -40,14 +48,6 @@ export const mockCategories: Category[] = [
     name: 'Beds & Sleep',
     description: 'Minimalist low platform beds engineered with mortise-and-tenon joinery and tailored upholstered headboards.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
-    itemCount: 4,
-  },
-  {
-    id: 'cat-dining',
-    slug: 'dining',
-    name: 'Dining & Entertaining',
-    description: 'Generously scaled solid wood dining tables paired with feather-weight sculptured dining chairs.',
-    image: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
     itemCount: 4,
   },
   {

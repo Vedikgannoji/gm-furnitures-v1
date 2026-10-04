@@ -1,67 +1,30 @@
 import React, { useState, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { SlidersHorizontal, X, RotateCcw } from 'lucide-react'
+import { SlidersHorizontal, X, RotateCcw, Search } from 'lucide-react'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
-import { mockProducts, mockCategories } from '@/data/mockData'
-import { Search } from 'lucide-react'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
+import { mockProducts } from '@/data/mockData'
+import { isProductAvailableForPurchase } from '@/utils/availability'
 
 export const ShopPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
-
-  // Extract query filters
-  const initialCategory = searchParams.get('category') || 'all'
-  const initialSort = searchParams.get('sort') || 'featured'
-
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory)
-  const [selectedMaterial, setSelectedMaterial] = useState<string>(initialCategory === 'all' ? 'all' : 'all')
-  const [inStockOnly, setInStockOnly] = useState<boolean>(false)
   const [maxPrice, setMaxPrice] = useState<number>(300000)
-  const [sortBy, setSortBy] = useState<string>(initialSort)
+  const [sortBy, setSortBy] = useState<string>('featured')
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false)
-  const [displayCount, setDisplayCount] = useState<number>(12)
 
-  // Extract unique materials
-  const allMaterials = useMemo(() => {
-    const list = new Set<string>()
-    mockProducts.forEach((p) => {
-      if (p.material.includes('Oak')) list.add('Oak Wood')
-      if (p.material.includes('Walnut')) list.add('Walnut Wood')
-      if (p.material.includes('Teak')) list.add('Teak Wood')
-      if (p.material.includes('Stone') || p.material.includes('Travertine') || p.material.includes('Marble')) list.add('Natural Stone')
-      if (p.material.includes('Linen') || p.material.includes('Bouclé') || p.material.includes('Wool')) list.add('Textile & Bouclé')
-      if (p.material.includes('Leather')) list.add('Leather')
-      if (p.material.includes('Steel') || p.material.includes('Aluminum')) list.add('Metal & Steel')
-    })
-    return Array.from(list)
+  // Launch Availability Rule: Dining Tables Only
+  const availableDiningTables = useMemo(() => {
+    return mockProducts.filter(isProductAvailableForPurchase)
   }, [])
 
-  // Filter & Sort logic
+  // Filter products strictly based on active dining tables
   const filteredProducts = useMemo(() => {
-    return mockProducts.filter((product) => {
-      if (selectedCategory !== 'all' && product.category !== selectedCategory) {
-        return false
-      }
-      if (inStockOnly && product.stockStatus === 'out_of_stock') {
-        return false
-      }
-      if (product.price > maxPrice) {
-        return false
-      }
-      if (selectedMaterial !== 'all') {
-        if (selectedMaterial === 'Oak Wood' && !product.material.includes('Oak')) return false
-        if (selectedMaterial === 'Walnut Wood' && !product.material.includes('Walnut')) return false
-        if (selectedMaterial === 'Teak Wood' && !product.material.includes('Teak')) return false
-        if (selectedMaterial === 'Natural Stone' && !product.material.includes('Stone') && !product.material.includes('Travertine') && !product.material.includes('Marble')) return false
-        if (selectedMaterial === 'Textile & Bouclé' && !product.material.includes('Linen') && !product.material.includes('Bouclé') && !product.material.includes('Wool')) return false
-        if (selectedMaterial === 'Leather' && !product.material.includes('Leather')) return false
-        if (selectedMaterial === 'Metal & Steel' && !product.material.includes('Steel') && !product.material.includes('Aluminum')) return false
-      }
+    return availableDiningTables.filter((product) => {
+      if (product.price > maxPrice) return false
       return true
     })
-  }, [selectedCategory, selectedMaterial, inStockOnly, maxPrice])
+  }, [availableDiningTables, maxPrice])
 
   const sortedProducts = useMemo(() => {
     const list = [...filteredProducts]
@@ -78,21 +41,13 @@ export const ShopPage: React.FC = () => {
   }, [filteredProducts, sortBy])
 
   const resetFilters = () => {
-    setSelectedCategory('all')
-    setSelectedMaterial('all')
-    setInStockOnly(false)
     setMaxPrice(300000)
     setSortBy('featured')
-    setSearchParams({})
   }
 
-  const activeFilterCount =
-    (selectedCategory !== 'all' ? 1 : 0) +
-    (selectedMaterial !== 'all' ? 1 : 0) +
-    (inStockOnly ? 1 : 0) +
-    (maxPrice < 300000 ? 1 : 0)
+  const activeFilterCount = maxPrice < 300000 ? 1 : 0
 
-  // Reusable Filter Sidebar Content
+  // Filter Sidebar Content (Material & Stock filters completely removed)
   const filterControls = (
     <div className="space-y-6 text-xs">
       {/* Active filters header */}
@@ -111,73 +66,18 @@ export const ShopPage: React.FC = () => {
         )}
       </div>
 
-      {/* Categories */}
+      {/* Category — Dining Tables active */}
       <div>
         <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-2.5">
           Category
         </h4>
         <div className="space-y-1.5">
-          <label className="flex items-center gap-2 cursor-pointer py-0.5">
-            <input
-              type="radio"
-              name="category"
-              checked={selectedCategory === 'all'}
-              onChange={() => setSelectedCategory('all')}
-              className="accent-foreground"
-            />
-            <span className={selectedCategory === 'all' ? 'font-medium text-foreground' : 'text-muted'}>
-              All Categories ({mockProducts.length})
+          <div className="flex items-center gap-2 py-1 text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-foreground" />
+            <span className="font-semibold tracking-wider uppercase text-xs">
+              Dining Tables ({availableDiningTables.length})
             </span>
-          </label>
-          {mockCategories.map((cat) => (
-            <label key={cat.id} className="flex items-center gap-2 cursor-pointer py-0.5">
-              <input
-                type="radio"
-                name="category"
-                checked={selectedCategory === cat.slug}
-                onChange={() => setSelectedCategory(cat.slug)}
-                className="accent-foreground"
-              />
-              <span className={selectedCategory === cat.slug ? 'font-medium text-foreground' : 'text-muted'}>
-                {cat.name} ({cat.itemCount})
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Material */}
-      <div className="pt-4 border-t border-border">
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-2.5">
-          Material & Craft
-        </h4>
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-2 cursor-pointer py-0.5">
-            <input
-              type="radio"
-              name="material"
-              checked={selectedMaterial === 'all'}
-              onChange={() => setSelectedMaterial('all')}
-              className="accent-foreground"
-            />
-            <span className={selectedMaterial === 'all' ? 'font-medium text-foreground' : 'text-muted'}>
-              All Materials
-            </span>
-          </label>
-          {allMaterials.map((mat) => (
-            <label key={mat} className="flex items-center gap-2 cursor-pointer py-0.5">
-              <input
-                type="radio"
-                name="material"
-                checked={selectedMaterial === mat}
-                onChange={() => setSelectedMaterial(mat)}
-                className="accent-foreground"
-              />
-              <span className={selectedMaterial === mat ? 'font-medium text-foreground' : 'text-muted'}>
-                {mat}
-              </span>
-            </label>
-          ))}
+          </div>
         </div>
       </div>
 
@@ -193,7 +93,7 @@ export const ShopPage: React.FC = () => {
         </div>
         <input
           type="range"
-          min={25000}
+          min={100000}
           max={300000}
           step={5000}
           value={maxPrice}
@@ -201,24 +101,9 @@ export const ShopPage: React.FC = () => {
           className="w-full accent-foreground cursor-pointer"
         />
         <div className="flex justify-between text-[10px] text-muted mt-1">
-          <span>₹25,000</span>
+          <span>₹1,00,000</span>
           <span>₹3,00,000</span>
         </div>
-      </div>
-
-      {/* Stock Availability */}
-      <div className="pt-4 border-t border-border">
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={inStockOnly}
-            onChange={(e) => setInStockOnly(e.target.checked)}
-            className="w-4 h-4 rounded-none accent-foreground"
-          />
-          <span className="text-xs font-medium text-foreground">
-            In-Stock Pieces Only
-          </span>
-        </label>
       </div>
     </div>
   )
@@ -232,7 +117,7 @@ export const ShopPage: React.FC = () => {
           The Complete Collection
         </h1>
         <p className="mt-2 text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-          Explore our complete catalog of precision-crafted furniture. Sculptural proportions engineered from solid oak, walnut, honed Roman travertine, and pure Belgian flax.
+          Explore our premier dining tables engineered with architectural Mortise-and-Tenon joinery, solid European oak, honed Carrara marble, and organic matte finishes.
         </p>
       </div>
 
@@ -247,7 +132,7 @@ export const ShopPage: React.FC = () => {
             <span>Filters {activeFilterCount > 0 && `(${activeFilterCount})`}</span>
           </button>
           <span className="text-xs text-muted">
-            Showing <span className="font-semibold text-foreground">{sortedProducts.length}</span> of {mockProducts.length} pieces
+            Showing <span className="font-semibold text-foreground">{sortedProducts.length}</span> Dining Tables
           </span>
         </div>
 
@@ -275,24 +160,6 @@ export const ShopPage: React.FC = () => {
       {activeFilterCount > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-8">
           <span className="text-[11px] uppercase tracking-wider text-muted mr-1">Active:</span>
-          {selectedCategory !== 'all' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
-              Category: {selectedCategory}
-              <X className="w-3 h-3 cursor-pointer hover:text-foreground" onClick={() => setSelectedCategory('all')} />
-            </span>
-          )}
-          {selectedMaterial !== 'all' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
-              Material: {selectedMaterial}
-              <X className="w-3 h-3 cursor-pointer hover:text-foreground" onClick={() => setSelectedMaterial('all')} />
-            </span>
-          )}
-          {inStockOnly && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
-              In Stock Only
-              <X className="w-3 h-3 cursor-pointer hover:text-foreground" onClick={() => setInStockOnly(false)} />
-            </span>
-          )}
           {maxPrice < 300000 && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
               Under ₹{(maxPrice / 1000).toFixed(0)}k
@@ -322,31 +189,29 @@ export const ShopPage: React.FC = () => {
           {sortedProducts.length === 0 ? (
             <EmptyState
               icon={Search}
-              title="No furniture pieces matched your criteria"
-              description="Try adjusting your filters, clearing the price range, or browsing our curated room showcases."
-              actionLabel="Reset All Filters"
+              title="No dining tables matched your criteria"
+              description="Try adjusting your price range filter to view available dining tables."
+              actionLabel="Reset Filters"
               onAction={resetFilters}
             />
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-                {sortedProducts.slice(0, displayCount).map((product) => (
+                {sortedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 
-              {/* Load more button */}
-              {displayCount < sortedProducts.length && (
-                <div className="mt-14 text-center">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => setDisplayCount((prev) => prev + 6)}
-                  >
-                    Load More Pieces ({sortedProducts.length - displayCount} remaining)
-                  </Button>
-                </div>
-              )}
+              {/* Editorial Coming Soon Callout for remaining collections */}
+              <div className="mt-14 p-8 sm:p-12 border border-border bg-surface text-center flex flex-col items-center justify-center">
+                <ComingSoonBadge label="COMING SOON" className="mb-3" />
+                <h3 className="text-sm sm:text-base font-light tracking-tight text-foreground uppercase max-w-md">
+                  More collections are in development.
+                </h3>
+                <p className="mt-2 text-xs text-muted max-w-md leading-relaxed">
+                  Sofas, lounge chairs, platform beds, and architectural storage capsules will be released in subsequent curated drops.
+                </p>
+              </div>
             </>
           )}
         </div>

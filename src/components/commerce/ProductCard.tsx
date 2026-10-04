@@ -43,17 +43,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className }) 
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 pointer-events-none">
-          {product.stockStatus === 'out_of_stock' && (
-            <span className="bg-foreground text-background text-[9px] font-medium tracking-widest uppercase px-2 py-0.5">
-              Sold Out
-            </span>
-          )}
-          {product.stockStatus === 'low_stock' && (
-            <span className="bg-amber-100 text-amber-900 border border-amber-200 text-[9px] font-medium tracking-widest uppercase px-2 py-0.5">
-              Few Units Left
-            </span>
-          )}
-          {product.newArrival && product.stockStatus !== 'out_of_stock' && (
+          {product.newArrival && (
             <span className="bg-background text-foreground border border-border text-[9px] font-medium tracking-widest uppercase px-2 py-0.5">
               New
             </span>

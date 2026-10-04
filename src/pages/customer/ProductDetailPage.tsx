@@ -215,11 +215,6 @@ export const ProductDetailPage: React.FC = () => {
             />
             {/* Top badges */}
             <div className="absolute top-4 left-4 flex flex-col gap-2">
-              {product.stockStatus === 'low_stock' && (
-                <span className="bg-amber-100 text-amber-900 border border-amber-200 text-[10px] font-semibold tracking-widest uppercase px-2.5 py-1">
-                  Low Stock
-                </span>
-              )}
               {product.newArrival && (
                 <span className="bg-background text-foreground border border-border text-[10px] font-semibold tracking-widest uppercase px-2.5 py-1">
                   New Arrival
@@ -346,25 +341,6 @@ export const ProductDetailPage: React.FC = () => {
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
-              </div>
-
-              {/* Stock status indicator */}
-              <div className="text-xs">
-                {product.stockStatus === 'in_stock' && (
-                  <span className="text-emerald-700 flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5" /> In Stock & Ready to Dispatch
-                  </span>
-                )}
-                {product.stockStatus === 'low_stock' && (
-                  <span className="text-amber-700 font-medium">
-                    Only {product.stock} units remaining in Atelier
-                  </span>
-                )}
-                {product.stockStatus === 'out_of_stock' && (
-                  <span className="text-rose-600 font-medium">
-                    Made to Order (Inquire for lead time)
-                  </span>
-                )}
               </div>
             </div>
 

@@ -262,16 +262,13 @@ export const HomePage: React.FC = () => {
               href="https://gminteriors.co/"
               target="_blank"
               rel="noopener noreferrer"
-              className="h-11 px-7 bg-surface hover:bg-surface-subtle text-foreground border border-border text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors"
+              className="h-11 px-7 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors shadow-sm"
             >
-              <Globe className="w-4 h-4 text-muted" />
+              <Globe className="w-4 h-4 text-background" />
               <span>Visit Official Website</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-muted" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-background" />
             </a>
           </div>
-          <span className="text-[11px] text-muted tracking-wider mt-2.5">
-            Official Instagram: @gm_interiors9 · gminteriors.co
-          </span>
         </div>
       </section>
 
@@ -300,7 +297,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 5. SHOP BY CATEGORY — ACTIVE */}
+      {/* 5. SHOP BY CATEGORY — DINING ACTIVE, OTHERS COMING SOON */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
           <div>
@@ -319,27 +316,59 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {mockCategories.map((category) => (
-            <Link
-              key={category.id}
-              to={`/shop/${category.slug}`}
-              className="group flex flex-col items-start text-left"
-            >
-              <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
-                <img
-                  src={category.image}
-                  alt={category.name}
-                  className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                />
+          {mockCategories.map((category) => {
+            const isAvailable = category.slug === 'dining'
+
+            if (isAvailable) {
+              return (
+                <Link
+                  key={category.id}
+                  to="/shop"
+                  className="group flex flex-col items-start text-left cursor-pointer"
+                >
+                  <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
+                    <img
+                      src={category.image}
+                      alt={category.name}
+                      className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="mt-2.5">
+                    <h3 className="text-xs font-medium text-foreground uppercase tracking-wider group-hover:underline">
+                      {category.name}
+                    </h3>
+                    <span className="text-[11px] text-muted">{category.itemCount} items</span>
+                  </div>
+                </Link>
+              )
+            }
+
+            return (
+              <div
+                key={category.id}
+                className="group flex flex-col items-start text-left cursor-default select-none"
+              >
+                <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
+                  <img
+                    src={category.image}
+                    alt={category.name}
+                    className="h-full w-full object-cover object-center grayscale contrast-90 opacity-90 transition-none"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center p-2">
+                    <ComingSoonBadge label="COMING SOON" />
+                  </div>
+                </div>
+                <div className="mt-2.5">
+                  <h3 className="text-xs font-medium text-muted uppercase tracking-wider">
+                    {category.name}
+                  </h3>
+                  <span className="text-[11px] font-medium tracking-wider text-muted/70 uppercase">
+                    COMING SOON
+                  </span>
+                </div>
               </div>
-              <div className="mt-2.5">
-                <h3 className="text-xs font-medium text-foreground uppercase tracking-wider group-hover:underline">
-                  {category.name}
-                </h3>
-                <span className="text-[11px] text-muted">{category.itemCount} items</span>
-              </div>
-            </Link>
-          ))}
+            )
+          })}
         </div>
       </section>
 
