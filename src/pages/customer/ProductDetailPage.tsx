@@ -167,7 +167,7 @@ export const ProductDetailPage: React.FC = () => {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
@@ -175,7 +175,7 @@ export const ProductDetailPage: React.FC = () => {
           { label: product.category, href: `/shop/${product.category}` },
           { label: product.name },
         ]}
-        className="mb-8"
+        className="mb-3 sm:mb-4"
       />
 
       {/* Main PDP Grid */}

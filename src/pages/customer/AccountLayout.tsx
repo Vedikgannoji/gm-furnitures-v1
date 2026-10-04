@@ -13,11 +13,11 @@ export const AccountLayout: React.FC = () => {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-      <Breadcrumbs items={[{ label: 'Client Account' }]} className="mb-6" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
+      <Breadcrumbs items={[{ label: 'Client Account' }]} className="mb-3 sm:mb-4" />
 
       {/* Account Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-border mb-10 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-border mb-6 sm:mb-8 gap-4">
         <div>
           <span className="editorial-badge text-muted">Client Residence Portfolio</span>
           <h1 className="text-2xl sm:text-3xl font-light text-foreground mt-1">

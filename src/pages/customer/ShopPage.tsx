@@ -109,9 +109,9 @@ export const ShopPage: React.FC = () => {
   )
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
       {/* Page Header */}
-      <div className="mb-8 pb-5 border-b border-border">
+      <div className="mb-6 sm:mb-8 pb-5 border-b border-border">
         <span className="editorial-badge">Available Pieces</span>
         <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-foreground mt-1">
           The Complete Collection

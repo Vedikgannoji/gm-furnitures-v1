@@ -69,3 +69,24 @@
     @apply text-[11px] font-medium uppercase tracking-[0.14em] text-muted;
   }
 }
+
+@keyframes marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.animate-marquee-slow {
+  animation: marquee-scroll 36s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-slow {
+    animation: none !important;
+  }
+}
+

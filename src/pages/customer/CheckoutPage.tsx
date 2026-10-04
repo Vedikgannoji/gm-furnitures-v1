@@ -82,16 +82,16 @@ export const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
       <Breadcrumbs
         items={[
           { label: 'Cart', href: '/cart' },
           { label: 'Secure Checkout' },
         ]}
-        className="mb-8"
+        className="mb-3 sm:mb-4"
       />
 
-      <div className="mb-8 pb-4 border-b border-border flex items-center justify-between">
+      <div className="mb-6 sm:mb-8 pb-4 border-b border-border flex items-center justify-between">
         <div>
           <span className="editorial-badge">Encrypted Transaction</span>
           <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-foreground mt-1">

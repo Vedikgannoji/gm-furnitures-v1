@@ -12,14 +12,14 @@ export const RoomDetailPage: React.FC = () => {
   const roomName = room ? room.name : 'Spatial Room Suite'
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
           { label: 'Rooms', href: '/rooms' },
           { label: roomName },
         ]}
-        className="mb-8"
+        className="mb-3 sm:mb-4"
       />
 
       <div className="bg-white border border-border overflow-hidden">

@@ -5,11 +5,11 @@ import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 
 export const CollectionsPage: React.FC = () => {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-      <Breadcrumbs items={[{ label: 'Design Collections' }]} className="mb-6" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
+      <Breadcrumbs items={[{ label: 'Design Collections' }]} className="mb-3 sm:mb-4" />
 
       {/* Header */}
-      <div className="mb-12 pb-6 border-b border-border">
+      <div className="mb-8 sm:mb-10 pb-5 border-b border-border">
         <div className="flex items-center justify-between">
           <span className="editorial-badge">Atelier Series</span>
           <ComingSoonBadge label="COMING SOON" />

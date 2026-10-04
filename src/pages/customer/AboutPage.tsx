@@ -124,18 +124,18 @@ export const AboutPage: React.FC = () => {
   }, [hasAnimated])
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
-      <Breadcrumbs items={[{ label: 'Our Story' }]} className="mb-4" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16 space-y-8 sm:space-y-10 lg:space-y-12">
+      <Breadcrumbs items={[{ label: 'Our Story' }]} className="mb-2 sm:mb-3" />
 
-      {/* 1. INTRO / MANIFESTO */}
-      <section className="max-w-3xl">
+      {/* 1. INTRO / MANIFESTO (Centered, compact editorial block) */}
+      <section className="max-w-3xl mx-auto text-center pt-1 sm:pt-2">
         <span className="editorial-badge text-muted mb-2 block tracking-[0.2em]">
           Our Heritage & Philosophy
         </span>
-        <h1 className="text-3xl sm:text-5xl font-light text-foreground mt-2 tracking-tight leading-[1.2]">
+        <h1 className="text-2xl sm:text-4xl lg:text-[40px] font-light text-foreground tracking-tight leading-[1.22] max-w-2xl mx-auto">
           "We do not create disposable fashion. We shape quiet architectural monuments for everyday life."
         </h1>
-        <div className="mt-6 space-y-3 text-xs sm:text-sm text-muted leading-relaxed">
+        <div className="mt-4 sm:mt-5 space-y-2 text-xs sm:text-sm text-muted leading-relaxed max-w-2xl mx-auto">
           <p className="font-medium text-foreground">
             GM Furniture is an integral part of GM Group.
           </p>
@@ -145,17 +145,17 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION */}
+      {/* 2. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION (Tightened) */}
       <section className="w-full">
-        <div className="bg-white border border-border p-6 sm:p-10 lg:p-12 flex flex-col items-center text-center shadow-sm">
+        <div className="bg-white border border-border p-6 sm:p-8 lg:p-10 flex flex-col items-center text-center shadow-sm">
           {/* Logo Placeholder */}
-          <div className="w-14 h-14 border-2 border-foreground flex items-center justify-center mb-4 bg-white shadow-sm">
+          <div className="w-13 h-13 border-2 border-foreground flex items-center justify-center mb-3 bg-white shadow-sm">
             <span className="text-sm font-bold tracking-[0.25em] text-foreground">
               GM
             </span>
           </div>
 
-          <span className="editorial-badge text-muted mb-1.5 tracking-[0.2em]">
+          <span className="editorial-badge text-muted mb-1 tracking-[0.2em]">
             Brand Heritage
           </span>
 
@@ -163,12 +163,12 @@ export const AboutPage: React.FC = () => {
             FROM THE HOUSE OF GM GROUP OF INTERIORS AND CONSTRUCTIONS
           </h2>
 
-          <p className="mt-3 text-xs sm:text-sm text-muted max-w-xl leading-relaxed">
+          <p className="mt-2.5 text-xs sm:text-sm text-muted max-w-xl leading-relaxed">
             Delivering exceptional architectural craftsmanship, turnkey execution, and bespoke interior spaces across Hyderabad and South India since 2006.
           </p>
 
           {/* Dual Black CTAs */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <a
               href="https://www.instagram.com/gm_interiors9/"
               target="_blank"
@@ -193,19 +193,19 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. AWARDS SECTION */}
+      {/* 3. AWARDS SECTION (Compact & Refined) */}
       <section className="w-full">
-        <div className="bg-surface border border-border p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="bg-surface border border-border p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-4 text-left">
-            <div className="w-12 h-12 bg-white border border-border flex items-center justify-center shrink-0">
-              <Award className="w-6 h-6 text-foreground stroke-[1.5]" />
+            <div className="w-11 h-11 bg-white border border-border flex items-center justify-center shrink-0">
+              <Award className="w-5 h-5 text-foreground stroke-[1.5]" />
             </div>
             <div>
               <span className="editorial-badge text-muted tracking-widest">Industry Recognition</span>
               <h3 className="text-base sm:text-lg font-medium text-foreground mt-0.5">
                 The Times of India Design & Architecture Honor
               </h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed max-w-xl">
+              <p className="text-xs text-muted mt-0.5 leading-relaxed max-w-xl">
                 Recognized for architectural distinction, precision furniture craftsmanship, and enduring residential execution across South India.
               </p>
             </div>
@@ -219,74 +219,96 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. SCROLLING GALLERY (Max 6 images, responsive horizontal scroll) */}
+      {/* 4. GALLERY (Continuous seamless infinite marquee, slow premium speed) */}
       {galleryImages.length > 0 && (
-        <section className="w-full space-y-4">
+        <section className="w-full space-y-3">
           <div className="flex items-end justify-between pb-2 border-b border-border">
             <div>
               <span className="editorial-badge text-muted">Visual Archive</span>
-              <h2 className="text-xl sm:text-2xl font-light text-foreground mt-1">
-                Studio & Craft Showcase
+              <h2 className="text-xl sm:text-2xl font-light text-foreground mt-0.5">
+                Gallery
               </h2>
             </div>
-            <span className="text-[11px] text-muted tracking-wider uppercase hidden sm:inline">
-              Swipe to explore &rarr;
-            </span>
           </div>
 
-          <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scroll-smooth no-scrollbar">
-            {galleryImages.slice(0, 6).map((src, index) => (
-              <div
-                key={src}
-                className="shrink-0 w-[260px] sm:w-[340px] md:w-[380px] aspect-[4/3] bg-surface border border-border overflow-hidden snap-start group relative"
-              >
-                <img
-                  src={src}
-                  alt={`GM Furniture Showcase ${index + 1}`}
-                  onError={() => handleImageError(src)}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          <div className="overflow-hidden w-full relative">
+            <div className="flex w-max hover:[animation-play-state:paused]">
+              {/* Primary Track */}
+              <div className="flex shrink-0 gap-4 sm:gap-6 pr-4 sm:pr-6 animate-marquee-slow motion-reduce:animate-none">
+                {galleryImages.map((src, index) => (
+                  <div
+                    key={`track1-${src}-${index}`}
+                    className="shrink-0 w-[260px] sm:w-[320px] md:w-[360px] aspect-[4/3] bg-surface border border-border overflow-hidden relative"
+                  >
+                    <img
+                      src={src}
+                      alt={`Gallery archive ${index + 1}`}
+                      onError={() => handleImageError(src)}
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* Duplicate Track (Seamless Loop) */}
+              <div
+                className="flex shrink-0 gap-4 sm:gap-6 pr-4 sm:pr-6 animate-marquee-slow motion-reduce:animate-none"
+                aria-hidden="true"
+              >
+                {galleryImages.map((src, index) => (
+                  <div
+                    key={`track2-${src}-${index}`}
+                    className="shrink-0 w-[260px] sm:w-[320px] md:w-[360px] aspect-[4/3] bg-surface border border-border overflow-hidden relative"
+                  >
+                    <img
+                      src={src}
+                      alt=""
+                      onError={() => handleImageError(src)}
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       )}
 
-      {/* 5. CRAFT PILLARS: MATERIALITY / PROPORTION / LONGEVITY */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 pb-12 border-b border-border">
-        <div className="p-6 bg-white border border-border flex flex-col justify-between">
+      {/* 5. CRAFT PILLARS: MATERIALITY / PROPORTION / LONGEVITY (Controlled Spacing) */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 pb-8 sm:pb-10 border-b border-border">
+        <div className="p-5 sm:p-6 bg-white border border-border flex flex-col justify-between">
           <div>
             <span className="editorial-badge text-muted">01 / Materiality</span>
-            <h3 className="text-base sm:text-lg font-light text-foreground mt-2">
+            <h3 className="text-base sm:text-lg font-light text-foreground mt-1.5">
               Sustainable Solid Hardwoods
             </h3>
-            <p className="text-xs text-muted mt-3 leading-relaxed">
+            <p className="text-xs text-muted mt-2.5 leading-relaxed">
               Every dining table, low platform bed, and console is sculpted from FSC-certified European white oak, American black walnut, and reclaimed teak. We reject engineered particle boards.
             </p>
           </div>
         </div>
 
-        <div className="p-6 bg-white border border-border flex flex-col justify-between">
+        <div className="p-5 sm:p-6 bg-white border border-border flex flex-col justify-between">
           <div>
             <span className="editorial-badge text-muted">02 / Proportion</span>
-            <h3 className="text-base sm:text-lg font-light text-foreground mt-2">
+            <h3 className="text-base sm:text-lg font-light text-foreground mt-1.5">
               Radical Reductionism
             </h3>
-            <p className="text-xs text-muted mt-3 leading-relaxed">
+            <p className="text-xs text-muted mt-2.5 leading-relaxed">
               Inspired by classical brutalist architecture and Japanese wabi-sabi aesthetics, our silhouettes focus entirely on balance, negative space, and light reflection.
             </p>
           </div>
         </div>
 
-        <div className="p-6 bg-white border border-border flex flex-col justify-between">
+        <div className="p-5 sm:p-6 bg-white border border-border flex flex-col justify-between">
           <div>
             <span className="editorial-badge text-muted">03 / Longevity</span>
-            <h3 className="text-base sm:text-lg font-light text-foreground mt-2">
+            <h3 className="text-base sm:text-lg font-light text-foreground mt-1.5">
               Heirloom Longevity
             </h3>
-            <p className="text-xs text-muted mt-3 leading-relaxed">
+            <p className="text-xs text-muted mt-2.5 leading-relaxed">
               Pieces are assembled with traditional mortise-and-tenon joints, sealed with zero-VOC plant oils, and backed by a comprehensive 10-year structural warranty.
             </p>
           </div>
@@ -294,8 +316,8 @@ export const AboutPage: React.FC = () => {
       </section>
 
       {/* 6. ANIMATED METRICS (100% / 10-Yr / Zero / 3,400+) */}
-      <section ref={metricsRef} className="py-6 sm:py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center border-y border-border py-8">
+      <section ref={metricsRef} className="py-2 sm:py-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center border-y border-border py-6 sm:py-8">
           <div>
             <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
               {hardwoodVal}

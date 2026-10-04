@@ -42,11 +42,11 @@ export const SearchPage: React.FC = () => {
   const popularSearches = ['Modular Sofa', 'Travertine', 'Solid Oak', 'Dining Table', 'Platform Bed', 'Walnut']
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-      <Breadcrumbs items={[{ label: 'Search Catalog' }]} className="mb-6" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
+      <Breadcrumbs items={[{ label: 'Search Catalog' }]} className="mb-3 sm:mb-4" />
 
       {/* Search Input Bar */}
-      <div className="max-w-3xl mx-auto text-center mb-12">
+      <div className="max-w-3xl mx-auto text-center mb-8 sm:mb-10">
         <h1 className="text-2xl sm:text-4xl font-light text-foreground mb-6 tracking-tight">
           Search Considered Furniture
         </h1>

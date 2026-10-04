@@ -43,10 +43,10 @@ export const FaqPage: React.FC = () => {
   ]
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-      <Breadcrumbs items={[{ label: 'Client FAQ' }]} className="mb-8" />
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
+      <Breadcrumbs items={[{ label: 'Client FAQ' }]} className="mb-3 sm:mb-4" />
 
-      <div className="mb-12 pb-6 border-b border-border">
+      <div className="mb-8 sm:mb-10 pb-5 border-b border-border">
         <span className="editorial-badge text-muted">Frequently Asked Questions</span>
         <h1 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
           Client Care & Architectural Advisory

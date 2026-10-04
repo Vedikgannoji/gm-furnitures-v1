@@ -43,18 +43,18 @@ export const CategoryPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
           { label: 'Shop', href: '/shop' },
           { label: category.name },
         ]}
-        className="mb-6"
+        className="mb-3 sm:mb-4"
       />
 
       {/* Category Editorial Header */}
-      <div className="relative mb-12 bg-surface border border-border p-6 sm:p-12 overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
+      <div className="relative mb-8 sm:mb-10 bg-surface border border-border p-6 sm:p-12 overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="max-w-xl z-10">
           <div className="flex items-center gap-2 mb-2">
             <span className="editorial-badge text-muted">Architectural Category</span>

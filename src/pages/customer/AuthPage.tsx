@@ -40,7 +40,7 @@ export const AuthPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 py-16 sm:py-24">
+    <div className="max-w-md mx-auto px-4 pt-8 sm:pt-12 pb-16 sm:pb-20">
       {/* Brand Header */}
       <div className="text-center mb-8">
         <span className="text-xs font-semibold uppercase tracking-[0.25em] text-foreground">

@@ -32,8 +32,8 @@ export const CartPage: React.FC = () => {
 
   if (items.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <Breadcrumbs items={[{ label: 'Shopping Bag' }]} className="mb-6" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
+        <Breadcrumbs items={[{ label: 'Shopping Bag' }]} className="mb-3 sm:mb-4" />
         <EmptyState
           icon={ShoppingBag}
           title="Your shopping bag is empty"
@@ -46,11 +46,11 @@ export const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-      <Breadcrumbs items={[{ label: 'Shopping Bag' }]} className="mb-6" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
+      <Breadcrumbs items={[{ label: 'Shopping Bag' }]} className="mb-3 sm:mb-4" />
 
       {/* Title */}
-      <div className="flex items-end justify-between mb-10 pb-4 border-b border-border">
+      <div className="flex items-end justify-between mb-6 sm:mb-8 pb-4 border-b border-border">
         <div>
           <span className="editorial-badge">Review Selection</span>
           <h1 className="text-2xl sm:text-4xl font-light text-foreground mt-1 tracking-tight">
