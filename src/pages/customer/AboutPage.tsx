@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState } from 'react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { ArrowUpRight, Award } from 'lucide-react'
 
@@ -53,79 +53,9 @@ export const AboutPage: React.FC = () => {
     setGalleryImages((prev) => prev.filter((src) => src !== failedSrc))
   }
 
-  // Animated Metrics (0 -> 100%, 0 -> 10-Yr, 0 -> Zero, 0 -> 3,400+)
-  const metricsRef = useRef<HTMLDivElement>(null)
-  const [hasAnimated, setHasAnimated] = useState(false)
-  const [hardwoodVal, setHardwoodVal] = useState('0%')
-  const [warrantyVal, setWarrantyVal] = useState('0-Yr')
-  const [vocVal, setVocVal] = useState('0')
-  const [residencesVal, setResidencesVal] = useState('0+')
-
-  useEffect(() => {
-    const el = metricsRef.current
-    if (!el) return
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    if (prefersReducedMotion) {
-      setHardwoodVal('100%')
-      setWarrantyVal('10-Yr')
-      setVocVal('Zero')
-      setResidencesVal('3,400+')
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries
-        if (entry.isIntersecting && !hasAnimated) {
-          setHasAnimated(true)
-          const startTime = performance.now()
-          const duration = 1800
-
-          const animate = (currentTime: number) => {
-            const elapsed = currentTime - startTime
-            const progress = Math.min(1, elapsed / duration)
-            const easeOutQuart = 1 - Math.pow(1 - progress, 4)
-
-            const curHardwood = Math.round(easeOutQuart * 100)
-            const curWarranty = Math.round(easeOutQuart * 10)
-            const curResidences = Math.round(easeOutQuart * 3400)
-
-            setHardwoodVal(`${curHardwood}%`)
-            setWarrantyVal(`${curWarranty}-Yr`)
-            setVocVal(progress > 0.4 ? 'Zero' : '0')
-            setResidencesVal(
-              curResidences >= 1000
-                ? `${(curResidences / 1000).toFixed(1).replace('.0', '')},${(curResidences % 1000).toString().padStart(3, '0')}+`
-                : `${curResidences}+`
-            )
-
-            if (progress < 1) {
-              requestAnimationFrame(animate)
-            } else {
-              setHardwoodVal('100%')
-              setWarrantyVal('10-Yr')
-              setVocVal('Zero')
-              setResidencesVal('3,400+')
-            }
-          }
-
-          requestAnimationFrame(animate)
-        }
-      },
-      { threshold: 0.15 }
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [hasAnimated])
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16 space-y-8 sm:space-y-10 lg:space-y-12">
-      <Breadcrumbs items={[{ label: 'Our Story' }]} className="mb-2 sm:mb-3" />
+      <Breadcrumbs items={[{ label: 'About Us' }]} className="mb-2 sm:mb-3" />
 
       {/* 1. INTRO / MANIFESTO (Centered, compact editorial block) */}
       <section className="max-w-3xl mx-auto text-center pt-1 sm:pt-2">
@@ -148,11 +78,13 @@ export const AboutPage: React.FC = () => {
       {/* 2. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION (Tightened) */}
       <section className="w-full">
         <div className="bg-white border border-border p-6 sm:p-8 lg:p-10 flex flex-col items-center text-center shadow-sm">
-          {/* Logo Placeholder */}
-          <div className="w-13 h-13 border-2 border-foreground flex items-center justify-center mb-3 bg-white shadow-sm">
-            <span className="text-sm font-bold tracking-[0.25em] text-foreground">
-              GM
-            </span>
+          {/* Brand Logo */}
+          <div className="mb-3 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="GM Group Logo"
+              className="h-10 sm:h-12 w-auto object-contain"
+            />
           </div>
 
           <span className="editorial-badge text-muted mb-1 tracking-[0.2em]">
@@ -275,83 +207,6 @@ export const AboutPage: React.FC = () => {
           </div>
         </section>
       )}
-
-      {/* 5. CRAFT PILLARS: MATERIALITY / PROPORTION / LONGEVITY (Controlled Spacing) */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 pb-8 sm:pb-10 border-b border-border">
-        <div className="p-5 sm:p-6 bg-white border border-border flex flex-col justify-between">
-          <div>
-            <span className="editorial-badge text-muted">01 / Materiality</span>
-            <h3 className="text-base sm:text-lg font-light text-foreground mt-1.5">
-              Sustainable Solid Hardwoods
-            </h3>
-            <p className="text-xs text-muted mt-2.5 leading-relaxed">
-              Every dining table, low platform bed, and console is sculpted from FSC-certified European white oak, American black walnut, and reclaimed teak. We reject engineered particle boards.
-            </p>
-          </div>
-        </div>
-
-        <div className="p-5 sm:p-6 bg-white border border-border flex flex-col justify-between">
-          <div>
-            <span className="editorial-badge text-muted">02 / Proportion</span>
-            <h3 className="text-base sm:text-lg font-light text-foreground mt-1.5">
-              Radical Reductionism
-            </h3>
-            <p className="text-xs text-muted mt-2.5 leading-relaxed">
-              Inspired by classical brutalist architecture and Japanese wabi-sabi aesthetics, our silhouettes focus entirely on balance, negative space, and light reflection.
-            </p>
-          </div>
-        </div>
-
-        <div className="p-5 sm:p-6 bg-white border border-border flex flex-col justify-between">
-          <div>
-            <span className="editorial-badge text-muted">03 / Longevity</span>
-            <h3 className="text-base sm:text-lg font-light text-foreground mt-1.5">
-              Heirloom Longevity
-            </h3>
-            <p className="text-xs text-muted mt-2.5 leading-relaxed">
-              Pieces are assembled with traditional mortise-and-tenon joints, sealed with zero-VOC plant oils, and backed by a comprehensive 10-year structural warranty.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. ANIMATED METRICS (100% / 10-Yr / Zero / 3,400+) */}
-      <section ref={metricsRef} className="py-2 sm:py-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center border-y border-border py-6 sm:py-8">
-          <div>
-            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
-              {hardwoodVal}
-            </span>
-            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
-              Solid Hardwood
-            </span>
-          </div>
-          <div>
-            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
-              {warrantyVal}
-            </span>
-            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
-              Framework Warranty
-            </span>
-          </div>
-          <div>
-            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
-              {vocVal}
-            </span>
-            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
-              Toxic VOC Finishes
-            </span>
-          </div>
-          <div>
-            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
-              {residencesVal}
-            </span>
-            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
-              Curated Residences
-            </span>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

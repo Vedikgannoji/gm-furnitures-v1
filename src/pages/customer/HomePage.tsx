@@ -205,11 +205,13 @@ export const HomePage: React.FC = () => {
       {/* 3. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION (Tightened & Compact) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-2 sm:-mt-4">
         <div className="bg-white border border-border p-6 sm:p-10 lg:p-12 flex flex-col items-center text-center">
-          {/* Logo Placeholder */}
-          <div className="w-14 h-14 border-2 border-foreground flex items-center justify-center mb-4 bg-white shadow-sm">
-            <span className="text-sm font-bold tracking-[0.25em] text-foreground">
-              GM
-            </span>
+          {/* Brand Logo */}
+          <div className="mb-4 flex items-center justify-center">
+            <img
+              src="/logo.png"
+              alt="GM Group Logo"
+              className="h-10 sm:h-12 w-auto object-contain"
+            />
           </div>
 
           <span className="editorial-badge text-muted mb-1.5 tracking-[0.2em]">

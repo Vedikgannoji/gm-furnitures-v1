@@ -62,13 +62,20 @@ export const CustomerNavbar: React.FC = () => {
 
           {/* Brand Logo */}
           <div className="flex items-center">
-            <Link to="/" className="flex flex-col items-start text-left group">
-              <span className="text-sm sm:text-base font-semibold tracking-[0.2em] uppercase text-foreground">
-                GM FURNITURE
-              </span>
-              <span className="text-[9px] tracking-[0.25em] uppercase text-muted -mt-0.5 font-light">
-                ATELIER & LIVING
-              </span>
+            <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group">
+              <img
+                src="/logo.png"
+                alt="GM Logo"
+                className="h-7 sm:h-8 w-auto object-contain shrink-0"
+              />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-sm sm:text-base font-semibold tracking-[0.2em] uppercase text-foreground leading-tight">
+                  GM FURNITURE
+                </span>
+                <span className="text-[9px] tracking-[0.25em] uppercase text-muted font-light leading-tight">
+                  ATELIER & LIVING
+                </span>
+              </div>
             </Link>
           </div>
 
@@ -137,7 +144,7 @@ export const CustomerNavbar: React.FC = () => {
               </span>
             </div>
             <Link to="/about" className="hover:text-foreground transition-colors">
-              Atelier
+              About Us
             </Link>
             <Link to="/contact" className="hover:text-foreground transition-colors">
               Contact

@@ -170,7 +170,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
         {/* Secondary Info */}
         <div className="border-t border-border pt-4 text-[11px] text-muted space-y-1.5">
           <Link to="/about" onClick={onClose} className="block hover:text-foreground">
-            About Atelier
+            About Us
           </Link>
           <Link to="/contact" onClick={onClose} className="block hover:text-foreground">
             Concierge & Contact
