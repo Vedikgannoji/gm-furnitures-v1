@@ -28,7 +28,12 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
             onClick={onClose}
             className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
           >
-            <span>Rooms</span>
+            <div className="flex items-center gap-2">
+              <span>Rooms</span>
+              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
+                Soon
+              </span>
+            </div>
             <ArrowRight className="w-4 h-4 text-muted" />
           </Link>
           <Link
@@ -36,7 +41,12 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
             onClick={onClose}
             className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
           >
-            <span>Collections</span>
+            <div className="flex items-center gap-2">
+              <span>Collections</span>
+              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
+                Soon
+              </span>
+            </div>
             <ArrowRight className="w-4 h-4 text-muted" />
           </Link>
         </div>
@@ -63,39 +73,59 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
 
         {/* Rooms Section */}
         <div className="border-t border-border pt-4">
-          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3">
-            Inspiration by Room
+          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3 flex items-center justify-between">
+            <span>Inspiration by Room</span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-normal">Coming Soon</span>
           </p>
           <div className="grid grid-cols-1 gap-2">
             {mockRooms.map((room) => (
-              <Link
+              <div
                 key={room.id}
-                to={`/rooms/${room.slug}`}
-                onClick={onClose}
-                className="text-xs text-foreground/80 hover:text-foreground py-1"
+                className="text-xs text-muted/70 py-1 flex items-center justify-between select-none"
               >
-                {room.name}
-              </Link>
+                <span>{room.name}</span>
+                <span className="text-[9px] text-zinc-400 uppercase tracking-wider">Soon</span>
+              </div>
             ))}
+          </div>
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <Link
+              to="/rooms"
+              onClick={onClose}
+              className="text-[11px] text-muted hover:text-foreground flex items-center justify-between"
+            >
+              <span>Explore Room Preview</span>
+              <span className="text-[9px] uppercase tracking-wider">Coming Soon &rarr;</span>
+            </Link>
           </div>
         </div>
 
         {/* Collections Section */}
         <div className="border-t border-border pt-4">
-          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3">
-            Featured Collections
+          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3 flex items-center justify-between">
+            <span>Featured Collections</span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-normal">Coming Soon</span>
           </p>
           <div className="grid grid-cols-1 gap-2">
             {mockCollections.map((col) => (
-              <Link
+              <div
                 key={col.id}
-                to={`/collections/${col.slug}`}
-                onClick={onClose}
-                className="text-xs text-foreground/80 hover:text-foreground py-1"
+                className="text-xs text-muted/70 py-1 flex items-center justify-between select-none"
               >
-                {col.name}
-              </Link>
+                <span>{col.name}</span>
+                <span className="text-[9px] text-zinc-400 uppercase tracking-wider">Soon</span>
+              </div>
             ))}
+          </div>
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <Link
+              to="/collections"
+              onClick={onClose}
+              className="text-[11px] text-muted hover:text-foreground flex items-center justify-between"
+            >
+              <span>Explore Collections Preview</span>
+              <span className="text-[9px] uppercase tracking-wider">Coming Soon &rarr;</span>
+            </Link>
           </div>
         </div>
 

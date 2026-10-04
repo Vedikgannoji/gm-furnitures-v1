@@ -109,38 +109,45 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-2.5 text-xs text-muted">
               <li>
-                <Link to="/rooms/living-room" className="hover:text-foreground transition-colors">
-                  Living Room
+                <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center justify-between">
+                  <span>Shop by Room</span>
+                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
                 </Link>
               </li>
               <li>
-                <Link to="/rooms/dining-room" className="hover:text-foreground transition-colors">
-                  Dining Room
+                <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center justify-between">
+                  <span>Living & Dining Rooms</span>
+                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
                 </Link>
               </li>
               <li>
-                <Link to="/rooms/bedroom" className="hover:text-foreground transition-colors">
-                  Bedroom Retreat
+                <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center justify-between">
+                  <span>Bedroom & Studio</span>
+                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
                 </Link>
               </li>
               <li>
-                <Link to="/rooms/home-office" className="hover:text-foreground transition-colors">
-                  Work & Studio
+                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
+                  <span>Signature Collections</span>
+                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
                 </Link>
               </li>
               <li>
-                <Link to="/collections/minimalist-line" className="hover:text-foreground transition-colors">
-                  The Minimalist Line
+                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
+                  <span>The Minimalist Line</span>
+                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
                 </Link>
               </li>
               <li>
-                <Link to="/collections/nordic-atelier" className="hover:text-foreground transition-colors">
-                  Nordic Atelier
+                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
+                  <span>Nordic Atelier</span>
+                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
                 </Link>
               </li>
               <li>
-                <Link to="/collections/architectural-series" className="hover:text-foreground transition-colors">
-                  Architectural Series
+                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
+                  <span>Architectural Series</span>
+                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
                 </Link>
               </li>
             </ul>
@@ -187,23 +194,23 @@ export const Footer: React.FC = () => {
                   Studio Contact
                 </Link>
               </li>
-              <li>
-                <Link to="/admin" className="hover:text-foreground transition-colors font-medium text-foreground underline-offset-4 hover:underline">
-                  Admin SaaS Portal
-                </Link>
-              </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-[11px] text-muted space-y-4 md:space-y-0">
-          <p>© {new Date().getFullYear()} GM Furniture Atelier. All rights reserved. GSTIN: 06AAACG1234F1Z8.</p>
-          <div className="flex space-x-6">
-            <span className="hover:text-foreground cursor-pointer">Instagram</span>
-            <span className="hover:text-foreground cursor-pointer">Pinterest</span>
-            <span className="hover:text-foreground cursor-pointer">ArchDaily</span>
-            <span className="hover:text-foreground cursor-pointer">LinkedIn</span>
+          <p>© {new Date().getFullYear()} GM Furniture Atelier. All rights reserved.</p>
+          <div className="flex items-center space-x-6">
+            <a
+              href="https://www.instagram.com/gm_interiors9/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors flex items-center gap-1 font-medium"
+              aria-label="GM Interiors on Instagram"
+            >
+              <span>Instagram (@gm_interiors9)</span>
+            </a>
           </div>
         </div>
       </div>

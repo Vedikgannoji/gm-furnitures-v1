@@ -33,9 +33,9 @@ export const CustomerNavbar: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-md border-b border-border transition-all">
+      <header className="sticky top-0 z-40 w-full bg-white border-b border-border shadow-[0_1px_0_0_#E5E5E5]">
         {/* Top minimal announcement banner */}
-        <div className="bg-surface text-center py-1.5 px-4 text-[11px] font-medium tracking-widest uppercase text-muted border-b border-border/60">
+        <div className="bg-white text-center py-1.5 px-4 text-[11px] font-medium tracking-widest uppercase text-muted border-b border-border">
           <span>Complimentary White-Glove Assembly & Delivery across India on orders over ₹50,000</span>
         </div>
 
@@ -88,7 +88,7 @@ export const CustomerNavbar: React.FC = () => {
 
               {/* Mega Dropdown */}
               {isShopHovered && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 w-80 bg-background border border-border shadow-xl p-4 animate-slide-down">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-80 bg-white border border-border shadow-xl p-4 animate-slide-down">
                   <div className="text-[10px] font-semibold text-muted uppercase tracking-widest mb-2 pb-1 border-b border-border">
                     Furniture Categories
                   </div>
@@ -97,7 +97,7 @@ export const CustomerNavbar: React.FC = () => {
                       <Link
                         key={cat.id}
                         to={`/shop/${cat.slug}`}
-                        className="py-1.5 px-2 hover:bg-surface text-foreground hover:text-foreground text-xs flex justify-between items-center transition-colors"
+                        className="py-1.5 px-2 hover:bg-zinc-50 text-foreground text-xs flex justify-between items-center transition-colors"
                         onClick={() => setIsShopHovered(false)}
                       >
                         <span>{cat.name}</span>
@@ -118,11 +118,17 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            <Link to="/rooms" className="hover:text-foreground transition-colors">
-              Rooms
+            <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+              <span>Rooms</span>
+              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
+                Soon
+              </span>
             </Link>
-            <Link to="/collections" className="hover:text-foreground transition-colors">
-              Collections
+            <Link to="/collections" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+              <span>Collections</span>
+              <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium tracking-wider">
+                Soon
+              </span>
             </Link>
             <Link to="/about" className="hover:text-foreground transition-colors">
               Atelier
@@ -221,7 +227,7 @@ export const CustomerNavbar: React.FC = () => {
 
         {/* Mobile Search dropdown if opened */}
         {isSearchOpen && (
-          <div className="lg:hidden p-3 bg-background border-t border-border animate-slide-down">
+          <div className="lg:hidden p-3 bg-white border-t border-border animate-slide-down">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"

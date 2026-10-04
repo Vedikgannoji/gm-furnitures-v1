@@ -5,7 +5,7 @@ import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
-import { mockProducts, mockCategories, mockRooms } from '@/data/mockData'
+import { mockProducts, mockCategories } from '@/data/mockData'
 import { Search } from 'lucide-react'
 
 export const ShopPage: React.FC = () => {
@@ -16,8 +16,7 @@ export const ShopPage: React.FC = () => {
   const initialSort = searchParams.get('sort') || 'featured'
 
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory)
-  const [selectedRoom, setSelectedRoom] = useState<string>('all')
-  const [selectedMaterial, setSelectedMaterial] = useState<string>('all')
+  const [selectedMaterial, setSelectedMaterial] = useState<string>(initialCategory === 'all' ? 'all' : 'all')
   const [inStockOnly, setInStockOnly] = useState<boolean>(false)
   const [maxPrice, setMaxPrice] = useState<number>(300000)
   const [sortBy, setSortBy] = useState<string>(initialSort)
@@ -45,9 +44,6 @@ export const ShopPage: React.FC = () => {
       if (selectedCategory !== 'all' && product.category !== selectedCategory) {
         return false
       }
-      if (selectedRoom !== 'all' && product.room !== selectedRoom) {
-        return false
-      }
       if (inStockOnly && product.stockStatus === 'out_of_stock') {
         return false
       }
@@ -65,7 +61,7 @@ export const ShopPage: React.FC = () => {
       }
       return true
     })
-  }, [selectedCategory, selectedRoom, selectedMaterial, inStockOnly, maxPrice])
+  }, [selectedCategory, selectedMaterial, inStockOnly, maxPrice])
 
   const sortedProducts = useMemo(() => {
     const list = [...filteredProducts]
@@ -83,7 +79,6 @@ export const ShopPage: React.FC = () => {
 
   const resetFilters = () => {
     setSelectedCategory('all')
-    setSelectedRoom('all')
     setSelectedMaterial('all')
     setInStockOnly(false)
     setMaxPrice(300000)
@@ -93,7 +88,6 @@ export const ShopPage: React.FC = () => {
 
   const activeFilterCount =
     (selectedCategory !== 'all' ? 1 : 0) +
-    (selectedRoom !== 'all' ? 1 : 0) +
     (selectedMaterial !== 'all' ? 1 : 0) +
     (inStockOnly ? 1 : 0) +
     (maxPrice < 300000 ? 1 : 0)
@@ -146,41 +140,6 @@ export const ShopPage: React.FC = () => {
               />
               <span className={selectedCategory === cat.slug ? 'font-medium text-foreground' : 'text-muted'}>
                 {cat.name} ({cat.itemCount})
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Room Environment */}
-      <div className="pt-4 border-t border-border">
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-2.5">
-          Room Environment
-        </h4>
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-2 cursor-pointer py-0.5">
-            <input
-              type="radio"
-              name="room"
-              checked={selectedRoom === 'all'}
-              onChange={() => setSelectedRoom('all')}
-              className="accent-foreground"
-            />
-            <span className={selectedRoom === 'all' ? 'font-medium text-foreground' : 'text-muted'}>
-              All Rooms
-            </span>
-          </label>
-          {mockRooms.map((room) => (
-            <label key={room.id} className="flex items-center gap-2 cursor-pointer py-0.5">
-              <input
-                type="radio"
-                name="room"
-                checked={selectedRoom === room.slug}
-                onChange={() => setSelectedRoom(room.slug)}
-                className="accent-foreground"
-              />
-              <span className={selectedRoom === room.slug ? 'font-medium text-foreground' : 'text-muted'}>
-                {room.name}
               </span>
             </label>
           ))}
@@ -320,12 +279,6 @@ export const ShopPage: React.FC = () => {
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
               Category: {selectedCategory}
               <X className="w-3 h-3 cursor-pointer hover:text-foreground" onClick={() => setSelectedCategory('all')} />
-            </span>
-          )}
-          {selectedRoom !== 'all' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
-              Room: {selectedRoom}
-              <X className="w-3 h-3 cursor-pointer hover:text-foreground" onClick={() => setSelectedRoom('all')} />
             </span>
           )}
           {selectedMaterial !== 'all' && (

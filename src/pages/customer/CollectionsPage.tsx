@@ -1,8 +1,7 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
 import { mockCollections } from '@/data/mockData'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
+import { ComingSoon } from '@/components/ui/ComingSoon'
 
 export const CollectionsPage: React.FC = () => {
   return (
@@ -11,23 +10,38 @@ export const CollectionsPage: React.FC = () => {
 
       {/* Header */}
       <div className="mb-12 pb-6 border-b border-border">
-        <span className="editorial-badge">Atelier Series</span>
+        <div className="flex items-center justify-between">
+          <span className="editorial-badge">Atelier Series</span>
+          <span className="text-[10px] uppercase tracking-widest font-semibold bg-zinc-100 text-zinc-700 px-2.5 py-1">
+            Coming Soon
+          </span>
+        </div>
         <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-foreground mt-2">
           Curated Design Collections
         </h1>
         <p className="mt-3 text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-          Thematic furniture capsules exploring distinct aesthetic movements. From radical Scandinavian reductionism to raw monumental stone monoliths.
+          Thematic furniture capsules exploring distinct aesthetic movements. These limited architectural capsules are currently being handcrafted for public launch.
         </p>
       </div>
 
-      {/* Collections Grid */}
+      {/* Global Coming Soon Banner */}
+      <div className="mb-12">
+        <ComingSoon
+          variant="section"
+          eyebrow="Capsule Collection"
+          title="COMING SOON"
+          subtitle="All design collections are currently being prepared. Collection-level purchasing will be active in the next release."
+        />
+      </div>
+
+      {/* Collections Grid (Non-navigable preview) */}
       <div className="space-y-12">
         {mockCollections.map((col, idx) => {
           const isEven = idx % 2 === 0
           return (
             <div
               key={col.id}
-              className="grid grid-cols-1 lg:grid-cols-12 bg-background border border-border overflow-hidden"
+              className="grid grid-cols-1 lg:grid-cols-12 bg-background border border-border overflow-hidden select-none"
             >
               {/* Image side */}
               <div
@@ -38,7 +52,7 @@ export const CollectionsPage: React.FC = () => {
                 <img
                   src={col.image}
                   alt={col.name}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700 ease-out"
+                  className="w-full h-full object-cover grayscale contrast-125"
                 />
               </div>
 
@@ -49,7 +63,12 @@ export const CollectionsPage: React.FC = () => {
                 }`}
               >
                 <div>
-                  <span className="editorial-badge text-muted">Capsule {idx + 1}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="editorial-badge text-muted">Capsule {idx + 1}</span>
+                    <span className="text-[9px] uppercase tracking-widest bg-zinc-100 text-zinc-700 px-2 py-0.5 font-medium">
+                      Coming Soon
+                    </span>
+                  </div>
                   <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-2 tracking-tight">
                     {col.name}
                   </h2>
@@ -63,15 +82,11 @@ export const CollectionsPage: React.FC = () => {
 
                 <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
                   <span className="text-xs text-muted">
-                    {col.productCount} Handcrafted Pieces
+                    Atelier Preview
                   </span>
-                  <Link
-                    to={`/collections/${col.slug}`}
-                    className="h-10 px-5 bg-foreground text-background hover:bg-black/85 text-xs uppercase tracking-wider font-medium flex items-center gap-2 transition-colors"
-                  >
-                    <span>View Collection</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  <span className="h-10 px-5 bg-zinc-100 text-zinc-500 text-xs uppercase tracking-wider font-medium flex items-center gap-2 cursor-not-allowed">
+                    Coming Soon
+                  </span>
                 </div>
               </div>
             </div>
