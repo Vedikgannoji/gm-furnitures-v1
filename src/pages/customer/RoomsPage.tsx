@@ -39,25 +39,14 @@ export const RoomsPage: React.FC = () => {
               <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
             </div>
 
-            <div className="p-6 sm:p-8 flex flex-col justify-between flex-1">
-              <div>
-                <span className="editorial-badge text-muted">{room.tagline}</span>
-                <h2 className="text-2xl font-light text-foreground mt-1 tracking-tight">
-                  {room.name}
-                </h2>
-                <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
-                  {room.description}
-                </p>
-              </div>
-
-              <div className="mt-8 pt-5 border-t border-border flex items-center justify-between">
-                <span className="text-xs text-muted">
-                  Spatial Environment Preview
-                </span>
-                <span className="h-10 px-5 bg-zinc-100 text-zinc-600 text-xs uppercase tracking-wider font-medium flex items-center gap-2 cursor-not-allowed border border-border">
-                  Preview Only
-                </span>
-              </div>
+            <div className="p-6 sm:p-8 flex flex-col flex-1">
+              <span className="editorial-badge text-muted">{room.tagline}</span>
+              <h2 className="text-2xl font-light text-foreground mt-1 tracking-tight">
+                {room.name}
+              </h2>
+              <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
+                {room.description}
+              </p>
             </div>
           </div>
         ))}

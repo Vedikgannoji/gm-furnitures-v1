@@ -50,15 +50,10 @@ export const CollectionDetailPage: React.FC = () => {
             {collection?.description || 'This limited architectural collection is currently being handcrafted in our atelier.'}
           </p>
 
-          <div className="mt-8 p-6 bg-surface border border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Unreleased Design Capsule
-              </p>
-              <p className="text-xs text-muted mt-0.5">
-                Collection purchasing and custom finishes will be enabled with public release.
-              </p>
-            </div>
+          <div className="mt-8 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <span className="text-xs text-muted">
+              Collection purchasing and custom finishes will launch with upcoming release.
+            </span>
             <Link
               to="/shop"
               className="inline-flex items-center gap-2 h-10 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest transition-colors shrink-0"

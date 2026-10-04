@@ -61,21 +61,12 @@ export const CollectionsPage: React.FC = () => {
                   <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-2 tracking-tight">
                     {col.name}
                   </h2>
-                  <p className="text-xs font-semibold text-foreground/80 mt-2 uppercase tracking-wider">
+                  <p className="text-xs font-semibold text-foreground/80 mt-1 uppercase tracking-wider">
                     "{col.tagline}"
                   </p>
-                  <p className="text-xs sm:text-sm text-muted mt-4 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
                     {col.description}
                   </p>
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
-                  <span className="text-xs text-muted">
-                    Atelier Preview
-                  </span>
-                  <span className="h-10 px-5 bg-zinc-100 text-zinc-600 text-xs uppercase tracking-wider font-medium flex items-center gap-2 cursor-not-allowed border border-border">
-                    Preview Only
-                  </span>
                 </div>
               </div>
             </div>
