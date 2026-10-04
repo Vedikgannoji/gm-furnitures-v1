@@ -4,6 +4,7 @@ import { ArrowRight, ArrowUpRight, Award, Shield, Truck, Globe } from 'lucide-re
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { mockProducts, mockCategories, mockRooms, mockCollections } from '@/data/mockData'
+import { isRoomAvailable } from '@/utils/availability'
 
 const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -396,22 +397,20 @@ export const HomePage: React.FC = () => {
             {/* Primary Track */}
             <div className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none">
               {mockRooms.map((room) => {
-                const isDining = room.slug === 'dining-room'
-                return (
-                  <Link
-                    key={`track1-${room.id}`}
-                    to={`/rooms/${room.slug}`}
-                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50"
-                  >
+                const isAvailable = isRoomAvailable(room)
+                const cardInner = (
+                  <>
                     <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
                       <img
                         src={room.image}
                         alt={room.name}
-                        className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-102 ${
-                          !isDining ? 'opacity-85 brightness-105' : ''
+                        className={`w-full h-full object-cover ${
+                          isAvailable
+                            ? 'transition-transform duration-700 ease-out group-hover:scale-102'
+                            : 'opacity-85 brightness-105'
                         }`}
                       />
-                      {!isDining && (
+                      {!isAvailable && (
                         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2 sm:py-2.5 px-4 text-center z-10">
                           <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-white uppercase">
                             COMING SOON
@@ -427,14 +426,37 @@ export const HomePage: React.FC = () => {
                           {room.description}
                         </p>
                       </div>
-                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
-                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
-                          {isDining ? 'EXPLORE CATALOG →' : 'Room Preview'}
-                        </span>
-                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
-                      </div>
+                      {isAvailable && (
+                        <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                          <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                            ROOM PREVIEW
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
+                        </div>
+                      )}
                     </div>
-                  </Link>
+                  </>
+                )
+
+                if (isAvailable) {
+                  return (
+                    <Link
+                      key={`track1-${room.id}`}
+                      to={`/rooms/${room.slug}`}
+                      className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50 cursor-pointer"
+                    >
+                      {cardInner}
+                    </Link>
+                  )
+                }
+
+                return (
+                  <div
+                    key={`track1-${room.id}`}
+                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden select-none cursor-default"
+                  >
+                    {cardInner}
+                  </div>
                 )
               })}
             </div>
@@ -445,22 +467,20 @@ export const HomePage: React.FC = () => {
               aria-hidden="true"
             >
               {mockRooms.map((room) => {
-                const isDining = room.slug === 'dining-room'
-                return (
-                  <Link
-                    key={`track2-${room.id}`}
-                    to={`/rooms/${room.slug}`}
-                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50"
-                  >
+                const isAvailable = isRoomAvailable(room)
+                const cardInner = (
+                  <>
                     <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
                       <img
                         src={room.image}
                         alt={room.name}
-                        className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-102 ${
-                          !isDining ? 'opacity-85 brightness-105' : ''
+                        className={`w-full h-full object-cover ${
+                          isAvailable
+                            ? 'transition-transform duration-700 ease-out group-hover:scale-102'
+                            : 'opacity-85 brightness-105'
                         }`}
                       />
-                      {!isDining && (
+                      {!isAvailable && (
                         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2 sm:py-2.5 px-4 text-center z-10">
                           <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-white uppercase">
                             COMING SOON
@@ -476,14 +496,37 @@ export const HomePage: React.FC = () => {
                           {room.description}
                         </p>
                       </div>
-                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
-                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
-                          {isDining ? 'EXPLORE CATALOG →' : 'Room Preview'}
-                        </span>
-                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
-                      </div>
+                      {isAvailable && (
+                        <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                          <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                            ROOM PREVIEW
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
+                        </div>
+                      )}
                     </div>
-                  </Link>
+                  </>
+                )
+
+                if (isAvailable) {
+                  return (
+                    <Link
+                      key={`track2-${room.id}`}
+                      to={`/rooms/${room.slug}`}
+                      className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50 cursor-pointer"
+                    >
+                      {cardInner}
+                    </Link>
+                  )
+                }
+
+                return (
+                  <div
+                    key={`track2-${room.id}`}
+                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden select-none cursor-default"
+                  >
+                    {cardInner}
+                  </div>
                 )
               })}
             </div>

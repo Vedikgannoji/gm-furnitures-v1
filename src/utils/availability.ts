@@ -19,3 +19,10 @@ export const isProductAvailableForPurchase = (product: Product): boolean => {
 export const isCategoryAvailable = (categorySlug: string): boolean => {
   return categorySlug === AVAILABLE_CATEGORY_SLUG
 }
+
+export const isRoomAvailable = (room: { slug: string; comingSoon?: boolean }): boolean => {
+  if (room.comingSoon !== undefined) {
+    return !room.comingSoon
+  }
+  return room.slug === 'dining-room'
+}

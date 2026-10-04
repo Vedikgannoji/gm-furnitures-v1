@@ -70,6 +70,7 @@ export const mockRooms: Room[] = [
     description: 'Monolithic solid timber tables framed with timeless hand-turned chairs beneath warm diffuse illumination.',
     image: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1600&q=80',
     featuredProductIds: ['gm-prod-09', 'gm-prod-04', 'gm-prod-15'],
+    comingSoon: false,
   },
   {
     id: 'room-living',
@@ -79,6 +80,7 @@ export const mockRooms: Room[] = [
     description: 'Soft bouclé fabrics, low-slung oak silhouettes, and natural stone anchors creating an inviting architectural flow.',
     image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80',
     featuredProductIds: ['gm-prod-01', 'gm-prod-03', 'gm-prod-07', 'gm-prod-12'],
+    comingSoon: true,
   },
   {
     id: 'room-bedroom',
@@ -88,6 +90,7 @@ export const mockRooms: Room[] = [
     description: 'Subtle tactile linens, low platform frames, and floating cantilevered bedside nightstands.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1600&q=80',
     featuredProductIds: ['gm-prod-05', 'gm-prod-11', 'gm-prod-16'],
+    comingSoon: true,
   },
   {
     id: 'room-office',
@@ -97,6 +100,7 @@ export const mockRooms: Room[] = [
     description: 'Stripped-back solid walnut work desks, leather task chairs, and modular credenza units for modern clarity.',
     image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1600&q=80',
     featuredProductIds: ['gm-prod-08', 'gm-prod-02', 'gm-prod-10'],
+    comingSoon: true,
   },
 ]
 

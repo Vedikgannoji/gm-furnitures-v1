@@ -69,6 +69,7 @@ export interface Room {
   description: string
   image: string
   featuredProductIds: string[]
+  comingSoon?: boolean
 }
 
 export interface Collection {
