@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Lock, Mail, User, AlertCircle } from 'lucide-react'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Lock, Mail, User, AlertCircle, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
@@ -10,9 +10,13 @@ const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 export const AuthPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const { showToast } = useToast()
-  const { login, register, loginWithGoogle, isAuthenticated } = useAuth()
+  const { user, login, register, loginWithGoogle, logout, isAuthenticated } = useAuth()
+
+  const isAdminLogin = location.pathname.startsWith('/admin') || searchParams.get('redirect')?.startsWith('/admin') === true
+  const redirectUrl = searchParams.get('redirect') || (isAdminLogin ? '/admin' : '/account')
 
   const [tab, setTab] = useState<'login' | 'register' | 'forgot'>('login')
   const [isLoading, setIsLoading] = useState(false)
@@ -22,14 +26,20 @@ export const AuthPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
 
-  const redirectUrl = searchParams.get('redirect') || '/account'
-
-  // If already authenticated, redirect
+  // If already authenticated, redirect appropriately
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(redirectUrl, { replace: true })
+      if (isAdminLogin) {
+        if (user?.role === 'admin') {
+          navigate('/admin', { replace: true })
+        } else {
+          setErrorMessage('Access denied. Your active account is not an administrator.')
+        }
+      } else {
+        navigate(redirectUrl, { replace: true })
+      }
     }
-  }, [isAuthenticated, navigate, redirectUrl])
+  }, [isAuthenticated, user, isAdminLogin, navigate, redirectUrl])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,9 +54,19 @@ export const AuthPage: React.FC = () => {
 
     try {
       if (tab === 'login') {
-        await login(email, password)
-        showToast('Signed In', 'Welcome back.', 'success')
-        navigate(redirectUrl, { replace: true })
+        const loggedInUser = await login(email, password)
+        if (isAdminLogin) {
+          if (loggedInUser.role === 'admin') {
+            showToast('Administrator Authenticated', 'Access granted to management console.', 'success')
+            navigate('/admin', { replace: true })
+          } else {
+            logout()
+            setErrorMessage('Access denied. This account does not possess administrator privileges.')
+          }
+        } else {
+          showToast('Signed In', 'Welcome back.', 'success')
+          navigate(redirectUrl, { replace: true })
+        }
       } else if (tab === 'register') {
         await register(name, email, password)
         showToast('Account Created', 'Your account has been created.', 'success')
@@ -71,9 +91,19 @@ export const AuthPage: React.FC = () => {
     setIsLoading(true)
     setErrorMessage(null)
     try {
-      await loginWithGoogle(credentialResponse.credential)
-      showToast('Signed In', 'Signed in with Google.', 'success')
-      navigate(redirectUrl, { replace: true })
+      const loggedInUser = await loginWithGoogle(credentialResponse.credential)
+      if (isAdminLogin) {
+        if (loggedInUser.role === 'admin') {
+          showToast('Administrator Authenticated', 'Access granted to management console.', 'success')
+          navigate('/admin', { replace: true })
+        } else {
+          logout()
+          setErrorMessage('Access denied. This Google account does not possess administrator privileges.')
+        }
+      } else {
+        showToast('Signed In', 'Signed in with Google.', 'success')
+        navigate(redirectUrl, { replace: true })
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Google authentication failed.')
     } finally {
@@ -86,22 +116,22 @@ export const AuthPage: React.FC = () => {
       {/* Brand Header */}
       <div className="text-center mb-8">
         <span className="text-xs font-semibold uppercase tracking-[0.25em] text-foreground">
-          GM FURNITURE
+          {isAdminLogin ? 'GM FURNITURE — MANAGEMENT' : 'GM FURNITURE'}
         </span>
         <h1 className="text-2xl font-light tracking-tight text-foreground mt-3">
-          {tab === 'login' && 'Welcome Back'}
-          {tab === 'register' && 'Get Started'}
-          {tab === 'forgot' && 'Account Recovery'}
+          {isAdminLogin ? 'Administrator Sign In' : (
+            tab === 'login' ? 'Welcome Back' : tab === 'register' ? 'Get Started' : 'Account Recovery'
+          )}
         </h1>
         <p className="text-xs text-muted mt-2">
-          {tab === 'login' && 'Sign in to continue.'}
-          {tab === 'register' && 'Create your account.'}
-          {tab === 'forgot' && 'Enter your email address to reset your password.'}
+          {isAdminLogin ? 'Restricted console. Sign in with administrative credentials.' : (
+            tab === 'login' ? 'Sign in to continue.' : tab === 'register' ? 'Create your account.' : 'Enter your email address to reset your password.'
+          )}
         </p>
       </div>
 
-      {/* Switcher Tabs */}
-      {tab !== 'forgot' && (
+      {/* Switcher Tabs (Only for customer portal) */}
+      {!isAdminLogin && tab !== 'forgot' && (
         <div className="grid grid-cols-2 border-b border-border mb-6 text-xs uppercase tracking-wider font-medium">
           <button
             onClick={() => {

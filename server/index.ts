@@ -8,6 +8,7 @@ import {
   comparePassword,
   signToken,
   verifyAuth,
+  verifyAdmin,
   verifyGoogleToken,
   AuthenticatedRequest,
 } from './auth'
@@ -615,6 +616,483 @@ app.post('/api/orders', verifyAuth, (req: AuthenticatedRequest, res: Response) =
   } catch (error: any) {
     console.error('Create order error:', error)
     return res.status(500).json({ error: 'Failed to create order.' })
+  }
+})
+
+// ==========================================
+// 6. ADMIN PRODUCT & METRICS ENDPOINTS (verifyAdmin protected)
+// ==========================================
+
+// GET /api/admin/products - List all products including drafts/archived
+app.get('/api/admin/products', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const rows = db.prepare('SELECT * FROM products ORDER BY created_at DESC').all() as any[]
+    const products = rows.map(formatProductRow)
+    return res.json(products)
+  } catch (error: any) {
+    console.error('Admin fetch products error:', error)
+    return res.status(500).json({ error: 'Failed to fetch products for administration.' })
+  }
+})
+
+// GET /api/admin/products/:id - Single product by ID or Slug
+app.get('/api/admin/products/:id', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params
+    const row = db.prepare('SELECT * FROM products WHERE id = ? OR slug = ?').get(id, id) as any
+    if (!row) {
+      return res.status(404).json({ error: 'Product not found.' })
+    }
+    return res.json(formatProductRow(row))
+  } catch (error: any) {
+    console.error('Admin fetch single product error:', error)
+    return res.status(500).json({ error: 'Failed to retrieve product details.' })
+  }
+})
+
+// POST /api/admin/products - Create a new product
+app.post('/api/admin/products', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const {
+      name,
+      slug: rawSlug,
+      sku: rawSku,
+      category,
+      collection,
+      room,
+      price,
+      mrp,
+      discount,
+      description,
+      shortDescription,
+      images,
+      colors,
+      dimensions,
+      material,
+      finish,
+      leadTime,
+      warranty,
+      specifications,
+      careInstructions,
+      status = 'published',
+      featured = false,
+      newArrival = false,
+      stock = 5,
+    } = req.body
+
+    // --- Validation (Phase 9) ---
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Product name is required.' })
+    }
+
+    const sku = (rawSku && typeof rawSku === 'string') ? rawSku.trim().toUpperCase() : ''
+    if (!sku) {
+      return res.status(400).json({ error: 'Product SKU is required.' })
+    }
+
+    // Slug formatting & validation
+    const slug = (rawSlug && typeof rawSlug === 'string' && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Valid product slug is required.' })
+    }
+
+    if (!category || typeof category !== 'string' || !category.trim()) {
+      return res.status(400).json({ error: 'Product category is required.' })
+    }
+
+    const numPrice = Number(price)
+    if (isNaN(numPrice) || numPrice <= 0) {
+      return res.status(400).json({ error: 'Price must be a valid positive number.' })
+    }
+
+    const numMrp = Number(mrp)
+    if (isNaN(numMrp) || numMrp < numPrice) {
+      return res.status(400).json({ error: 'MRP must be a valid number greater than or equal to the selling price.' })
+    }
+
+    const numStock = Number(stock)
+    if (isNaN(numStock) || numStock < 0) {
+      return res.status(400).json({ error: 'Stock units must be 0 or greater.' })
+    }
+
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      return res.status(400).json({ error: 'Product description is required.' })
+    }
+
+    if (!material || typeof material !== 'string' || !material.trim()) {
+      return res.status(400).json({ error: 'Material specification is required.' })
+    }
+
+    if (!finish || typeof finish !== 'string' || !finish.trim()) {
+      return res.status(400).json({ error: 'Finish specification is required.' })
+    }
+
+    // At least one image required
+    const validImages = Array.isArray(images) ? images.filter((img: any) => typeof img === 'string' && img.trim()) : []
+    if (validImages.length === 0) {
+      return res.status(400).json({ error: 'At least one product image URL is required.' })
+    }
+
+    // Dimensions validation
+    if (!dimensions || typeof dimensions !== 'object') {
+      return res.status(400).json({ error: 'Product dimensions are required.' })
+    }
+
+    // Check SKU uniqueness
+    const existingSku = db.prepare('SELECT id FROM products WHERE sku = ?').get(sku)
+    if (existingSku) {
+      return res.status(400).json({ error: `SKU "${sku}" is already assigned to another product.` })
+    }
+
+    // Check Slug uniqueness
+    const existingSlug = db.prepare('SELECT id FROM products WHERE slug = ?').get(slug)
+    if (existingSlug) {
+      return res.status(400).json({ error: `URL slug "${slug}" is already in use by another product.` })
+    }
+
+    // Auto calculate discount if not given
+    const calculatedDiscount = discount !== undefined && !isNaN(Number(discount))
+      ? Number(discount)
+      : Math.max(0, Math.round(((numMrp - numPrice) / numMrp) * 100))
+
+    const id = `gm-prod-${Date.now().toString(36)}-${Math.floor(100 + Math.random() * 900)}`
+    const now = new Date().toISOString()
+
+    const colorsArr = Array.isArray(colors) && colors.length > 0 ? colors : [{ name: 'Default Finish', hex: '#333333' }]
+    const specsArr = Array.isArray(specifications) ? specifications : []
+    const careArr = Array.isArray(careInstructions) ? careInstructions : []
+
+    db.prepare(`
+      INSERT INTO products (
+        id, slug, name, sku, category, collection, room,
+        price, mrp, discount, description, short_description,
+        images_json, colors_json, dimensions_json,
+        material, finish, lead_time, warranty,
+        specifications_json, care_instructions_json,
+        status, featured, new_arrival, rating, review_count, stock,
+        created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?
+      )
+    `).run(
+      id,
+      slug,
+      name.trim(),
+      sku,
+      category.trim(),
+      collection ? collection.trim() : null,
+      room ? room.trim() : null,
+      Math.round(numPrice),
+      Math.round(numMrp),
+      calculatedDiscount,
+      description.trim(),
+      shortDescription ? shortDescription.trim() : description.trim().slice(0, 150),
+      JSON.stringify(validImages),
+      JSON.stringify(colorsArr),
+      JSON.stringify(dimensions),
+      material.trim(),
+      finish.trim(),
+      leadTime || '2-4 Weeks White-Glove Delivery',
+      warranty || '5-Year Structural Warranty',
+      JSON.stringify(specsArr),
+      JSON.stringify(careArr),
+      status || 'published',
+      featured ? 1 : 0,
+      newArrival ? 1 : 0,
+      5.0,
+      0,
+      Math.floor(numStock),
+      now,
+      now
+    )
+
+    const createdRow = db.prepare('SELECT * FROM products WHERE id = ?').get(id)
+    return res.status(201).json({
+      success: true,
+      product: formatProductRow(createdRow),
+      message: 'Product created successfully.',
+    })
+  } catch (error: any) {
+    console.error('Admin create product error:', error)
+    return res.status(500).json({ error: error.message || 'Failed to create product.' })
+  }
+})
+
+// PUT /api/admin/products/:id - Update product
+app.put('/api/admin/products/:id', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params
+
+    const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any
+    if (!existing) {
+      return res.status(404).json({ error: 'Product not found.' })
+    }
+
+    const {
+      name,
+      slug: rawSlug,
+      sku: rawSku,
+      category,
+      collection,
+      room,
+      price,
+      mrp,
+      discount,
+      description,
+      shortDescription,
+      images,
+      colors,
+      dimensions,
+      material,
+      finish,
+      leadTime,
+      warranty,
+      specifications,
+      careInstructions,
+      status,
+      featured,
+      newArrival,
+      stock,
+    } = req.body
+
+    // --- Validation (Phase 9) ---
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Product name is required.' })
+    }
+
+    const sku = (rawSku && typeof rawSku === 'string') ? rawSku.trim().toUpperCase() : ''
+    if (!sku) {
+      return res.status(400).json({ error: 'Product SKU is required.' })
+    }
+
+    const slug = (rawSlug && typeof rawSlug === 'string' && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Valid product slug is required.' })
+    }
+
+    if (!category || typeof category !== 'string' || !category.trim()) {
+      return res.status(400).json({ error: 'Product category is required.' })
+    }
+
+    const numPrice = Number(price)
+    if (isNaN(numPrice) || numPrice <= 0) {
+      return res.status(400).json({ error: 'Price must be a valid positive number.' })
+    }
+
+    const numMrp = Number(mrp)
+    if (isNaN(numMrp) || numMrp < numPrice) {
+      return res.status(400).json({ error: 'MRP must be a valid number greater than or equal to selling price.' })
+    }
+
+    const numStock = Number(stock)
+    if (isNaN(numStock) || numStock < 0) {
+      return res.status(400).json({ error: 'Stock units must be 0 or greater.' })
+    }
+
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      return res.status(400).json({ error: 'Product description is required.' })
+    }
+
+    if (!material || typeof material !== 'string' || !material.trim()) {
+      return res.status(400).json({ error: 'Material specification is required.' })
+    }
+
+    if (!finish || typeof finish !== 'string' || !finish.trim()) {
+      return res.status(400).json({ error: 'Finish specification is required.' })
+    }
+
+    const validImages = Array.isArray(images) ? images.filter((img: any) => typeof img === 'string' && img.trim()) : []
+    if (validImages.length === 0) {
+      return res.status(400).json({ error: 'At least one product image URL is required.' })
+    }
+
+    if (!dimensions || typeof dimensions !== 'object') {
+      return res.status(400).json({ error: 'Product dimensions are required.' })
+    }
+
+    // Check SKU uniqueness (exclude current product)
+    const existingSku = db.prepare('SELECT id FROM products WHERE sku = ? AND id != ?').get(sku, id)
+    if (existingSku) {
+      return res.status(400).json({ error: `SKU "${sku}" is already assigned to another product.` })
+    }
+
+    // Check Slug uniqueness (exclude current product)
+    const existingSlug = db.prepare('SELECT id FROM products WHERE slug = ? AND id != ?').get(slug, id)
+    if (existingSlug) {
+      return res.status(400).json({ error: `URL slug "${slug}" is already in use by another product.` })
+    }
+
+    const calculatedDiscount = discount !== undefined && !isNaN(Number(discount))
+      ? Number(discount)
+      : Math.max(0, Math.round(((numMrp - numPrice) / numMrp) * 100))
+
+    const now = new Date().toISOString()
+    const colorsArr = Array.isArray(colors) ? colors : JSON.parse(existing.colors_json || '[]')
+    const specsArr = Array.isArray(specifications) ? specifications : JSON.parse(existing.specifications_json || '[]')
+    const careArr = Array.isArray(careInstructions) ? careInstructions : JSON.parse(existing.care_instructions_json || '[]')
+
+    db.prepare(`
+      UPDATE products
+      SET slug = ?,
+          name = ?,
+          sku = ?,
+          category = ?,
+          collection = ?,
+          room = ?,
+          price = ?,
+          mrp = ?,
+          discount = ?,
+          description = ?,
+          short_description = ?,
+          images_json = ?,
+          colors_json = ?,
+          dimensions_json = ?,
+          material = ?,
+          finish = ?,
+          lead_time = ?,
+          warranty = ?,
+          specifications_json = ?,
+          care_instructions_json = ?,
+          status = ?,
+          featured = ?,
+          new_arrival = ?,
+          stock = ?,
+          updated_at = ?
+      WHERE id = ?
+    `).run(
+      slug,
+      name.trim(),
+      sku,
+      category.trim(),
+      collection ? collection.trim() : null,
+      room ? room.trim() : null,
+      Math.round(numPrice),
+      Math.round(numMrp),
+      calculatedDiscount,
+      description.trim(),
+      shortDescription ? shortDescription.trim() : description.trim().slice(0, 150),
+      JSON.stringify(validImages),
+      JSON.stringify(colorsArr),
+      JSON.stringify(dimensions),
+      material.trim(),
+      finish.trim(),
+      leadTime || existing.lead_time,
+      warranty || existing.warranty,
+      JSON.stringify(specsArr),
+      JSON.stringify(careArr),
+      status || existing.status,
+      featured !== undefined ? (featured ? 1 : 0) : existing.featured,
+      newArrival !== undefined ? (newArrival ? 1 : 0) : existing.new_arrival,
+      Math.floor(numStock),
+      now,
+      id
+    )
+
+    const updatedRow = db.prepare('SELECT * FROM products WHERE id = ?').get(id)
+    return res.json({
+      success: true,
+      product: formatProductRow(updatedRow),
+      message: 'Product updated successfully.',
+    })
+  } catch (error: any) {
+    console.error('Admin update product error:', error)
+    return res.status(500).json({ error: error.message || 'Failed to update product.' })
+  }
+})
+
+// DELETE /api/admin/products/:id - Delete product
+app.delete('/api/admin/products/:id', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params
+    const existing = db.prepare('SELECT id, name FROM products WHERE id = ?').get(id) as any
+    if (!existing) {
+      return res.status(404).json({ error: 'Product not found.' })
+    }
+
+    // Cascade delete cart and wishlist references
+    db.prepare('DELETE FROM cart_items WHERE product_id = ?').run(id)
+    db.prepare('DELETE FROM wishlist_items WHERE product_id = ?').run(id)
+
+    db.prepare('DELETE FROM products WHERE id = ?').run(id)
+
+    return res.json({
+      success: true,
+      message: `Product "${existing.name}" successfully deleted.`,
+    })
+  } catch (error: any) {
+    console.error('Admin delete product error:', error)
+    return res.status(500).json({ error: 'Failed to delete product.' })
+  }
+})
+
+// GET /api/admin/stats - Real Dashboard Metrics (Phase 10)
+app.get('/api/admin/stats', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const totalProducts = (db.prepare('SELECT COUNT(*) as count FROM products').get() as any).count
+    const publishedProducts = (db.prepare("SELECT COUNT(*) as count FROM products WHERE status = 'published'").get() as any).count
+    const draftProducts = (db.prepare("SELECT COUNT(*) as count FROM products WHERE status != 'published'").get() as any).count
+    const lowStockProducts = (db.prepare('SELECT COUNT(*) as count FROM products WHERE stock <= 3').get() as any).count
+    const totalCustomers = (db.prepare("SELECT COUNT(*) as count FROM users WHERE role != 'admin'").get() as any).count
+    const totalOrders = (db.prepare('SELECT COUNT(*) as count FROM orders').get() as any).count
+
+    // Total revenue from all confirmed orders
+    const revenueRow = db.prepare('SELECT SUM(total) as revenue FROM orders').get() as any
+    const totalRevenue = revenueRow?.revenue || 0
+
+    // Recent orders (up to 5)
+    const recentOrderRows = db.prepare(`
+      SELECT o.id, o.order_number, o.total, o.status, o.created_at, u.name as customer_name, u.email as customer_email
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      ORDER BY o.created_at DESC
+      LIMIT 5
+    `).all() as any[]
+
+    const recentOrders = recentOrderRows.map((r) => ({
+      id: r.id,
+      orderNumber: r.order_number,
+      customer: {
+        name: r.customer_name || 'Store Guest',
+        email: r.customer_email || 'guest@example.com',
+      },
+      date: new Date(r.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+      total: r.total,
+      status: r.status,
+    }))
+
+    // Low stock items list (for dashboard display)
+    const lowStockRows = db.prepare(`
+      SELECT * FROM products WHERE stock <= 3 ORDER BY stock ASC LIMIT 6
+    `).all() as any[]
+
+    const lowStockItems = lowStockRows.map(formatProductRow)
+
+    return res.json({
+      totalProducts,
+      publishedProducts,
+      draftProducts,
+      lowStockProducts,
+      totalCustomers,
+      totalOrders,
+      totalRevenue,
+      recentOrders,
+      lowStockItems,
+    })
+  } catch (error: any) {
+    console.error('Admin stats error:', error)
+    return res.status(500).json({ error: 'Failed to fetch dashboard metrics.' })
   }
 })
 
