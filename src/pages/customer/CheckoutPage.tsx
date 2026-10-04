@@ -80,7 +80,7 @@ export const CheckoutPage: React.FC = () => {
     e.preventDefault()
     setIsProcessing(true)
 
-    const fullName = `${formData.firstName} ${formData.lastName}`.trim() || user?.name || 'Valued Client'
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim() || user?.name || 'Customer'
     const deliveryAddress = {
       fullName,
       phone: formData.phone || '+91 7013672894',
@@ -141,7 +141,7 @@ export const CheckoutPage: React.FC = () => {
         </p>
         <Link to="/shop" className="inline-block mt-6">
           <Button variant="primary" size="md">
-            Explore Catalog
+            EXPLORE CATALOG →
           </Button>
         </Link>
       </div>
@@ -561,7 +561,7 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             <p className="text-[10px] text-muted text-center mt-3">
-              By confirming, you agree to GM Atelier's terms of commission and delivery schedule.
+              By confirming, you agree to GM Furniture's terms of service and delivery schedule.
             </p>
           </div>
         </div>

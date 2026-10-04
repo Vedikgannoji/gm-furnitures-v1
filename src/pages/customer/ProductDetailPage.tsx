@@ -77,7 +77,7 @@ export const ProductDetailPage: React.FC = () => {
   const accordionItems = [
     {
       id: 'specifications',
-      title: 'Architectural Specifications',
+      title: 'Product Specifications',
       content: (
         <div className="divide-y divide-border/60 text-xs">
           {product.specifications.map((spec, i) => (
@@ -99,7 +99,7 @@ export const ProductDetailPage: React.FC = () => {
     },
     {
       id: 'dimensions',
-      title: 'Dimensions & Spatial Footprint',
+      title: 'Dimensions & Sizing',
       content: (
         <div className="space-y-2 text-xs">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3 border border-border">
@@ -144,14 +144,14 @@ export const ProductDetailPage: React.FC = () => {
     },
     {
       id: 'delivery-warranty',
-      title: 'White-Glove Delivery & Warranty',
+      title: 'Delivery & Warranty',
       content: (
         <div className="space-y-3 text-xs leading-relaxed text-muted">
           <div className="flex items-start gap-2.5">
             <Truck className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-foreground">Complimentary White-Glove Installation</p>
-              <p className="mt-0.5">{product.leadTime}. Delivered by a specialized two-person freight team who unpack, position, assemble, and remove all packaging materials.</p>
+              <p className="font-medium text-foreground">Complimentary Home Delivery & Assembly</p>
+              <p className="mt-0.5">{product.leadTime}. Delivered by a professional team who unpack, position, assemble, and remove all packaging materials.</p>
             </div>
           </div>
           <div className="flex items-start gap-2.5 pt-2 border-t border-border">
@@ -253,7 +253,7 @@ export const ProductDetailPage: React.FC = () => {
               </div>
               <span className="text-muted">•</span>
               <span className="text-muted underline cursor-pointer hover:text-foreground">
-                {product.reviewCount} client appraisals
+                {product.reviewCount} customer reviews
               </span>
             </div>
 
@@ -375,7 +375,7 @@ export const ProductDetailPage: React.FC = () => {
               )}
             >
               <Heart className={cn('w-4 h-4', isSaved ? 'fill-current text-foreground' : '')} />
-              <span>{isSaved ? 'Saved in Your Wishlist' : 'Add to Curated Wishlist'}</span>
+              <span>{isSaved ? 'Saved in Wishlist' : 'Add to Wishlist'}</span>
             </button>
           </div>
 
@@ -383,7 +383,7 @@ export const ProductDetailPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border text-xs text-muted">
             <div className="flex items-center gap-2">
               <Truck className="w-4 h-4 text-foreground shrink-0" />
-              <span>Free White Glove Assembly</span>
+              <span>Free Delivery & Assembly</span>
             </div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-foreground shrink-0" />
@@ -405,7 +405,7 @@ export const ProductDetailPage: React.FC = () => {
             <div>
               <span className="editorial-badge">Considered Companions</span>
               <h2 className="text-2xl font-light text-foreground mt-1">
-                Related Architectural Pieces
+                Related Pieces
               </h2>
             </div>
             <Link

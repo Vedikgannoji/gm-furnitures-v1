@@ -88,7 +88,7 @@ export const AccountOrderDetailPage: React.FC = () => {
         {/* Items List */}
         <div className="lg:col-span-8 bg-background border border-border p-6">
           <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-3 border-b border-border">
-            Commissioned Pieces
+            Ordered Items
           </h3>
 
           <div className="divide-y divide-border">
@@ -126,7 +126,7 @@ export const AccountOrderDetailPage: React.FC = () => {
               <span className="font-semibold text-foreground">{formatCurrency(order.tax)}</span>
             </div>
             <div className="flex justify-between text-muted">
-              <span>Specialized White-Glove Shipping</span>
+              <span>Delivery & Assembly</span>
               <span className="font-semibold text-emerald-700">
                 {order.shipping === 0 ? 'COMPLIMENTARY' : formatCurrency(order.shipping)}
               </span>
@@ -160,7 +160,7 @@ export const AccountOrderDetailPage: React.FC = () => {
 
           <div className="pt-4 border-t border-border">
             <h4 className="text-[11px] font-semibold uppercase tracking-widest text-foreground mb-1">
-              White-Glove Status
+              Delivery Status
             </h4>
             <p className="text-xs text-muted leading-relaxed">
               Our regional delivery crew will coordinate the appointment 24 hours prior to final arrival.
@@ -174,7 +174,7 @@ export const AccountOrderDetailPage: React.FC = () => {
         isOpen={isInvoiceOpen}
         onClose={() => setIsInvoiceOpen(false)}
         title="Tax Invoice"
-        description="Formal Statutory Tax Invoice for Custom Hardwood Furniture Commission"
+        description="Tax Invoice for Furniture Order"
         maxWidth="2xl"
       >
         <div className="p-4 bg-white text-zinc-900 border border-zinc-200 text-xs space-y-6">

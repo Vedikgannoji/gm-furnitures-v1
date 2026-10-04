@@ -15,10 +15,10 @@ export const CollectionsPage: React.FC = () => {
           <ComingSoonBadge label="COMING SOON" />
         </div>
         <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-foreground mt-2">
-          Curated Design Collections
+          Design Collections
         </h1>
         <p className="mt-3 text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-          Thematic furniture capsules exploring distinct aesthetic movements. Preview these upcoming architectural capsules below. Public ordering will be enabled with collection release.
+          Thematic furniture collections exploring distinct design styles. Preview these upcoming collections below. Ordering will be enabled with collection release.
         </p>
       </div>
 
@@ -42,7 +42,6 @@ export const CollectionsPage: React.FC = () => {
                   alt={col.name}
                   className="w-full h-full object-cover"
                 />
-                <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
               </div>
 
               {/* Text side */}

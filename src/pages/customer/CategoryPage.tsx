@@ -57,7 +57,7 @@ export const CategoryPage: React.FC = () => {
       <div className="relative mb-8 sm:mb-10 bg-surface border border-border p-6 sm:p-12 overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="max-w-xl z-10">
           <div className="flex items-center gap-2 mb-2">
-            <span className="editorial-badge text-muted">Architectural Category</span>
+            <span className="editorial-badge text-muted">Furniture Category</span>
             {!isAvailable && <ComingSoonBadge label="COMING SOON" />}
           </div>
           <h1 className="text-3xl sm:text-5xl font-light text-foreground mt-2 tracking-tight">
@@ -115,7 +115,7 @@ export const CategoryPage: React.FC = () => {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="h-9 px-3 bg-surface border border-border text-xs font-medium focus:border-foreground focus:outline-none cursor-pointer w-full sm:w-48"
               >
-                <option value="featured">Curated & Featured</option>
+                <option value="featured">Featured</option>
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
                 <option value="rating">Highest Rated</option>
@@ -145,7 +145,7 @@ export const CategoryPage: React.FC = () => {
               to="/shop"
               className="inline-flex items-center gap-2 px-7 py-3 bg-foreground text-background text-xs uppercase tracking-widest font-semibold hover:bg-black/85 transition-colors shadow-sm"
             >
-              Explore Active Dining Tables
+              EXPLORE CATALOG →
             </Link>
           </div>
         </div>

@@ -180,10 +180,10 @@ export const HomePage: React.FC = () => {
             <Truck className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                White-Glove Assembly
+                Delivery & Assembly
               </h4>
               <p className="text-xs text-muted mt-1 leading-relaxed">
-                Complimentary room placement, full assembly, and packaging recycling across India.
+                Complimentary room placement, full assembly, and packaging removal across India.
               </p>
             </div>
           </div>
@@ -276,7 +276,7 @@ export const HomePage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
           <div>
-            <span className="editorial-badge">Curated Icons</span>
+            <span className="editorial-badge">Featured Furniture</span>
             <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
               Featured Pieces
             </h2>
@@ -372,7 +372,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 6. SHOP BY ROOM — COMING SOON (Clean, compact, no preview buttons/rows) */}
+      {/* 6. SHOP BY ROOM — CONTINUOUS AUTO-SCROLLING CAROUSEL */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
           <div>
@@ -381,38 +381,117 @@ export const HomePage: React.FC = () => {
               Shop by Room
             </h2>
           </div>
-          <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            <ComingSoonBadge label="COMING SOON" />
-          </div>
+          <Link
+            to="/rooms"
+            className="text-xs uppercase tracking-widest font-medium text-foreground hover:opacity-75 transition-opacity flex items-center gap-1 mt-2 sm:mt-0"
+          >
+            <span>View All Rooms</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 select-none">
-          {mockRooms.slice(0, 2).map((room) => (
-            <div
-              key={room.id}
-              className="flex flex-col bg-background border border-border overflow-hidden"
-            >
-              <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
-                <img
-                  src={room.image}
-                  alt={room.name}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-out hover:scale-102"
-                />
-                <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
-              </div>
-              <div className="p-5 sm:p-6 flex flex-col flex-1">
-                <span className="editorial-badge text-muted">{room.tagline}</span>
-                <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
-                <p className="text-xs text-muted mt-2 leading-relaxed">
-                  {room.description}
-                </p>
-              </div>
+        {/* Seamless Infinite Marquee Carousel */}
+        <div className="overflow-hidden w-full relative">
+          <div className="flex w-max hover:[animation-play-state:paused]">
+            {/* Primary Track */}
+            <div className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none">
+              {mockRooms.map((room) => {
+                const isDining = room.slug === 'dining-room'
+                return (
+                  <Link
+                    key={`track1-${room.id}`}
+                    to={`/rooms/${room.slug}`}
+                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50"
+                  >
+                    <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                      <img
+                        src={room.image}
+                        alt={room.name}
+                        className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-102 ${
+                          !isDining ? 'opacity-85 brightness-105' : ''
+                        }`}
+                      />
+                      {!isDining && (
+                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm border-y border-zinc-200/80 py-2 sm:py-2.5 px-4 text-center z-10 shadow-sm">
+                          <span className="text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] text-zinc-700 uppercase">
+                            COMING SOON
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+                      <div>
+                        <span className="editorial-badge text-muted">{room.tagline}</span>
+                        <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
+                        <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
+                          {room.description}
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                          {isDining ? 'EXPLORE CATALOG →' : 'Room Preview'}
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
-          ))}
+
+            {/* Duplicate Track (Seamless Loop) */}
+            <div
+              className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none"
+              aria-hidden="true"
+            >
+              {mockRooms.map((room) => {
+                const isDining = room.slug === 'dining-room'
+                return (
+                  <Link
+                    key={`track2-${room.id}`}
+                    to={`/rooms/${room.slug}`}
+                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50"
+                  >
+                    <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                      <img
+                        src={room.image}
+                        alt={room.name}
+                        className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-102 ${
+                          !isDining ? 'opacity-85 brightness-105' : ''
+                        }`}
+                      />
+                      {!isDining && (
+                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm border-y border-zinc-200/80 py-2 sm:py-2.5 px-4 text-center z-10 shadow-sm">
+                          <span className="text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] text-zinc-700 uppercase">
+                            COMING SOON
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+                      <div>
+                        <span className="editorial-badge text-muted">{room.tagline}</span>
+                        <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
+                        <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
+                          {room.description}
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                          {isDining ? 'EXPLORE CATALOG →' : 'Room Preview'}
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* 7. SIGNATURE COLLECTION — COMING SOON (Clean, compact, no preview buttons/rows) */}
+      {/* 7. SIGNATURE COLLECTION — COMING SOON (Clean, compact, no badge on image) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
           <div>
@@ -447,13 +526,12 @@ export const HomePage: React.FC = () => {
                 alt={signatureCollection.name}
                 className="w-full h-full object-cover"
               />
-              <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* 8. THE MINIMALIST LINE — COMING SOON (Clean, compact, no preview buttons/rows) */}
+      {/* 8. THE MINIMALIST LINE — COMING SOON (Clean, compact, no badge on image) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
           <div>
@@ -475,7 +553,6 @@ export const HomePage: React.FC = () => {
                 alt={minimalistCollection.name}
                 className="w-full h-full object-cover"
               />
-              <ComingSoonBadge label="COMING SOON" className="absolute top-4 left-4 z-10" />
             </div>
 
             <div className="p-6 sm:p-10 lg:p-12 flex flex-col justify-center order-1 lg:order-2">

@@ -27,22 +27,19 @@ export const AccountWishlistPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>
-          <h2 className="text-xl font-light text-foreground">Curated Saved Wishlist</h2>
-          <p className="text-xs text-muted mt-1">
-            Spatial furniture pieces saved for future commission or architect consultations.
-          </p>
+          <h2 className="text-xl font-light text-foreground">Wishlist</h2>
         </div>
         <span className="text-xs text-muted font-medium">
-          {savedProducts.length} {savedProducts.length === 1 ? 'Design' : 'Designs'}
+          {savedProducts.length} {savedProducts.length === 1 ? 'Item' : 'Items'}
         </span>
       </div>
 
       {savedProducts.length === 0 ? (
         <EmptyState
           icon={Heart}
-          title="Your wishlist is empty"
-          description="Click the heart icon on any architectural design to save it to your client portfolio."
-          actionLabel="Explore Catalog"
+          title="Your wishlist is empty."
+          description="Save items you like to view them here anytime."
+          actionLabel="EXPLORE CATALOG →"
           actionHref="/shop"
         />
       ) : (

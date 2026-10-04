@@ -147,7 +147,7 @@ export const ShopPage: React.FC = () => {
             onChange={(e) => setSortBy(e.target.value)}
             className="h-9 px-3 bg-surface border border-border text-xs font-medium focus:border-foreground focus:outline-none cursor-pointer w-full sm:w-48"
           >
-            <option value="featured">Curated & Featured</option>
+            <option value="featured">Featured</option>
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
             <option value="newest">New Arrivals</option>
@@ -209,7 +209,7 @@ export const ShopPage: React.FC = () => {
                   More collections are in development.
                 </h3>
                 <p className="mt-2 text-xs text-muted max-w-md leading-relaxed">
-                  Sofas, lounge chairs, platform beds, and architectural storage capsules will be released in subsequent curated drops.
+                  Sofas, lounge chairs, beds, and storage furniture will be released in upcoming drops.
                 </p>
               </div>
             </>

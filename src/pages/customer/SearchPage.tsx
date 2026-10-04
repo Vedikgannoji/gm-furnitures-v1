@@ -116,7 +116,7 @@ export const SearchPage: React.FC = () => {
           icon={Search}
           title={`No designs matching "${query}"`}
           description="Try checking for typos, searching for broader terms like 'oak' or 'table', or explore our complete catalog."
-          actionLabel="View All Furniture"
+          actionLabel="EXPLORE CATALOG →"
           actionHref="/shop"
           onAction={() => handleQueryChange('')}
         />

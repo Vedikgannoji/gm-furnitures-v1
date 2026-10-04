@@ -80,7 +80,7 @@ export const CustomerNavbar: React.FC = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-8 text-xs uppercase tracking-widest font-medium text-muted">
+          <nav className="hidden lg:flex items-center space-x-8 text-xs uppercase tracking-widest font-medium text-foreground">
             {/* Shop with dropdown */}
             <div
               className="relative py-4"
@@ -89,7 +89,7 @@ export const CustomerNavbar: React.FC = () => {
             >
               <Link
                 to="/shop"
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
+                className="flex items-center gap-1 text-foreground hover:opacity-70 transition-opacity"
               >
                 <span>Shop</span>
                 <ChevronDown className="w-3 h-3 transition-transform duration-200" />
@@ -130,7 +130,7 @@ export const CustomerNavbar: React.FC = () => {
               <span className="text-xs uppercase tracking-widest font-medium text-foreground">
                 Rooms
               </span>
-              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
                 COMING SOON
               </span>
             </div>
@@ -139,14 +139,14 @@ export const CustomerNavbar: React.FC = () => {
               <span className="text-xs uppercase tracking-widest font-medium text-foreground">
                 Collections
               </span>
-              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
                 COMING SOON
               </span>
             </div>
-            <Link to="/about" className="hover:text-foreground transition-colors">
+            <Link to="/about" className="text-foreground hover:opacity-70 transition-opacity">
               About Us
             </Link>
-            <Link to="/contact" className="hover:text-foreground transition-colors">
+            <Link to="/contact" className="text-foreground hover:opacity-70 transition-opacity">
               Contact
             </Link>
           </nav>
@@ -165,7 +165,7 @@ export const CustomerNavbar: React.FC = () => {
                     autoFocus
                     className="h-8 w-60 bg-surface pl-8 pr-7 text-xs border border-border focus:border-foreground focus:outline-none placeholder:text-muted"
                   />
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-foreground" />
                   <button
                     type="button"
                     onClick={() => {
@@ -181,11 +181,11 @@ export const CustomerNavbar: React.FC = () => {
               ) : (
                 <button
                   onClick={() => setIsSearchOpen(true)}
-                  className="p-1.5 text-muted hover:text-foreground transition-colors flex items-center gap-1.5 text-xs uppercase tracking-wider"
+                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity flex items-center gap-1.5 text-xs uppercase tracking-wider"
                   aria-label="Search catalog"
                 >
-                  <Search className="w-4 h-4" />
-                  <span className="hidden xl:inline text-[11px]">Search</span>
+                  <Search className="w-4 h-4 text-foreground" />
+                  <span className="hidden xl:inline text-[11px] text-foreground">Search</span>
                 </button>
               )}
             </div>
@@ -195,7 +195,7 @@ export const CustomerNavbar: React.FC = () => {
               <>
                 <Link
                   to="/account"
-                  className="p-1.5 text-muted hover:text-foreground transition-colors"
+                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity"
                   aria-label="Customer account"
                   title={`Account: ${user?.name || ''}`}
                 >
@@ -205,11 +205,11 @@ export const CustomerNavbar: React.FC = () => {
                 {/* Wishlist (Authenticated only) */}
                 <Link
                   to="/account/wishlist"
-                  className="p-1.5 text-muted hover:text-foreground transition-colors relative"
-                  aria-label="Saved items wishlist"
+                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity relative"
+                  aria-label="Wishlist"
                   title="Wishlist"
                 >
-                  <Heart className="w-4 h-4" />
+                  <Heart className="w-4 h-4 text-foreground" />
                   {wishlistCount > 0 && (
                     <span className="absolute 0 top-0.5 right-0.5 w-3.5 h-3.5 bg-foreground text-background text-[9px] font-semibold flex items-center justify-center rounded-full">
                       {wishlistCount}
@@ -220,11 +220,11 @@ export const CustomerNavbar: React.FC = () => {
                 {/* Cart Trigger (Authenticated only) */}
                 <button
                   onClick={() => setIsCartDrawerOpen(true)}
-                  className="p-1.5 text-foreground hover:text-muted transition-colors relative flex items-center gap-1.5"
+                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity relative flex items-center gap-1.5"
                   aria-label="Open cart"
                   title="Shopping Bag"
                 >
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="w-4 h-4 text-foreground" />
                   {cartCount > 0 && (
                     <span className="w-4 h-4 bg-foreground text-background text-[10px] font-semibold flex items-center justify-center rounded-full">
                       {cartCount}

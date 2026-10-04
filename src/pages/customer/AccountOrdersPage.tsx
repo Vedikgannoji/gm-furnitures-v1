@@ -63,29 +63,28 @@ export const AccountOrdersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-light text-foreground">Order & Commission History</h2>
+        <h2 className="text-xl font-light text-foreground">Order History</h2>
         <p className="text-xs text-muted mt-1">
-          Review previous shipments, verify White-Glove dispatch milestones, and track furniture orders.
+          View your past orders and track your purchases.
         </p>
       </div>
 
       {isLoading ? (
         <div className="py-12 text-center text-xs text-muted">
-          Loading client commission history...
+          Loading order history...
         </div>
       ) : orders.length === 0 ? (
         <div className="border border-dashed border-border p-12 text-center bg-surface/50">
           <Package className="w-8 h-8 text-muted mx-auto mb-3 stroke-[1.2]" />
-          <h3 className="text-sm font-medium text-foreground">No Commissions Recorded</h3>
+          <h3 className="text-sm font-medium text-foreground">No Orders Yet</h3>
           <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
-            You have not placed any furniture commissions yet. Explore our handcrafted architectural dining pieces.
+            You have not placed any orders yet.
           </p>
           <Link
             to="/shop"
             className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-foreground text-background text-xs uppercase tracking-wider font-semibold hover:bg-black/85 transition-colors"
           >
-            <span>Explore Furniture</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>EXPLORE CATALOG &rarr;</span>
           </Link>
         </div>
       ) : (
@@ -162,7 +161,7 @@ export const AccountOrdersPage: React.FC = () => {
               {/* Footer */}
               <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
                 <span className="text-muted text-[11px]">
-                  Total Commission Value (incl. 18% GST & White-Glove Setup)
+                  Total Order Value (incl. 18% GST & Delivery)
                 </span>
                 <span className="font-semibold text-foreground text-sm">
                   {formatCurrency(order.total)}

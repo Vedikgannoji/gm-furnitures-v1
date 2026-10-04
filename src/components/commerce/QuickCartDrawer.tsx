@@ -34,8 +34,8 @@ export const QuickCartDrawer: React.FC = () => {
         <EmptyState
           icon={ShoppingBag}
           title="Your shopping bag is empty"
-          description="Explore our curated architectural collection to begin outfitting your space."
-          actionLabel="Explore Catalog"
+          description="Explore our furniture collection to begin outfitting your space."
+          actionLabel="EXPLORE CATALOG →"
           actionHref="/shop"
           onAction={() => setIsCartDrawerOpen(false)}
         />
@@ -47,11 +47,11 @@ export const QuickCartDrawer: React.FC = () => {
               <Truck className="w-3.5 h-3.5 text-muted" />
               {remainingForFreeShipping > 0 ? (
                 <span>
-                  Add <span className="font-semibold">{formatCurrency(remainingForFreeShipping)}</span> for complimentary White-Glove delivery
+                  Add <span className="font-semibold">{formatCurrency(remainingForFreeShipping)}</span> for complimentary delivery & assembly
                 </span>
               ) : (
                 <span className="text-emerald-700 font-medium">
-                  Complimentary White-Glove delivery unlocked
+                  Complimentary delivery & assembly unlocked
                 </span>
               )}
             </div>
@@ -151,7 +151,7 @@ export const QuickCartDrawer: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-muted mb-4">
-              Taxes & specialized assembly calculated at checkout.
+              Taxes & assembly calculated at checkout.
             </p>
 
             <div className="flex flex-col gap-2">

@@ -37,8 +37,8 @@ export const CartPage: React.FC = () => {
         <EmptyState
           icon={ShoppingBag}
           title="Your shopping bag is empty"
-          description="You have not added any architectural furniture to your shopping bag yet. Explore our curated collections to get started."
-          actionLabel="Explore Furniture"
+          description="You have not added any furniture to your shopping bag yet. Explore our catalog to find pieces you love."
+          actionLabel="EXPLORE CATALOG →"
           actionHref="/shop"
         />
       </div>
@@ -167,22 +167,22 @@ export const CartPage: React.FC = () => {
         {/* Order Summary Card (Right) */}
         <div className="lg:col-span-4 bg-surface border border-border p-6 sm:p-8 sticky top-24">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-4 border-b border-border">
-            Order Financial Summary
+            Order Summary
           </h2>
 
           <div className="space-y-3 pt-5 text-xs">
             <div className="flex justify-between">
-              <span className="text-muted">Pieces Subtotal</span>
+              <span className="text-muted">Items Subtotal</span>
               <span className="font-semibold text-foreground">{formatCurrency(subtotal)}</span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-muted">GST Tax (18% Statutory Rate)</span>
+              <span className="text-muted">GST Tax (18%)</span>
               <span className="font-semibold text-foreground">{formatCurrency(tax)}</span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-muted">White-Glove Delivery & Assembly</span>
+              <span className="text-muted">Delivery & Assembly</span>
               <span>
                 {shipping === 0 ? (
                   <span className="text-emerald-700 font-semibold uppercase text-[11px]">
@@ -196,7 +196,7 @@ export const CartPage: React.FC = () => {
 
             {appliedDiscount > 0 && (
               <div className="flex justify-between text-emerald-700 font-medium pt-1">
-                <span>Promotional Discount (10%)</span>
+                <span>Discount (10%)</span>
                 <span>-{formatCurrency(appliedDiscount)}</span>
               </div>
             )}
@@ -214,7 +214,7 @@ export const CartPage: React.FC = () => {
           {/* Promo Code Input */}
           <form onSubmit={handleApplyPromo} className="mt-6 pt-5 border-t border-border">
             <label className="text-[11px] font-medium uppercase tracking-wider text-muted block mb-1.5">
-              Promotional Certificate / Code
+              Promo Code
             </label>
             <div className="flex gap-2">
               <input

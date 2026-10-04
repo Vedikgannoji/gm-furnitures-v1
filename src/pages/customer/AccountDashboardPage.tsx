@@ -75,7 +75,7 @@ export const AccountDashboardPage: React.FC = () => {
 
         <div className="bg-background border border-border p-5">
           <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Curated Wishlist</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider">Wishlist</span>
             <Heart className="w-4 h-4" />
           </div>
           <p className="text-2xl font-light text-foreground mt-2">{wishlistCount} Saved</p>
@@ -111,7 +111,7 @@ export const AccountDashboardPage: React.FC = () => {
         <div className="bg-background border border-border p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-2">
             <div>
-              <span className="editorial-badge text-muted">Latest Commission</span>
+              <span className="editorial-badge text-muted">Latest Order</span>
               <h3 className="text-base font-medium text-foreground mt-0.5">
                 Order {latestOrder.orderNumber}
               </h3>
@@ -124,7 +124,7 @@ export const AccountDashboardPage: React.FC = () => {
                 to="/account/orders"
                 className="text-xs text-foreground font-medium underline ml-2"
               >
-                View Commission History &rarr;
+                View Order History &rarr;
               </Link>
             </div>
           </div>
@@ -155,16 +155,17 @@ export const AccountDashboardPage: React.FC = () => {
         </div>
       ) : (
         <div className="bg-surface border border-border p-6 text-center">
-          <h3 className="text-sm font-medium text-foreground">Welcome to your Client Portal</h3>
+          <h3 className="text-base font-medium text-foreground">
+            Welcome, {user?.name || user?.email?.split('@')[0] || 'there'}
+          </h3>
           <p className="text-xs text-muted mt-1 max-w-md mx-auto leading-relaxed">
-            Your client portfolio is registered under {user?.email}. Browse our available dining tables to place your initial commission.
+            Browse our furniture and find something you like.
           </p>
           <Link
             to="/shop"
             className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-foreground text-background text-xs uppercase tracking-wider font-semibold hover:bg-black/85 transition-colors"
           >
-            <span>Explore Dining Tables</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>EXPLORE CATALOG &rarr;</span>
           </Link>
         </div>
       )}

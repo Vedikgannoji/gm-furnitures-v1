@@ -30,14 +30,13 @@ export const CollectionDetailPage: React.FC = () => {
               alt={collection.name}
               className="w-full h-full object-cover"
             />
-            <ComingSoonBadge label="COMING SOON" className="absolute top-6 left-6 z-10" />
           </div>
         )}
 
         <div className="p-8 sm:p-14 max-w-3xl">
           <div className="flex items-center gap-3 mb-2">
             <span className="editorial-badge text-muted">
-              {collection?.tagline || 'Curated Capsule'}
+              {collection?.tagline || 'Design Collection'}
             </span>
             <ComingSoonBadge label="COMING SOON" />
           </div>
@@ -47,19 +46,18 @@ export const CollectionDetailPage: React.FC = () => {
           </h1>
 
           <p className="mt-4 text-sm sm:text-base text-muted leading-relaxed">
-            {collection?.description || 'This limited architectural collection is currently being handcrafted in our atelier.'}
+            {collection?.description || 'This furniture collection is currently being prepared by our design team.'}
           </p>
 
           <div className="mt-8 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <span className="text-xs text-muted">
-              Collection purchasing and custom finishes will launch with upcoming release.
+              Collection purchasing will launch with our upcoming release.
             </span>
             <Link
               to="/shop"
               className="inline-flex items-center gap-2 h-10 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest transition-colors shrink-0"
             >
-              <span>Explore Active Pieces</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>EXPLORE CATALOG →</span>
             </Link>
           </div>
         </div>

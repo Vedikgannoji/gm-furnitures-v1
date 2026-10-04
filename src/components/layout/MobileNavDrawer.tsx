@@ -30,7 +30,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
               <span className="text-sm uppercase tracking-widest font-medium text-foreground">
                 Rooms
               </span>
-              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
                 COMING SOON
               </span>
             </div>
@@ -40,7 +40,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
               <span className="text-sm uppercase tracking-widest font-medium text-foreground">
                 Collections
               </span>
-              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-black text-white px-1.5 py-px leading-none">
+              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
                 COMING SOON
               </span>
             </div>
@@ -173,7 +173,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
             About Us
           </Link>
           <Link to="/contact" onClick={onClose} className="block hover:text-foreground">
-            Concierge & Contact
+            Contact Us
           </Link>
           <Link to="/faq" onClick={onClose} className="block hover:text-foreground">
             Frequently Asked Questions

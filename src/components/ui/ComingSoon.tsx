@@ -15,7 +15,7 @@ export const ComingSoonBadge: React.FC<ComingSoonBadgeProps> = ({
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center text-[9px] font-semibold tracking-widest uppercase bg-black text-white px-2 py-0.5 shadow-sm leading-none',
+        'inline-flex items-center justify-center text-[9px] font-semibold tracking-widest uppercase bg-zinc-100 text-zinc-600 border border-zinc-200/80 px-2 py-0.5 shadow-sm leading-none',
         className
       )}
     >

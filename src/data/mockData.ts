@@ -63,15 +63,6 @@ export const mockCategories: Category[] = [
 
 export const mockRooms: Room[] = [
   {
-    id: 'room-living',
-    slug: 'living-room',
-    name: 'Living Room',
-    tagline: 'An sanctuary of quiet contemplation',
-    description: 'Soft bouclé fabrics, low-slung oak silhouettes, and natural stone anchors creating an inviting architectural flow.',
-    image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80',
-    featuredProductIds: ['gm-prod-01', 'gm-prod-03', 'gm-prod-07', 'gm-prod-12'],
-  },
-  {
     id: 'room-dining',
     slug: 'dining-room',
     name: 'Dining Space',
@@ -79,6 +70,15 @@ export const mockRooms: Room[] = [
     description: 'Monolithic solid timber tables framed with timeless hand-turned chairs beneath warm diffuse illumination.',
     image: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1600&q=80',
     featuredProductIds: ['gm-prod-09', 'gm-prod-04', 'gm-prod-15'],
+  },
+  {
+    id: 'room-living',
+    slug: 'living-room',
+    name: 'Living Room',
+    tagline: 'A sanctuary of quiet contemplation',
+    description: 'Soft bouclé fabrics, low-slung oak silhouettes, and natural stone anchors creating an inviting architectural flow.',
+    image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80',
+    featuredProductIds: ['gm-prod-01', 'gm-prod-03', 'gm-prod-07', 'gm-prod-12'],
   },
   {
     id: 'room-bedroom',
@@ -541,7 +541,7 @@ export const mockInvoices: Invoice[] = [
 export const mockStoreSettings: StoreSettings = {
   storeName: 'GM Furniture Atelier',
   brandTagline: 'Considered Living for Modern Spaces',
-  supportEmail: 'concierge@gmfurniture.in',
+  supportEmail: 'support@gmfurniture.in',
   supportPhone: '+91 (011) 4920-8000',
   registeredAddress: 'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
   gstin: '36AFNPV7079J1ZG',

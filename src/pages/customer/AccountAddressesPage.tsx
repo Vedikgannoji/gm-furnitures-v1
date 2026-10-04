@@ -63,7 +63,7 @@ export const AccountAddressesPage: React.FC = () => {
       })
       if (res.ok) {
         setAddresses((prev) => prev.filter((a) => a.id !== id))
-        showToast('Address Removed', 'Location removed from your client address book.', 'info')
+        showToast('Address Removed', 'Address removed successfully.', 'info')
       }
     } catch (err) {
       showToast('Error', 'Failed to remove address.', 'error')
@@ -119,9 +119,9 @@ export const AccountAddressesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>
-          <h2 className="text-xl font-light text-foreground">Delivery Locations</h2>
+          <h2 className="text-xl font-light text-foreground">Delivery Addresses</h2>
           <p className="text-xs text-muted mt-1">
-            Registered residential and architecture studio sites for White-Glove installation.
+            Manage your saved delivery addresses.
           </p>
         </div>
         <Button
@@ -131,20 +131,20 @@ export const AccountAddressesPage: React.FC = () => {
           className="flex items-center gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Add Location</span>
+          <span>Add Address</span>
         </Button>
       </div>
 
       {isLoading ? (
         <div className="py-12 text-center text-xs text-muted">
-          Loading client delivery locations...
+          Loading saved addresses...
         </div>
       ) : addresses.length === 0 ? (
         <div className="border border-dashed border-border p-12 text-center bg-surface/50">
           <MapPin className="w-8 h-8 text-muted mx-auto mb-3 stroke-[1.2]" />
-          <h3 className="text-sm font-medium text-foreground">No Delivery Locations Saved</h3>
+          <h3 className="text-sm font-medium text-foreground">No Addresses Saved</h3>
           <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
-            You have not registered any delivery residences yet. Add your delivery address for streamlined checkout.
+            You have not saved any delivery addresses yet. Add an address for faster checkout.
           </p>
           <Button
             variant="outline"
@@ -152,7 +152,7 @@ export const AccountAddressesPage: React.FC = () => {
             onClick={() => setIsModalOpen(true)}
             className="mt-4 text-xs uppercase tracking-wider"
           >
-            Add First Location
+            Add Address
           </Button>
         </div>
       ) : (

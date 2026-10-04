@@ -10,12 +10,12 @@ export const PolicyPage: React.FC = () => {
     { title: string; subtitle: string; sections: { heading: string; body: string }[] }
   > = {
     shipping: {
-      title: 'White-Glove Delivery & Logistics Policy',
-      subtitle: 'Precision handling and assembly of architectural furniture across India',
+      title: 'Delivery & Logistics Policy',
+      subtitle: 'Careful handling and assembly of furniture across India',
       sections: [
         {
-          heading: '1. Complimentary White-Glove Qualification',
-          body: 'All orders with a cumulative subtotal of ₹50,000 or greater qualify for complimentary White-Glove installation. For orders under ₹50,000, a subsidized flat shipping fee of ₹2,500 is applied.',
+          heading: '1. Complimentary Delivery Qualification',
+          body: 'All orders with a cumulative subtotal of ₹50,000 or greater qualify for complimentary delivery and assembly. For orders under ₹50,000, a subsidized flat shipping fee of ₹2,500 is applied.',
         },
         {
           heading: '2. Two-Person In-Room Delivery & Setup',
@@ -29,29 +29,29 @@ export const PolicyPage: React.FC = () => {
     },
     returns: {
       title: 'Returns, Replacements & Guarantee Policy',
-      subtitle: 'Our commitment to enduring quality and client satisfaction',
+      subtitle: 'Our commitment to enduring quality and customer satisfaction',
       sections: [
         {
-          heading: '1. 14-Day Considered Space Trial',
-          body: 'We want you to experience each design in your residence. If a standard catalog piece does not harmonize with your spatial requirements, you may initiate a return within 14 days of delivery.',
+          heading: '1. 14-Day In-Home Trial',
+          body: 'We want you to experience each design in your home. If a standard catalog piece does not suit your space, you may initiate a return within 14 days of delivery.',
         },
         {
           heading: '2. Return Condition & Packaging',
           body: 'Returned pieces must be in pristine, unaltered condition with no scratches, stains, or structural modifications.',
         },
         {
-          heading: '3. Bespoke Custom Commissions',
-          body: 'Made-to-order timber commissions with customized dimensions are non-returnable unless a verified manufacturing defect is identified upon installation.',
+          heading: '3. Custom Orders',
+          body: 'Made-to-order furniture with customized dimensions are non-returnable unless a verified manufacturing defect is identified upon installation.',
         },
       ],
     },
     privacy: {
-      title: 'Client Privacy & Data Security Policy',
-      subtitle: 'How GM Furniture Atelier protects and respects client information',
+      title: 'Privacy & Data Security Policy',
+      subtitle: 'How GM Furniture protects and respects your personal information',
       sections: [
         {
           heading: '1. Information We Collect',
-          body: 'We collect relevant client details (name, email, phone number, shipping address) strictly for order fulfillment, White-Glove delivery coordination, and statutory GST taxation invoicing.',
+          body: 'We collect relevant customer details (name, email, phone number, shipping address) strictly for order fulfillment, delivery coordination, and statutory GST taxation invoicing.',
         },
         {
           heading: '2. Payment Gateway Security',
@@ -64,12 +64,12 @@ export const PolicyPage: React.FC = () => {
       ],
     },
     terms: {
-      title: 'Terms of Service & Atelier Agreement',
-      subtitle: 'Statutory conditions governing orders, commissions, and digital commerce',
+      title: 'Terms of Service',
+      subtitle: 'Conditions governing orders and digital commerce',
       sections: [
         {
-          heading: '1. Atelier Commissions & Invoicing',
-          body: 'All orders placed through the website constitute a formal purchase commission. Tax invoices are issued in accordance with Indian Goods and Services Tax (GST) statutes under HSN 94036000.',
+          heading: '1. Orders & Invoicing',
+          body: 'All orders placed through the website constitute a formal purchase order. Tax invoices are issued in accordance with Indian Goods and Services Tax (GST) statutes under HSN 94036000.',
         },
         {
           heading: '2. Natural Material Characteristics',
@@ -96,7 +96,7 @@ export const PolicyPage: React.FC = () => {
       />
 
       <div className="mb-8 sm:mb-10 pb-5 border-b border-border">
-        <span className="editorial-badge text-muted">Legal & Client Assurance</span>
+        <span className="editorial-badge text-muted">Policies & Assurance</span>
         <h1 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
           {current.title}
         </h1>
