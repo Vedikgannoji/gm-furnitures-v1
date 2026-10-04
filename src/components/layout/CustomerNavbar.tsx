@@ -14,6 +14,7 @@ import { useWishlist } from '@/context/WishlistContext'
 import { useAuth } from '@/context/AuthContext'
 import { MobileNavDrawer } from './MobileNavDrawer'
 import { mockCategories } from '@/data/mockData'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 
 export const CustomerNavbar: React.FC = () => {
   const navigate = useNavigate()
@@ -130,18 +131,14 @@ export const CustomerNavbar: React.FC = () => {
               <span className="text-xs uppercase tracking-widest font-medium text-foreground">
                 Rooms
               </span>
-              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
-                COMING SOON
-              </span>
+              <ComingSoonBadge className="mt-0.5 text-[8px] px-1.5 py-0.5" />
             </div>
 
             <div className="flex flex-col items-center justify-center cursor-not-allowed select-none py-1">
               <span className="text-xs uppercase tracking-widest font-medium text-foreground">
                 Collections
               </span>
-              <span className="mt-0.5 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
-                COMING SOON
-              </span>
+              <ComingSoonBadge className="mt-0.5 text-[8px] px-1.5 py-0.5" />
             </div>
             <Link to="/about" className="text-foreground hover:opacity-70 transition-opacity">
               About Us

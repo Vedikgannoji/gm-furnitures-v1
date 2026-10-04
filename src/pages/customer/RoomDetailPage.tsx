@@ -31,9 +31,9 @@ export const RoomDetailPage: React.FC = () => {
               className={`w-full h-full object-cover ${room.slug !== 'dining-room' ? 'opacity-85 brightness-105' : ''}`}
             />
             {room.slug !== 'dining-room' && (
-              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-zinc-900/85 backdrop-blur-xs py-2.5 text-center shadow-sm">
-                <span className="text-[11px] font-medium tracking-[0.25em] uppercase text-white">
-                  Coming Soon
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2.5 text-center">
+                <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-white">
+                  COMING SOON
                 </span>
               </div>
             )}

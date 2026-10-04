@@ -40,9 +40,9 @@ export const RoomsPage: React.FC = () => {
 
                 {/* Coming Soon treatment for other rooms */}
                 {!isDining && (
-                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-zinc-900/85 backdrop-blur-xs py-2 text-center shadow-sm">
-                    <span className="text-[11px] font-medium tracking-[0.25em] uppercase text-white">
-                      Coming Soon
+                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2.5 text-center">
+                    <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-white">
+                      COMING SOON
                     </span>
                   </div>
                 )}

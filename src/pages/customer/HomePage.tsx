@@ -412,8 +412,8 @@ export const HomePage: React.FC = () => {
                         }`}
                       />
                       {!isDining && (
-                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm border-y border-zinc-200/80 py-2 sm:py-2.5 px-4 text-center z-10 shadow-sm">
-                          <span className="text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] text-zinc-700 uppercase">
+                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2 sm:py-2.5 px-4 text-center z-10">
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-white uppercase">
                             COMING SOON
                           </span>
                         </div>
@@ -461,8 +461,8 @@ export const HomePage: React.FC = () => {
                         }`}
                       />
                       {!isDining && (
-                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm border-y border-zinc-200/80 py-2 sm:py-2.5 px-4 text-center z-10 shadow-sm">
-                          <span className="text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] text-zinc-700 uppercase">
+                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2 sm:py-2.5 px-4 text-center z-10">
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-white uppercase">
                             COMING SOON
                           </span>
                         </div>

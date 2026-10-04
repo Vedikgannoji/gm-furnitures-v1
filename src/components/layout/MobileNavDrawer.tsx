@@ -4,6 +4,7 @@ import { Drawer } from '@/components/ui/Drawer'
 import { mockCategories, mockRooms, mockCollections } from '@/data/mockData'
 import { ArrowRight, User, Heart, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 
 export interface MobileNavDrawerProps {
   isOpen: boolean
@@ -30,9 +31,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
               <span className="text-sm uppercase tracking-widest font-medium text-foreground">
                 Rooms
               </span>
-              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
-                COMING SOON
-              </span>
+              <ComingSoonBadge className="mt-1 !text-[8px] !px-1.5 !py-0.5" />
             </div>
           </div>
           <div className="py-2 flex items-center justify-between border-b border-border/40 select-none">
@@ -40,9 +39,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
               <span className="text-sm uppercase tracking-widest font-medium text-foreground">
                 Collections
               </span>
-              <span className="mt-1 text-[8px] font-semibold tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200/70 px-1.5 py-px leading-none">
-                COMING SOON
-              </span>
+              <ComingSoonBadge className="mt-1 !text-[8px] !px-1.5 !py-0.5" />
             </div>
           </div>
         </div>
@@ -70,7 +67,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
         <div className="border-t border-border pt-4">
           <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3 flex items-center justify-between">
             <span>Inspiration by Room</span>
-            <span className="text-[9px] px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-normal">Coming Soon</span>
+            <ComingSoonBadge />
           </p>
           <div className="grid grid-cols-1 gap-2">
             {mockRooms.map((room) => (
@@ -99,7 +96,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
         <div className="border-t border-border pt-4">
           <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3 flex items-center justify-between">
             <span>Featured Collections</span>
-            <span className="text-[9px] px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-normal">Coming Soon</span>
+            <ComingSoonBadge />
           </p>
           <div className="grid grid-cols-1 gap-2">
             {mockCollections.map((col) => (
