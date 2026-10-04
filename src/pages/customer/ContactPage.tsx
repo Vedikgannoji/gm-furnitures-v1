@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Button } from '@/components/ui/Button'
-import { Mail, Phone, MapPin, Clock, CheckCircle2 } from 'lucide-react'
+import { Mail, Phone, MapPin, CheckCircle2 } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 
 export const ContactPage: React.FC = () => {
@@ -11,30 +11,30 @@ export const ContactPage: React.FC = () => {
     name: '',
     email: '',
     phone: '',
-    inquiryType: 'advisory',
+    inquiryType: 'furniture',
     message: '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
-    showToast('Inquiry Dispatched', 'Our atelier advisory team will contact you within 24 hours.', 'success')
+    showToast('Inquiry Received', 'Our support team will contact you within 24 hours.', 'success')
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-      <Breadcrumbs items={[{ label: 'Studio Contact' }]} className="mb-8" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <Breadcrumbs items={[{ label: 'Contact Us' }]} className="mb-6" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         {/* Contact Info (Left) */}
-        <div className="lg:col-span-5 space-y-8">
+        <div className="lg:col-span-5 space-y-6">
           <div>
-            <span className="editorial-badge text-muted">Client Concierge</span>
+            <span className="editorial-badge text-muted">Customer Support</span>
             <h1 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
-              Connect with Atelier
+              Connect with Us
             </h1>
             <p className="mt-3 text-xs sm:text-sm text-muted leading-relaxed">
-              Whether arranging custom timber dimension adjustments, scheduling an architect consultation, or ordering material sample swatches, our design directors are here to assist.
+              Have a question about our furniture, interiors, services, or upcoming collections? Get in touch with our team and we’ll be happy to assist.
             </p>
           </div>
 
@@ -43,44 +43,67 @@ export const ContactPage: React.FC = () => {
               <MapPin className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold text-foreground uppercase tracking-wider block">
-                  Studio Headquarters & Flagship Gallery
+                  Office & Experience Studio
                 </span>
-                <p className="text-muted mt-0.5">
-                  Sector 44, Institutional Area, Gurugram, Haryana 122003, India
+                <p className="text-muted mt-1 leading-relaxed">
+                  GM Group of Interiors and Constructions,<br />
+                  Raghavendra Nagar Colony, Road No-1,<br />
+                  Near SR Digi School, Opposite SBI Bank,<br />
+                  Suchitra, Flat No-51,<br />
+                  Hyderabad, Telangana 500054, IN
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 pt-2 border-t border-border/50">
               <Mail className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold text-foreground uppercase tracking-wider block">
-                  Private Advisory Email
+                  EMAIL
                 </span>
-                <p className="text-muted mt-0.5">concierge@gmfurniture.in</p>
+                <a
+                  href="mailto:info@gminteriors.co"
+                  className="text-muted hover:text-foreground mt-0.5 block hover:underline transition-colors"
+                >
+                  info@gminteriors.co
+                </a>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 pt-2 border-t border-border/50">
               <Phone className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold text-foreground uppercase tracking-wider block">
-                  Direct Line
+                  CONTACT NUMBERS
                 </span>
-                <p className="text-muted mt-0.5">+91 (011) 4920-8000 (Mon–Sat, 10 AM – 7 PM IST)</p>
+                <div className="text-muted mt-0.5 flex flex-wrap items-center gap-1.5">
+                  <a
+                    href="tel:+917013672894"
+                    className="hover:text-foreground hover:underline transition-colors"
+                  >
+                    +91 7013672894
+                  </a>
+                  <span>/</span>
+                  <a
+                    href="tel:+919381599950"
+                    className="hover:text-foreground hover:underline transition-colors"
+                  >
+                    9381599950
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Form (Right) */}
-        <div className="lg:col-span-7 bg-surface border border-border p-6 sm:p-10">
+        <div className="lg:col-span-7 bg-surface border border-border p-6 sm:p-8">
           {submitted ? (
             <div className="text-center py-12">
               <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-3" />
               <h3 className="text-lg font-light text-foreground">Inquiry Received</h3>
               <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
-                Thank you. An atelier spatial consultant has received your message and will respond shortly.
+                Thank you for reaching out. A member of our design team will contact you shortly.
               </p>
               <Button
                 variant="outline"
@@ -127,7 +150,7 @@ export const ContactPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                    Mobile Phone
+                    Contact Number
                   </label>
                   <input
                     type="tel"
@@ -145,10 +168,10 @@ export const ContactPage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, inquiryType: e.target.value })}
                     className="w-full h-10 bg-background border border-border px-3 text-xs focus:border-foreground focus:outline-none cursor-pointer"
                   >
-                    <option value="advisory">Residential Spatial Advisory</option>
-                    <option value="custom">Custom Dimensions & Timber Commission</option>
-                    <option value="trade">Architect & Interior Trade Program</option>
-                    <option value="order">Existing Order Milestone Inquiry</option>
+                    <option value="furniture">Furniture Inquiry</option>
+                    <option value="custom">Custom Sizing & Orders</option>
+                    <option value="interior">Interior Design Consultation</option>
+                    <option value="trade">Architect & Contractor Partnership</option>
                   </select>
                 </div>
               </div>
@@ -158,17 +181,22 @@ export const ContactPage: React.FC = () => {
                   Message Details
                 </label>
                 <textarea
-                  rows={4}
                   required
+                  rows={4}
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Tell us about your spatial project, room dimensions, or desired furniture finishes..."
-                  className="w-full bg-background border border-border p-3 text-xs focus:border-foreground focus:outline-none"
+                  placeholder="Tell us about your space, furniture requirements, or questions..."
+                  className="w-full bg-background border border-border p-3 text-xs focus:border-foreground focus:outline-none resize-none"
                 />
               </div>
 
-              <Button type="submit" variant="primary" size="md" className="w-full">
-                Submit Consultation Request &rarr;
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className="w-full sm:w-auto px-8"
+              >
+                Send Message
               </Button>
             </form>
           )}

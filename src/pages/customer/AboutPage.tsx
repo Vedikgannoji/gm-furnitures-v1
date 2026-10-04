@@ -1,84 +1,335 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
-import { Award, Shield, Compass, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Award } from 'lucide-react'
+
+const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+    stroke="currentColor"
+    strokeWidth="2"
+    fill="none"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+)
+
+const GlobeIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+    stroke="currentColor"
+    strokeWidth="2"
+    fill="none"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+)
 
 export const AboutPage: React.FC = () => {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-      <Breadcrumbs items={[{ label: 'About Atelier' }]} className="mb-8" />
+  // Gallery state supporting dynamic images up to 6 without breaking if missing
+  const [galleryImages, setGalleryImages] = useState<string[]>([
+    '/about-gallery/1.png',
+    '/about-gallery/2.png',
+    '/about-gallery/3.png',
+    '/about-gallery/4.png',
+    '/about-gallery/5.png',
+    '/about-gallery/6.png',
+  ])
 
-      {/* Hero */}
-      <div className="max-w-3xl mb-16">
-        <span className="editorial-badge text-muted">The Atelier Story</span>
-        <h1 className="text-3xl sm:text-5xl font-light text-foreground mt-2 tracking-tight leading-[1.15]">
+  const handleImageError = (failedSrc: string) => {
+    setGalleryImages((prev) => prev.filter((src) => src !== failedSrc))
+  }
+
+  // Animated Metrics (0 -> 100%, 0 -> 10-Yr, 0 -> Zero, 0 -> 3,400+)
+  const metricsRef = useRef<HTMLDivElement>(null)
+  const [hasAnimated, setHasAnimated] = useState(false)
+  const [hardwoodVal, setHardwoodVal] = useState('0%')
+  const [warrantyVal, setWarrantyVal] = useState('0-Yr')
+  const [vocVal, setVocVal] = useState('0')
+  const [residencesVal, setResidencesVal] = useState('0+')
+
+  useEffect(() => {
+    const el = metricsRef.current
+    if (!el) return
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (prefersReducedMotion) {
+      setHardwoodVal('100%')
+      setWarrantyVal('10-Yr')
+      setVocVal('Zero')
+      setResidencesVal('3,400+')
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true)
+          const startTime = performance.now()
+          const duration = 1800
+
+          const animate = (currentTime: number) => {
+            const elapsed = currentTime - startTime
+            const progress = Math.min(1, elapsed / duration)
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4)
+
+            const curHardwood = Math.round(easeOutQuart * 100)
+            const curWarranty = Math.round(easeOutQuart * 10)
+            const curResidences = Math.round(easeOutQuart * 3400)
+
+            setHardwoodVal(`${curHardwood}%`)
+            setWarrantyVal(`${curWarranty}-Yr`)
+            setVocVal(progress > 0.4 ? 'Zero' : '0')
+            setResidencesVal(
+              curResidences >= 1000
+                ? `${(curResidences / 1000).toFixed(1).replace('.0', '')},${(curResidences % 1000).toString().padStart(3, '0')}+`
+                : `${curResidences}+`
+            )
+
+            if (progress < 1) {
+              requestAnimationFrame(animate)
+            } else {
+              setHardwoodVal('100%')
+              setWarrantyVal('10-Yr')
+              setVocVal('Zero')
+              setResidencesVal('3,400+')
+            }
+          }
+
+          requestAnimationFrame(animate)
+        }
+      },
+      { threshold: 0.15 }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasAnimated])
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
+      <Breadcrumbs items={[{ label: 'Our Story' }]} className="mb-4" />
+
+      {/* 1. INTRO / MANIFESTO */}
+      <section className="max-w-3xl">
+        <span className="editorial-badge text-muted mb-2 block tracking-[0.2em]">
+          Our Heritage & Philosophy
+        </span>
+        <h1 className="text-3xl sm:text-5xl font-light text-foreground mt-2 tracking-tight leading-[1.2]">
           "We do not create disposable fashion. We shape quiet architectural monuments for everyday life."
         </h1>
-        <p className="mt-6 text-sm text-muted leading-relaxed">
-          Founded in 2022, GM Atelier was established out of a desire to return furniture making to its foundational roots: honest solid hardwoods, raw monolithic stone, and structural integrity devoid of decorative pretense.
-        </p>
-      </div>
-
-      {/* Visual Break */}
-      <div className="aspect-[21/9] w-full bg-surface border border-border overflow-hidden mb-16">
-        <img
-          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=80"
-          alt="Architectural furniture atelier studio"
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      {/* Philosophy Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10 pb-16 border-b border-border">
-        <div>
-          <span className="editorial-badge text-muted">01 / Materiality</span>
-          <h3 className="text-lg font-light text-foreground mt-2">
-            Sustainable Solid Hardwoods
-          </h3>
-          <p className="text-xs text-muted mt-3 leading-relaxed">
-            Every dining table, low platform bed, and console is sculpted from FSC-certified European white oak, American black walnut, and reclaimed teak. We reject engineered particle boards.
+        <div className="mt-6 space-y-3 text-xs sm:text-sm text-muted leading-relaxed">
+          <p className="font-medium text-foreground">
+            GM Furniture is an integral part of GM Group.
+          </p>
+          <p>
+            GM Group, established in 2006 by the Vavilala family, proudly serves South India with expert residential and commercial architectural solutions. With deep roots in the Telugu states, we specialize in creating stylish, functional spaces tailored to your needs. Our experienced team is dedicated to delivering quality craftsmanship, innovative designs, and reliable service, making GM Group your trusted partner for architectural and interior design projects.
           </p>
         </div>
+      </section>
 
-        <div>
-          <span className="editorial-badge text-muted">02 / Proportion</span>
-          <h3 className="text-lg font-light text-foreground mt-2">
-            Radical Reductionism
-          </h3>
-          <p className="text-xs text-muted mt-3 leading-relaxed">
-            Inspired by classical brutalist architecture and Japanese wabi-sabi aesthetics, our silhouettes focus entirely on balance, negative space, and light reflection.
+      {/* 2. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION */}
+      <section className="w-full">
+        <div className="bg-white border border-border p-6 sm:p-10 lg:p-12 flex flex-col items-center text-center shadow-sm">
+          {/* Logo Placeholder */}
+          <div className="w-14 h-14 border-2 border-foreground flex items-center justify-center mb-4 bg-white shadow-sm">
+            <span className="text-sm font-bold tracking-[0.25em] text-foreground">
+              GM
+            </span>
+          </div>
+
+          <span className="editorial-badge text-muted mb-1.5 tracking-[0.2em]">
+            Brand Heritage
+          </span>
+
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight text-foreground max-w-2xl uppercase leading-snug">
+            FROM THE HOUSE OF GM GROUP OF INTERIORS AND CONSTRUCTIONS
+          </h2>
+
+          <p className="mt-3 text-xs sm:text-sm text-muted max-w-xl leading-relaxed">
+            Delivering exceptional architectural craftsmanship, turnkey execution, and bespoke interior spaces across Hyderabad and South India since 2006.
           </p>
+
+          {/* Dual Black CTAs */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="https://www.instagram.com/gm_interiors9/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-11 px-7 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors shadow-sm"
+            >
+              <InstagramIcon className="w-4 h-4" />
+              <span>Follow Us on Instagram</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
+            <a
+              href="https://gminteriors.co/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-11 px-7 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors shadow-sm"
+            >
+              <GlobeIcon className="w-4 h-4 text-background" />
+              <span>Visit Official Website</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-background" />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. AWARDS SECTION */}
+      <section className="w-full">
+        <div className="bg-surface border border-border p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4 text-left">
+            <div className="w-12 h-12 bg-white border border-border flex items-center justify-center shrink-0">
+              <Award className="w-6 h-6 text-foreground stroke-[1.5]" />
+            </div>
+            <div>
+              <span className="editorial-badge text-muted tracking-widest">Industry Recognition</span>
+              <h3 className="text-base sm:text-lg font-medium text-foreground mt-0.5">
+                The Times of India Design & Architecture Honor
+              </h3>
+              <p className="text-xs text-muted mt-1 leading-relaxed max-w-xl">
+                Recognized for architectural distinction, precision furniture craftsmanship, and enduring residential execution across South India.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 px-4 py-2 border border-border bg-white text-center">
+            <span className="text-[10px] uppercase tracking-widest text-muted block">Presented By</span>
+            <span className="text-xs font-semibold tracking-wider text-foreground uppercase block mt-0.5">
+              Times of India
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. SCROLLING GALLERY (Max 6 images, responsive horizontal scroll) */}
+      {galleryImages.length > 0 && (
+        <section className="w-full space-y-4">
+          <div className="flex items-end justify-between pb-2 border-b border-border">
+            <div>
+              <span className="editorial-badge text-muted">Visual Archive</span>
+              <h2 className="text-xl sm:text-2xl font-light text-foreground mt-1">
+                Studio & Craft Showcase
+              </h2>
+            </div>
+            <span className="text-[11px] text-muted tracking-wider uppercase hidden sm:inline">
+              Swipe to explore &rarr;
+            </span>
+          </div>
+
+          <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scroll-smooth no-scrollbar">
+            {galleryImages.slice(0, 6).map((src, index) => (
+              <div
+                key={src}
+                className="shrink-0 w-[260px] sm:w-[340px] md:w-[380px] aspect-[4/3] bg-surface border border-border overflow-hidden snap-start group relative"
+              >
+                <img
+                  src={src}
+                  alt={`GM Furniture Showcase ${index + 1}`}
+                  onError={() => handleImageError(src)}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 5. CRAFT PILLARS: MATERIALITY / PROPORTION / LONGEVITY */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 pb-12 border-b border-border">
+        <div className="p-6 bg-white border border-border flex flex-col justify-between">
+          <div>
+            <span className="editorial-badge text-muted">01 / Materiality</span>
+            <h3 className="text-base sm:text-lg font-light text-foreground mt-2">
+              Sustainable Solid Hardwoods
+            </h3>
+            <p className="text-xs text-muted mt-3 leading-relaxed">
+              Every dining table, low platform bed, and console is sculpted from FSC-certified European white oak, American black walnut, and reclaimed teak. We reject engineered particle boards.
+            </p>
+          </div>
         </div>
 
-        <div>
-          <span className="editorial-badge text-muted">03 / Longevity</span>
-          <h3 className="text-lg font-light text-foreground mt-2">
-            Heirloom Longevity
-          </h3>
-          <p className="text-xs text-muted mt-3 leading-relaxed">
-            Pieces are assembled with traditional mortise-and-tenon joints, sealed with zero-VOC plant oils, and backed by a comprehensive 10-year structural warranty.
-          </p>
+        <div className="p-6 bg-white border border-border flex flex-col justify-between">
+          <div>
+            <span className="editorial-badge text-muted">02 / Proportion</span>
+            <h3 className="text-base sm:text-lg font-light text-foreground mt-2">
+              Radical Reductionism
+            </h3>
+            <p className="text-xs text-muted mt-3 leading-relaxed">
+              Inspired by classical brutalist architecture and Japanese wabi-sabi aesthetics, our silhouettes focus entirely on balance, negative space, and light reflection.
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Studio Workshop Stats */}
-      <div className="py-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-        <div>
-          <span className="text-3xl sm:text-4xl font-light text-foreground block">100%</span>
-          <span className="text-xs uppercase tracking-widest text-muted mt-1 block">Solid Hardwood</span>
+        <div className="p-6 bg-white border border-border flex flex-col justify-between">
+          <div>
+            <span className="editorial-badge text-muted">03 / Longevity</span>
+            <h3 className="text-base sm:text-lg font-light text-foreground mt-2">
+              Heirloom Longevity
+            </h3>
+            <p className="text-xs text-muted mt-3 leading-relaxed">
+              Pieces are assembled with traditional mortise-and-tenon joints, sealed with zero-VOC plant oils, and backed by a comprehensive 10-year structural warranty.
+            </p>
+          </div>
         </div>
-        <div>
-          <span className="text-3xl sm:text-4xl font-light text-foreground block">10-Yr</span>
-          <span className="text-xs uppercase tracking-widest text-muted mt-1 block">Framework Warranty</span>
+      </section>
+
+      {/* 6. ANIMATED METRICS (100% / 10-Yr / Zero / 3,400+) */}
+      <section ref={metricsRef} className="py-6 sm:py-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center border-y border-border py-8">
+          <div>
+            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
+              {hardwoodVal}
+            </span>
+            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
+              Solid Hardwood
+            </span>
+          </div>
+          <div>
+            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
+              {warrantyVal}
+            </span>
+            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
+              Framework Warranty
+            </span>
+          </div>
+          <div>
+            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
+              {vocVal}
+            </span>
+            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
+              Toxic VOC Finishes
+            </span>
+          </div>
+          <div>
+            <span className="text-3xl sm:text-4xl lg:text-5xl font-light text-foreground tracking-tight block tabular-nums">
+              {residencesVal}
+            </span>
+            <span className="text-[11px] uppercase tracking-widest text-muted mt-1.5 block">
+              Curated Residences
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="text-3xl sm:text-4xl font-light text-foreground block">Zero</span>
-          <span className="text-xs uppercase tracking-widest text-muted mt-1 block">Toxic VOC Finishes</span>
-        </div>
-        <div>
-          <span className="text-3xl sm:text-4xl font-light text-foreground block">3,400+</span>
-          <span className="text-xs uppercase tracking-widest text-muted mt-1 block">Curated Residences</span>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

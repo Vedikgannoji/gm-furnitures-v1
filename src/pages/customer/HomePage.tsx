@@ -4,7 +4,6 @@ import { ArrowRight, ArrowUpRight, Award, Shield, Truck, Globe } from 'lucide-re
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { mockProducts, mockCategories, mockRooms, mockCollections } from '@/data/mockData'
-import heroImage from '@/assets/hero.png'
 
 const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -118,14 +117,11 @@ export const HomePage: React.FC = () => {
   const { projectsDisplay, followersDisplay, sectionRef: metricsRef } = useCredibilityMetrics(1800)
 
   return (
-    <div className="flex flex-col space-y-12 sm:space-y-16 lg:space-y-20 pb-16 sm:pb-20">
+    <div className="flex flex-col space-y-8 sm:space-y-10 lg:space-y-12 pb-14 sm:pb-16">
       {/* 1. HERO SECTION */}
       <section className="relative min-h-[520px] lg:h-[76vh] w-full bg-[#111111] text-white flex items-center overflow-hidden border-b border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           <div className="lg:col-span-7 max-w-2xl z-10">
-            <span className="editorial-badge text-zinc-400 mb-3 block tracking-[0.2em]">
-              Architectural Living / Edition 2026
-            </span>
             <h1 className="text-4xl sm:text-6xl font-light tracking-tight text-white leading-[1.1]">
               Furniture for considered spaces.
             </h1>
@@ -153,7 +149,7 @@ export const HomePage: React.FC = () => {
           <div className="lg:col-span-5 flex items-center justify-center relative">
             <div className="relative w-full max-w-[340px] aspect-square flex items-center justify-center p-6 sm:p-8 bg-zinc-900/40 border border-zinc-800/80 shadow-2xl">
               <img
-                src={heroImage}
+                src="/hero.png"
                 alt="GM Furniture Atelier"
                 className="w-auto h-auto max-w-full max-h-[280px] object-contain transition-transform duration-700 hover:scale-105"
                 loading="eager"
@@ -205,7 +201,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 3. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION (Tightened & Compact) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-2 sm:-mt-4">
         <div className="bg-white border border-border p-6 sm:p-10 lg:p-12 flex flex-col items-center text-center">
           {/* Logo Placeholder */}
           <div className="w-14 h-14 border-2 border-foreground flex items-center justify-center mb-4 bg-white shadow-sm">
@@ -215,7 +211,7 @@ export const HomePage: React.FC = () => {
           </div>
 
           <span className="editorial-badge text-muted mb-1.5 tracking-[0.2em]">
-            Brand Heritage & Pedigree
+            Brand Heritage
           </span>
 
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight text-foreground max-w-2xl uppercase leading-snug">
@@ -301,7 +297,7 @@ export const HomePage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
           <div>
-            <span className="editorial-badge">Architectural Form</span>
+            <span className="editorial-badge">Categories</span>
             <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
               Shop by Category
             </h2>
@@ -376,7 +372,7 @@ export const HomePage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
           <div>
-            <span className="editorial-badge">Curated Spatial Environments</span>
+            <span className="editorial-badge">Room Inspiration</span>
             <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
               Shop by Room
             </h2>

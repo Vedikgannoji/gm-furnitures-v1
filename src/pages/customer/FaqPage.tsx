@@ -32,7 +32,7 @@ export const FaqPage: React.FC = () => {
       id: 'faq-5',
       title: 'Can I request bespoke custom dimensions for my residence?',
       content:
-        'Yes. Through our Architectural Advisory program, we modify dining table lengths, desk configurations, and credenza storage layouts to conform to specific architectural blueprints. Contact concierge@gmfurniture.in to initiate custom sizing.',
+        'Yes. We can modify dining table lengths and configurations to suit your space. Contact info@gminteriors.co or call our team to discuss custom sizing.',
     },
     {
       id: 'faq-6',

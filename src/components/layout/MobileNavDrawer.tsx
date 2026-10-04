@@ -59,7 +59,6 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
                 className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
               >
                 <span>{cat.name}</span>
-                <span className="text-[10px] text-muted">({cat.itemCount})</span>
               </Link>
             ))}
           </div>

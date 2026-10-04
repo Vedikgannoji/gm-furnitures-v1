@@ -101,7 +101,6 @@ export const CustomerNavbar: React.FC = () => {
                         onClick={() => setIsShopHovered(false)}
                       >
                         <span>{cat.name}</span>
-                        <span className="text-[10px] text-muted">{cat.itemCount} items</span>
                       </Link>
                     ))}
                     <div className="pt-2 mt-1 border-t border-border">

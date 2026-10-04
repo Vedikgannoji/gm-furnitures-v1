@@ -12,15 +12,15 @@ export const Footer: React.FC = () => {
     e.preventDefault()
     if (email) {
       setSubscribed(true)
-      showToast('Subscribed', 'Thank you for subscribing to the GM Atelier Dispatch.', 'success')
+      showToast('Subscribed', 'Thank you for subscribing to our newsletter.', 'success')
       setEmail('')
     }
   }
 
   return (
-    <footer className="bg-background border-t border-border pt-16 pb-12">
+    <footer className="bg-background border-t border-border pt-12 sm:pt-14 pb-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-16 border-b border-border">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 pb-12 sm:pb-14 border-b border-border">
           {/* Brand Manifesto */}
           <div className="lg:col-span-2 pr-0 lg:pr-8">
             <Link to="/" className="inline-block">
@@ -28,16 +28,16 @@ export const Footer: React.FC = () => {
                 GM FURNITURE
               </span>
             </Link>
-            <p className="mt-4 text-xs text-muted leading-relaxed max-w-sm">
-              An architectural furniture studio dedicated to pure form, enduring natural materials, and quiet contemplation. Benchcrafted for considered living spaces.
+            <p className="mt-3 text-xs text-muted leading-relaxed max-w-sm">
+              Handcrafted solid wood furniture and architectural interiors by GM Group. Designed for modern living spaces across India.
             </p>
 
-            <div className="mt-8">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-foreground mb-2">
-                Atelier Dispatch
+            <div className="mt-6">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground mb-1.5">
+                Newsletter & Updates
               </p>
               <p className="text-xs text-muted mb-3">
-                Receive private invitations to new collection releases and architectural features.
+                Receive invitations to new furniture releases and interior design updates.
               </p>
               <form onSubmit={handleSubscribe} className="flex max-w-sm">
                 <input
@@ -153,10 +153,10 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Client Concierge & Legal */}
+          {/* Customer Support & Legal */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-foreground mb-4">
-              Concierge & Policies
+              Customer Support & Policies
             </h4>
             <ul className="space-y-2.5 text-xs text-muted">
               <li>
@@ -191,7 +191,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <Link to="/contact" className="hover:text-foreground transition-colors">
-                  Studio Contact
+                  Contact Us
                 </Link>
               </li>
             </ul>

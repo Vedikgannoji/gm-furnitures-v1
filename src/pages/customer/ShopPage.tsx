@@ -109,15 +109,15 @@ export const ShopPage: React.FC = () => {
   )
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Page Header */}
-      <div className="mb-10 pb-6 border-b border-border">
-        <span className="editorial-badge">Architectural Catalog</span>
+      <div className="mb-8 pb-5 border-b border-border">
+        <span className="editorial-badge">Available Pieces</span>
         <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-foreground mt-1">
           The Complete Collection
         </h1>
         <p className="mt-2 text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-          Explore our premier dining tables engineered with architectural Mortise-and-Tenon joinery, solid European oak, honed Carrara marble, and organic matte finishes.
+          Explore our handcrafted dining tables engineered with traditional Mortise-and-Tenon joinery, solid European oak, honed Carrara marble, and organic matte finishes.
         </p>
       </div>
 

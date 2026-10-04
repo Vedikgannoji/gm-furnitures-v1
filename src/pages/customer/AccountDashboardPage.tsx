@@ -105,19 +105,19 @@ export const AccountDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Atelier Dedicated Concierge Card */}
+      {/* Customer Support Card */}
       <div className="bg-surface border border-border p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-            Dedicated Client Concierge
+            Customer Support
           </h4>
           <p className="text-xs text-muted mt-1 leading-relaxed max-w-lg">
-            Have questions regarding upcoming white-glove installations, custom wood finish matching, or spatial layouts? Your assigned advisory director is available Monday – Saturday.
+            Have questions regarding delivery, custom orders, or interior design consultations? Our team is available Monday – Saturday to assist you.
           </p>
         </div>
         <Link to="/contact">
           <button className="px-4 py-2 bg-foreground text-background text-xs uppercase tracking-wider font-medium hover:bg-black/85 transition-colors whitespace-nowrap">
-            Contact Concierge
+            Contact Support
           </button>
         </Link>
       </div>
