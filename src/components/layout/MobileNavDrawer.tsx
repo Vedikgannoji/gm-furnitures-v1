@@ -2,7 +2,8 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { Drawer } from '@/components/ui/Drawer'
 import { mockCategories, mockRooms, mockCollections } from '@/data/mockData'
-import { ArrowRight, User, Heart, ShieldCheck } from 'lucide-react'
+import { ArrowRight, User, Heart, LogOut } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 export interface MobileNavDrawerProps {
   isOpen: boolean
@@ -10,6 +11,7 @@ export interface MobileNavDrawerProps {
 }
 
 export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) => {
+  const { user, isAuthenticated, logout } = useAuth()
   return (
     <Drawer isOpen={isOpen} onClose={onClose} position="left" title="Navigation" width="max-w-xs">
       <div className="flex flex-col space-y-6 pt-2 pb-8">
@@ -124,14 +126,38 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
 
         {/* Account & Wishlist */}
         <div className="border-t border-border pt-4 flex flex-col space-y-3">
-          <Link
-            to="/account"
-            onClick={onClose}
-            className="flex items-center gap-2.5 text-xs text-foreground hover:text-muted py-1"
-          >
-            <User className="w-4 h-4 text-muted" />
-            <span>My Account & Orders</span>
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/account"
+                onClick={onClose}
+                className="flex items-center gap-2.5 text-xs text-foreground hover:text-muted py-1"
+              >
+                <User className="w-4 h-4 text-muted" />
+                <span>My Account ({user?.name})</span>
+              </Link>
+              <button
+                onClick={() => {
+                  logout()
+                  onClose()
+                }}
+                className="flex items-center gap-2.5 text-xs text-muted hover:text-foreground py-1 text-left"
+              >
+                <LogOut className="w-4 h-4 text-muted" />
+                <span>Sign Out</span>
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              onClick={onClose}
+              className="flex items-center justify-between p-2.5 bg-foreground text-background text-xs uppercase tracking-wider font-semibold hover:bg-black/85 transition-colors"
+            >
+              <span>Sign In to Account</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
+
           <Link
             to="/account/wishlist"
             onClick={onClose}
@@ -139,14 +165,6 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
           >
             <Heart className="w-4 h-4 text-muted" />
             <span>Curated Wishlist</span>
-          </Link>
-          <Link
-            to="/admin"
-            onClick={onClose}
-            className="flex items-center gap-2.5 text-xs font-medium text-foreground bg-surface p-2 border border-border mt-2"
-          >
-            <ShieldCheck className="w-4 h-4 text-muted" />
-            <span>Admin SaaS Portal</span>
           </Link>
         </div>
 

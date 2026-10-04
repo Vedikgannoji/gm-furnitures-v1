@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ShieldCheck,
@@ -14,10 +14,12 @@ import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useCart } from '@/context/CartContext'
+import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/utils'
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate()
+  const { user, token } = useAuth()
   const { items, subtotal, tax, shipping, total, clearCart } = useCart()
 
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbanking'>('card')
@@ -26,23 +28,46 @@ export const CheckoutPage: React.FC = () => {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
   const [generatedOrderNumber, setGeneratedOrderNumber] = useState('')
 
-  // Form states
+  // Form states defaulting from authenticated user
   const [formData, setFormData] = useState({
-    firstName: 'Aditya',
-    lastName: 'Mehta',
-    email: 'aditya.mehta@studioarch.in',
-    phone: '+91 98201 44521',
-    address: '402, Altius Towers, Golf Course Road',
-    apartment: 'Phase 5',
-    city: 'Gurugram',
-    state: 'Haryana',
-    pincode: '122002',
+    firstName: user?.name?.split(' ')[0] || '',
+    lastName: user?.name?.split(' ').slice(1).join(' ') || '',
+    email: user?.email || '',
+    phone: '',
+    address: '',
+    apartment: '',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    pincode: '500033',
     cardNumber: '•••• •••• •••• 4242',
     cardExpiry: '12/28',
     cardCvv: '•••',
-    upiId: 'aditya@okhdfcbank',
+    upiId: '',
     bank: 'HDFC Bank',
   })
+
+  // Prefill default address from API if available
+  useEffect(() => {
+    if (!token) return
+    fetch('/api/addresses', { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.json())
+      .then((addrs) => {
+        if (Array.isArray(addrs) && addrs.length > 0) {
+          const primary = addrs.find((a) => a.isDefault) || addrs[0]
+          setFormData((prev) => ({
+            ...prev,
+            firstName: primary.fullName?.split(' ')[0] || prev.firstName,
+            lastName: primary.fullName?.split(' ').slice(1).join(' ') || prev.lastName,
+            phone: primary.phone || prev.phone,
+            address: primary.addressLine || prev.address,
+            city: primary.city || prev.city,
+            state: primary.state || prev.state,
+            pincode: primary.pincode || prev.pincode,
+          }))
+        }
+      })
+      .catch((err) => console.error('Failed to load prefill address:', err))
+  }, [token])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -51,18 +76,60 @@ export const CheckoutPage: React.FC = () => {
   const whiteGloveExtra = shippingOption === 'white_glove' ? 0 : 0
   const grandTotal = total + whiteGloveExtra
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsProcessing(true)
 
-    // Simulate payment authorization & order confirmation
-    setTimeout(() => {
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim() || user?.name || 'Valued Client'
+    const deliveryAddress = {
+      fullName,
+      phone: formData.phone || '+91 7013672894',
+      addressLine: formData.apartment ? `${formData.address}, ${formData.apartment}` : formData.address || 'Bespoke Residence',
+      city: formData.city || 'Hyderabad',
+      state: formData.state || 'Telangana',
+      pincode: formData.pincode || '500033',
+    }
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          items: items.map((it) => ({
+            product: {
+              id: it.product.id,
+              name: it.product.name,
+              images: it.product.images,
+            },
+            quantity: it.quantity,
+            selectedColor: it.selectedColor,
+            price: it.product.price,
+          })),
+          deliveryAddress,
+          subtotal,
+          discount: 0,
+          total: grandTotal,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setGeneratedOrderNumber(data.order.orderNumber)
+        setIsSuccessModalOpen(true)
+        clearCart()
+      } else {
+        const errData = await res.json()
+        alert(errData.error || 'Failed to place order.')
+      }
+    } catch (err) {
+      console.error('Order placement error:', err)
+      alert('Network error while placing order.')
+    } finally {
       setIsProcessing(false)
-      const newOrderNum = `GMF-${Math.floor(10000 + Math.random() * 90000)}`
-      setGeneratedOrderNumber(newOrderNum)
-      setIsSuccessModalOpen(true)
-      clearCart()
-    }, 1500)
+    }
   }
 
   if (items.length === 0 && !isSuccessModalOpen) {

@@ -9,10 +9,13 @@ import { useCart } from '@/context/CartContext'
 import { formatCurrency } from '@/lib/utils'
 
 export const AccountWishlistPage: React.FC = () => {
-  const { wishlistIds, toggleWishlist } = useWishlist()
+  const { wishlistIds, wishlistProducts, toggleWishlist } = useWishlist()
   const { addToCart, setIsCartDrawerOpen } = useCart()
 
-  const savedProducts = mockProducts.filter((p) => wishlistIds.includes(p.id))
+  // Use real products loaded from database / API
+  const savedProducts = wishlistProducts.length > 0
+    ? wishlistProducts
+    : mockProducts.filter((p) => wishlistIds.includes(p.id))
 
   const handleMoveToCart = (product: typeof mockProducts[0]) => {
     addToCart(product, 1)

@@ -7,15 +7,16 @@ import {
   User,
   Menu,
   ChevronDown,
-  Shield,
 } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import { useWishlist } from '@/context/WishlistContext'
+import { useAuth } from '@/context/AuthContext'
 import { MobileNavDrawer } from './MobileNavDrawer'
 import { mockCategories } from '@/data/mockData'
 
 export const CustomerNavbar: React.FC = () => {
   const navigate = useNavigate()
+  const { user, isAuthenticated } = useAuth()
   const { cartCount, setIsCartDrawerOpen } = useCart()
   const { wishlistCount } = useWishlist()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -177,15 +178,24 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            {/* Account Icon */}
-            <Link
-              to="/account"
-              className="p-1.5 text-muted hover:text-foreground transition-colors"
-              aria-label="Customer account"
-              title="My Account"
-            >
-              <User className="w-4 h-4" />
-            </Link>
+            {/* Auth State: Sign In button when logged out, Profile icon when logged in */}
+            {isAuthenticated ? (
+              <Link
+                to="/account"
+                className="p-1.5 text-muted hover:text-foreground transition-colors"
+                aria-label="Customer account"
+                title={`Client Account: ${user?.name || ''}`}
+              >
+                <User className="w-4 h-4 text-foreground" />
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className="h-8 px-3.5 bg-foreground text-background hover:bg-black/85 text-[11px] font-semibold uppercase tracking-wider flex items-center transition-colors shadow-sm"
+              >
+                Sign In
+              </Link>
+            )}
 
             {/* Wishlist */}
             <Link
@@ -216,16 +226,6 @@ export const CustomerNavbar: React.FC = () => {
                 </span>
               )}
             </button>
-
-            {/* Admin Switch Link Badge */}
-            <Link
-              to="/admin"
-              className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 bg-surface hover:bg-surface-subtle border border-border text-[10px] uppercase tracking-wider text-muted hover:text-foreground transition-colors"
-              title="Switch to Admin Management SaaS"
-            >
-              <Shield className="w-3 h-3" />
-              <span>Admin</span>
-            </Link>
           </div>
         </div>
 

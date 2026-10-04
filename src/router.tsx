@@ -5,6 +5,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { CustomerLayout } from '@/components/layout/CustomerLayout'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { AccountLayout } from '@/pages/customer/AccountLayout'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 // Customer Pages
 import { HomePage } from '@/pages/customer/HomePage'
@@ -75,14 +76,25 @@ export const router = createBrowserRouter([
       { path: 'collections', element: <CollectionsPage /> },
       { path: 'collections/:slug', element: <CollectionDetailPage /> },
       { path: 'search', element: <SearchPage /> },
-      { path: 'cart', element: <CartPage /> },
-      { path: 'checkout', element: <CheckoutPage /> },
+      {
+        path: 'checkout',
+        element: (
+          <ProtectedRoute>
+            <CheckoutPage />
+          </ProtectedRoute>
+        ),
+      },
+      { path: 'auth', element: <AuthPage /> },
       { path: 'login', element: <AuthPage /> },
       { path: 'register', element: <AuthPage /> },
       { path: 'forgot-password', element: <AuthPage /> },
       {
         path: 'account',
-        element: <AccountLayout />,
+        element: (
+          <ProtectedRoute>
+            <AccountLayout />
+          </ProtectedRoute>
+        ),
         children: [
           { index: true, element: <AccountDashboardPage /> },
           { path: 'orders', element: <AccountOrdersPage /> },
