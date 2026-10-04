@@ -77,6 +77,22 @@ export const router = createBrowserRouter([
       { path: 'collections/:slug', element: <CollectionDetailPage /> },
       { path: 'search', element: <SearchPage /> },
       {
+        path: 'cart',
+        element: (
+          <ProtectedRoute>
+            <CartPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'wishlist',
+        element: (
+          <ProtectedRoute>
+            <Navigate to="/account/wishlist" replace />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'checkout',
         element: (
           <ProtectedRoute>
@@ -118,7 +134,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: (
+      <ProtectedRoute requireAdmin>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <AdminDashboardPage /> },
       { path: 'products', element: <AdminProductsPage /> },

@@ -51,63 +51,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (isAuthenticated && token) {
-      // If there are guest cart items in localStorage, merge them once
-      const rawGuest = localStorage.getItem(GUEST_CART_STORAGE_KEY)
-      let guestItems: CartItem[] = []
-      if (rawGuest) {
-        try {
-          guestItems = JSON.parse(rawGuest)
-        } catch {
-          guestItems = []
-        }
-      }
-
-      if (guestItems.length > 0 && !hasMergedRef.current) {
-        hasMergedRef.current = true
-        fetch('/api/cart/merge', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            items: guestItems.map((g) => ({
-              productId: g.product.id,
-              quantity: g.quantity,
-              selectedColor: g.selectedColor,
-            })),
-          }),
-        }).finally(() => {
-          localStorage.removeItem(GUEST_CART_STORAGE_KEY)
-          fetchDBCart(token)
-        })
-      } else {
-        fetchDBCart(token)
-      }
+      fetchDBCart(token)
     } else {
-      // User is logged out: load guest cart from localStorage
-      hasMergedRef.current = false
-      try {
-        const saved = localStorage.getItem(GUEST_CART_STORAGE_KEY)
-        setItems(saved ? JSON.parse(saved) : [])
-      } catch {
-        setItems([])
-      }
+      setItems([])
     }
   }, [isAuthenticated, token, fetchDBCart])
 
-  // Save guest cart to localStorage when not logged in
-  useEffect(() => {
-    if (!isAuthenticated) {
-      try {
-        localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(items))
-      } catch (e) {
-        console.error('Error saving guest cart to localStorage', e)
-      }
-    }
-  }, [items, isAuthenticated])
-
   const addToCart = async (product: Product, quantity = 1, color?: string) => {
+    if (!isAuthenticated || !token) {
+      showToast('Sign In Required', 'Please sign in to add items to your shopping bag.', 'info')
+      window.location.href = '/auth'
+      return
+    }
+
     const selectedColor = color || (product.colors?.[0]?.name ?? 'Standard')
 
     // Optimistic / Local update

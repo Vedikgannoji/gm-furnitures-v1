@@ -1,6 +1,8 @@
 import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
+import bcrypt from 'bcryptjs'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -29,6 +31,7 @@ export function initDatabase() {
       provider TEXT NOT NULL DEFAULT 'local',
       provider_id TEXT,
       avatar_url TEXT,
+      role TEXT NOT NULL DEFAULT 'customer',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -112,6 +115,12 @@ export function initDatabase() {
     );
   `)
 
+  // Migrate role column if not present in existing table
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer';")
+  } catch {}
+
+  seedAdminUser()
   seedProducts()
 }
 
@@ -356,3 +365,29 @@ function seedProducts() {
     now
   )
 }
+
+export function seedAdminUser() {
+  const adminEmail = (process.env.ADMIN_EMAIL || 'vedikgannoi5126@gmail.com').trim().toLowerCase()
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Vedik@2006'
+  const hash = bcrypt.hashSync(adminPassword, 10)
+  const now = new Date().toISOString()
+
+  const existing = db.prepare('SELECT id, email, role FROM users WHERE email = ?').get(adminEmail) as any
+
+  if (!existing) {
+    const adminId = `usr_admin_${crypto.randomUUID()}`
+    db.prepare(`
+      INSERT INTO users (id, name, email, password_hash, provider, role, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'local', 'admin', ?, ?)
+    `).run(adminId, 'Administrator', adminEmail, hash, now, now)
+    console.log(`[Database] Initialized designated admin user: ${adminEmail}`)
+  } else {
+    db.prepare(`
+      UPDATE users
+      SET role = 'admin', password_hash = ?, updated_at = ?
+      WHERE email = ?
+    `).run(hash, now, adminEmail)
+    console.log(`[Database] Ensured admin privileges for: ${adminEmail}`)
+  }
+}
+

@@ -544,7 +544,7 @@ export const mockStoreSettings: StoreSettings = {
   supportEmail: 'concierge@gmfurniture.in',
   supportPhone: '+91 (011) 4920-8000',
   registeredAddress: 'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
-  gstin: '06AAACG1234F1Z8',
+  gstin: '36AFNPV7079J1ZG',
   pan: 'AAACG1234F',
   currency: 'INR (₹)',
   freeShippingThreshold: 50000,

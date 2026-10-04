@@ -7,6 +7,7 @@ import {
   User,
   Menu,
   ChevronDown,
+  X,
 } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import { useWishlist } from '@/context/WishlistContext'
@@ -155,15 +156,19 @@ export const CustomerNavbar: React.FC = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
-                    className="h-8 w-60 bg-surface pl-8 pr-3 text-xs border border-border focus:border-foreground focus:outline-none placeholder:text-muted"
+                    className="h-8 w-60 bg-surface pl-8 pr-7 text-xs border border-border focus:border-foreground focus:outline-none placeholder:text-muted"
                   />
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
                   <button
                     type="button"
-                    onClick={() => setIsSearchOpen(false)}
-                    className="absolute right-2 top-2 text-[10px] text-muted hover:text-foreground"
+                    onClick={() => {
+                      setIsSearchOpen(false)
+                      setSearchQuery('')
+                    }}
+                    className="absolute right-2 top-2 p-0.5 text-muted hover:text-foreground transition-colors"
+                    aria-label="Close search"
                   >
-                    ESC
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </form>
               ) : (
@@ -180,14 +185,46 @@ export const CustomerNavbar: React.FC = () => {
 
             {/* Auth State: Sign In button when logged out, Profile icon when logged in */}
             {isAuthenticated ? (
-              <Link
-                to="/account"
-                className="p-1.5 text-muted hover:text-foreground transition-colors"
-                aria-label="Customer account"
-                title={`Client Account: ${user?.name || ''}`}
-              >
-                <User className="w-4 h-4 text-foreground" />
-              </Link>
+              <>
+                <Link
+                  to="/account"
+                  className="p-1.5 text-muted hover:text-foreground transition-colors"
+                  aria-label="Customer account"
+                  title={`Account: ${user?.name || ''}`}
+                >
+                  <User className="w-4 h-4 text-foreground" />
+                </Link>
+
+                {/* Wishlist (Authenticated only) */}
+                <Link
+                  to="/account/wishlist"
+                  className="p-1.5 text-muted hover:text-foreground transition-colors relative"
+                  aria-label="Saved items wishlist"
+                  title="Wishlist"
+                >
+                  <Heart className="w-4 h-4" />
+                  {wishlistCount > 0 && (
+                    <span className="absolute 0 top-0.5 right-0.5 w-3.5 h-3.5 bg-foreground text-background text-[9px] font-semibold flex items-center justify-center rounded-full">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Cart Trigger (Authenticated only) */}
+                <button
+                  onClick={() => setIsCartDrawerOpen(true)}
+                  className="p-1.5 text-foreground hover:text-muted transition-colors relative flex items-center gap-1.5"
+                  aria-label="Open cart"
+                  title="Shopping Bag"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  {cartCount > 0 && (
+                    <span className="w-4 h-4 bg-foreground text-background text-[10px] font-semibold flex items-center justify-center rounded-full">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+              </>
             ) : (
               <Link
                 to="/auth"
@@ -196,36 +233,6 @@ export const CustomerNavbar: React.FC = () => {
                 Sign In
               </Link>
             )}
-
-            {/* Wishlist */}
-            <Link
-              to="/account/wishlist"
-              className="p-1.5 text-muted hover:text-foreground transition-colors relative"
-              aria-label="Saved items wishlist"
-              title="Saved items"
-            >
-              <Heart className="w-4 h-4" />
-              {wishlistCount > 0 && (
-                <span className="absolute 0 top-0.5 right-0.5 w-3.5 h-3.5 bg-foreground text-background text-[9px] font-semibold flex items-center justify-center rounded-full">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Cart Trigger */}
-            <button
-              onClick={() => setIsCartDrawerOpen(true)}
-              className="p-1.5 text-foreground hover:text-muted transition-colors relative flex items-center gap-1.5"
-              aria-label="Open cart"
-              title="Shopping Bag"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              {cartCount > 0 && (
-                <span className="w-4 h-4 bg-foreground text-background text-[10px] font-semibold flex items-center justify-center rounded-full">
-                  {cartCount}
-                </span>
-              )}
-            </button>
           </div>
         </div>
 
@@ -242,12 +249,25 @@ export const CustomerNavbar: React.FC = () => {
                 className="h-10 w-full bg-surface pl-9 pr-12 text-xs border border-border focus:border-foreground focus:outline-none"
               />
               <Search className="w-4 h-4 absolute left-3 top-3 text-muted" />
-              <button
-                type="submit"
-                className="absolute right-2 top-2 h-6 px-2 text-[10px] uppercase tracking-wider bg-foreground text-background"
-              >
-                Go
-              </button>
+              <div className="absolute right-2 top-2 flex items-center gap-1.5">
+                <button
+                  type="submit"
+                  className="h-6 px-2 text-[10px] uppercase tracking-wider bg-foreground text-background"
+                >
+                  Go
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(false)
+                    setSearchQuery('')
+                  }}
+                  className="h-6 w-6 flex items-center justify-center text-muted hover:text-foreground"
+                  aria-label="Close search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </form>
           </div>
         )}

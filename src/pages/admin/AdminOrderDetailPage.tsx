@@ -240,7 +240,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                 GM FURNITURE ATELIER
               </h2>
               <p className="text-[11px] text-zinc-500 mt-1">Sector 44, Institutional Area, Gurugram, HR 122003</p>
-              <p className="text-[11px] font-mono text-zinc-500">GSTIN: 06AAACG1234F1Z8</p>
+              <p className="text-[11px] font-mono text-zinc-500">GSTIN: 36AFNPV7079J1ZG</p>
             </div>
             <div className="text-right">
               <span className="text-xs font-mono font-bold block text-black">

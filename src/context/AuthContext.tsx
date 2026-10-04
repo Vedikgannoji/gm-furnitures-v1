@@ -5,6 +5,7 @@ export interface UserProfile {
   name: string
   email: string
   provider: string
+  role?: string
   avatar_url?: string
 }
 

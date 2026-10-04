@@ -45,30 +45,18 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (isAuthenticated && token) {
       fetchDBWishlist(token)
     } else {
-      // Guest: load from localStorage without fake items
-      try {
-        const saved = localStorage.getItem(GUEST_WISHLIST_KEY)
-        setWishlistIds(saved ? JSON.parse(saved) : [])
-        setWishlistProducts([])
-      } catch {
-        setWishlistIds([])
-        setWishlistProducts([])
-      }
+      setWishlistIds([])
+      setWishlistProducts([])
     }
   }, [isAuthenticated, token, fetchDBWishlist])
 
-  // Save guest wishlist to localStorage when logged out
-  useEffect(() => {
-    if (!isAuthenticated) {
-      try {
-        localStorage.setItem(GUEST_WISHLIST_KEY, JSON.stringify(wishlistIds))
-      } catch (e) {
-        console.error('Error saving guest wishlist to localStorage', e)
-      }
-    }
-  }, [wishlistIds, isAuthenticated])
-
   const toggleWishlist = async (productId: string, productName?: string) => {
+    if (!isAuthenticated || !token) {
+      showToast('Sign In Required', 'Please sign in to save items to your wishlist.', 'info')
+      window.location.href = '/auth'
+      return
+    }
+
     const exists = wishlistIds.includes(productId)
 
     // Optimistic state update

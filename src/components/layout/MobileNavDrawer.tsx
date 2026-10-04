@@ -136,6 +136,14 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
                 <User className="w-4 h-4 text-muted" />
                 <span>My Account ({user?.name})</span>
               </Link>
+              <Link
+                to="/account/wishlist"
+                onClick={onClose}
+                className="flex items-center gap-2.5 text-xs text-foreground hover:text-muted py-1"
+              >
+                <Heart className="w-4 h-4 text-muted" />
+                <span>Wishlist</span>
+              </Link>
               <button
                 onClick={() => {
                   logout()
@@ -157,15 +165,6 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
               <ArrowRight className="w-4 h-4" />
             </Link>
           )}
-
-          <Link
-            to="/account/wishlist"
-            onClick={onClose}
-            className="flex items-center gap-2.5 text-xs text-foreground hover:text-muted py-1"
-          >
-            <Heart className="w-4 h-4 text-muted" />
-            <span>Curated Wishlist</span>
-          </Link>
         </div>
 
         {/* Secondary Info */}

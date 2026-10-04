@@ -19,6 +19,7 @@ export const AuthPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
 
   const redirectUrl = searchParams.get('redirect') || '/account'
@@ -33,20 +34,25 @@ export const AuthPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
+
+    if (tab === 'register' && password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.')
+      return
+    }
+
     setIsLoading(true)
 
     try {
       if (tab === 'login') {
         await login(email, password)
-        showToast('Signed In', 'Welcome back to your GM Atelier account.', 'success')
+        showToast('Signed In', 'Welcome back.', 'success')
         navigate(redirectUrl, { replace: true })
       } else if (tab === 'register') {
         await register(name, email, password)
-        showToast('Account Created', 'Welcome to GM Furniture. Your profile is ready.', 'success')
+        showToast('Account Created', 'Your account has been created.', 'success')
         navigate(redirectUrl, { replace: true })
       } else {
-        // Forgot password note
-        showToast('Recovery Link Dispatched', 'If this email exists, password reset instructions have been sent.', 'info')
+        showToast('Instructions Sent', 'If an account exists with this email, password reset instructions have been sent.', 'info')
         setTab('login')
       }
     } catch (err: any) {
@@ -66,7 +72,7 @@ export const AuthPage: React.FC = () => {
     setErrorMessage(null)
     try {
       await loginWithGoogle(credentialResponse.credential)
-      showToast('Google Sign-In Successful', 'Authenticated with Google account.', 'success')
+      showToast('Signed In', 'Signed in with Google.', 'success')
       navigate(redirectUrl, { replace: true })
     } catch (err: any) {
       setErrorMessage(err.message || 'Google authentication failed.')
@@ -83,14 +89,14 @@ export const AuthPage: React.FC = () => {
           GM FURNITURE
         </span>
         <h1 className="text-2xl font-light tracking-tight text-foreground mt-3">
-          {tab === 'login' && 'Client Portal Access'}
-          {tab === 'register' && 'Create Client Account'}
+          {tab === 'login' && 'Welcome Back'}
+          {tab === 'register' && 'Get Started'}
           {tab === 'forgot' && 'Account Recovery'}
         </h1>
         <p className="text-xs text-muted mt-2">
-          {tab === 'login' && 'Manage your architectural orders, white-glove deliveries, and curated wishlist.'}
-          {tab === 'register' && 'Join GM Atelier to save spatial room plans and access private editions.'}
-          {tab === 'forgot' && 'Enter your registered email to receive a secure restoration token.'}
+          {tab === 'login' && 'Sign in to continue.'}
+          {tab === 'register' && 'Create your account.'}
+          {tab === 'forgot' && 'Enter your email address to reset your password.'}
         </p>
       </div>
 
@@ -145,7 +151,7 @@ export const AuthPage: React.FC = () => {
                   onError={() => setErrorMessage('Google Sign-In was cancelled or failed.')}
                   theme="outline"
                   size="large"
-                  text={tab === 'login' ? 'signin_with' : 'signup_with'}
+                  text="continue_with"
                   shape="rectangular"
                   width="100%"
                 />
@@ -156,7 +162,7 @@ export const AuthPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setErrorMessage(
-                      'Google OAuth requires GOOGLE_CLIENT_ID and VITE_GOOGLE_CLIENT_ID in your .env file. Please add your Google Client ID to enable instant Google Sign-In.'
+                      'Google OAuth requires GOOGLE_CLIENT_ID and VITE_GOOGLE_CLIENT_ID in your .env file.'
                     )
                   }}
                   className="w-full flex items-center justify-center gap-3 py-2 text-xs font-medium text-foreground hover:bg-zinc-50 transition-colors"
@@ -189,7 +195,7 @@ export const AuthPage: React.FC = () => {
                 <div className="w-full border-t border-border" />
               </div>
               <span className="relative px-3 bg-surface text-[10px] uppercase tracking-widest text-muted">
-                Or Continue With Email
+                OR CONTINUE WITH EMAIL
               </span>
             </div>
           </div>
@@ -207,7 +213,7 @@ export const AuthPage: React.FC = () => {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Aditya Mehta"
+                  placeholder="Your Name"
                   className="w-full h-10 bg-background border border-border pl-9 pr-3 text-xs focus:border-foreground focus:outline-none"
                 />
                 <User className="w-4 h-4 absolute left-3 top-3 text-muted" />
@@ -225,7 +231,7 @@ export const AuthPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
+                placeholder="name@example.com"
                 className="w-full h-10 bg-background border border-border pl-9 pr-3 text-xs focus:border-foreground focus:outline-none"
               />
               <Mail className="w-4 h-4 absolute left-3 top-3 text-muted" />
@@ -266,6 +272,26 @@ export const AuthPage: React.FC = () => {
             </div>
           )}
 
+          {tab === 'register' && (
+            <div>
+              <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full h-10 bg-background border border-border pl-9 pr-3 text-xs focus:border-foreground focus:outline-none"
+                />
+                <Lock className="w-4 h-4 absolute left-3 top-3 text-muted" />
+              </div>
+            </div>
+          )}
+
           <div className="pt-2">
             <Button
               type="submit"
@@ -274,9 +300,9 @@ export const AuthPage: React.FC = () => {
               isLoading={isLoading}
               className="w-full text-xs uppercase tracking-widest font-semibold"
             >
-              {tab === 'login' && 'Sign In to Account'}
-              {tab === 'register' && 'Create Client Profile'}
-              {tab === 'forgot' && 'Dispatch Recovery Email'}
+              {tab === 'login' && 'Sign In'}
+              {tab === 'register' && 'Register'}
+              {tab === 'forgot' && 'Send Instructions'}
             </Button>
           </div>
         </form>

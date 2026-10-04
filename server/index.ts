@@ -62,6 +62,7 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
       name: name.trim(),
       email: normalizedEmail,
       provider: 'local',
+      role: 'customer',
     }
 
     const token = signToken(user)
@@ -87,7 +88,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase()
-    const userRow = db.prepare('SELECT id, name, email, password_hash, provider, avatar_url FROM users WHERE email = ?').get(normalizedEmail) as any
+    const userRow = db.prepare('SELECT id, name, email, password_hash, provider, role, avatar_url FROM users WHERE email = ?').get(normalizedEmail) as any
 
     if (!userRow || !userRow.password_hash) {
       return res.status(401).json({ error: 'Invalid email or password.' })
@@ -103,6 +104,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       name: userRow.name,
       email: userRow.email,
       provider: userRow.provider,
+      role: userRow.role || 'customer',
       avatar_url: userRow.avatar_url,
     }
 
@@ -132,14 +134,14 @@ app.post('/api/auth/google', async (req: Request, res: Response) => {
     const normalizedEmail = googlePayload.email.trim().toLowerCase()
     const now = new Date().toISOString()
 
-    let userRow = db.prepare('SELECT id, name, email, provider, avatar_url FROM users WHERE email = ?').get(normalizedEmail) as any
+    let userRow = db.prepare('SELECT id, name, email, provider, role, avatar_url FROM users WHERE email = ?').get(normalizedEmail) as any
 
     if (!userRow) {
       // Create new user linked to Google
       const userId = `usr_${crypto.randomUUID()}`
       db.prepare(`
-        INSERT INTO users (id, name, email, provider, provider_id, avatar_url, created_at, updated_at)
-        VALUES (?, ?, ?, 'google', ?, ?, ?, ?)
+        INSERT INTO users (id, name, email, provider, provider_id, role, avatar_url, created_at, updated_at)
+        VALUES (?, ?, ?, 'google', ?, 'customer', ?, ?, ?)
       `).run(userId, googlePayload.name, normalizedEmail, googlePayload.sub, googlePayload.picture || null, now, now)
 
       userRow = {
@@ -147,6 +149,7 @@ app.post('/api/auth/google', async (req: Request, res: Response) => {
         name: googlePayload.name,
         email: normalizedEmail,
         provider: 'google',
+        role: 'customer',
         avatar_url: googlePayload.picture,
       }
     } else {
@@ -165,6 +168,7 @@ app.post('/api/auth/google', async (req: Request, res: Response) => {
       name: userRow.name,
       email: userRow.email,
       provider: userRow.provider,
+      role: userRow.role || 'customer',
       avatar_url: userRow.avatar_url,
     }
 

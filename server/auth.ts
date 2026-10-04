@@ -18,6 +18,7 @@ export interface AuthUser {
   name: string
   email: string
   provider: string
+  role?: string
   avatar_url?: string
 }
 
@@ -32,6 +33,7 @@ export function signToken(user: AuthUser): string {
       email: user.email,
       name: user.name,
       provider: user.provider,
+      role: user.role || 'customer',
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
@@ -45,6 +47,15 @@ export function verifyToken(token: string): AuthUser | null {
   } catch {
     return null
   }
+}
+
+export function verifyAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  verifyAuth(req, res, () => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Admin privileges required.' })
+    }
+    next()
+  })
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -103,7 +114,7 @@ export function verifyAuth(req: AuthenticatedRequest, res: Response, next: NextF
   }
 
   // Verify user still exists in database
-  const user = db.prepare('SELECT id, name, email, provider, avatar_url FROM users WHERE id = ?').get(decoded.id) as AuthUser | undefined
+  const user = db.prepare('SELECT id, name, email, provider, role, avatar_url FROM users WHERE id = ?').get(decoded.id) as AuthUser | undefined
 
   if (!user) {
     return res.status(401).json({ error: 'User account no longer exists.' })
@@ -124,7 +135,7 @@ export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: Ne
     const token = authHeader.split(' ')[1]
     const decoded = verifyToken(token)
     if (decoded) {
-      const user = db.prepare('SELECT id, name, email, provider, avatar_url FROM users WHERE id = ?').get(decoded.id) as AuthUser | undefined
+      const user = db.prepare('SELECT id, name, email, provider, role, avatar_url FROM users WHERE id = ?').get(decoded.id) as AuthUser | undefined
       if (user) {
         req.user = user
       }

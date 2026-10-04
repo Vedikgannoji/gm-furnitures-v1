@@ -20,7 +20,7 @@ export const Footer: React.FC = () => {
   return (
     <footer className="bg-background border-t border-border pt-12 sm:pt-14 pb-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 pb-12 sm:pb-14 border-b border-border">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 pb-12 sm:pb-14 border-b border-border">
           {/* Brand Manifesto */}
           <div className="lg:col-span-2 pr-0 lg:pr-8">
             <Link to="/" className="inline-block">
@@ -58,102 +58,26 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Shop */}
+          {/* Collection */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-foreground mb-4">
-              Catalog
+              Collection
             </h4>
             <ul className="space-y-2.5 text-xs text-muted">
               <li>
                 <Link to="/shop" className="hover:text-foreground transition-colors">
-                  All Furniture
+                  View Total Collection
                 </Link>
               </li>
               <li>
-                <Link to="/shop/sofas" className="hover:text-foreground transition-colors">
-                  Sofas & Sectionals
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/chairs" className="hover:text-foreground transition-colors">
-                  Lounge Chairs
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/tables" className="hover:text-foreground transition-colors">
-                  Coffee & Side Tables
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/dining" className="hover:text-foreground transition-colors">
-                  Dining Tables & Chairs
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/beds" className="hover:text-foreground transition-colors">
-                  Beds & Headboards
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/storage" className="hover:text-foreground transition-colors">
-                  Storage & Credenzas
+                <Link to="/shop" className="hover:text-foreground transition-colors">
+                  New Arrivals
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Rooms & Collections */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-foreground mb-4">
-              Curations
-            </h4>
-            <ul className="space-y-2.5 text-xs text-muted">
-              <li>
-                <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center justify-between">
-                  <span>Shop by Room</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center justify-between">
-                  <span>Living & Dining Rooms</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/rooms" className="hover:text-foreground transition-colors flex items-center justify-between">
-                  <span>Bedroom & Studio</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
-                  <span>Signature Collections</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
-                  <span>The Minimalist Line</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
-                  <span>Nordic Atelier</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/collections" className="hover:text-foreground transition-colors flex items-center justify-between">
-                  <span>Architectural Series</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 bg-zinc-100 text-zinc-500 font-medium">Soon</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Customer Support & Legal */}
+          {/* Customer Support & Policies */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-foreground mb-4">
               Customer Support & Policies
@@ -165,16 +89,6 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/policies/shipping" className="hover:text-foreground transition-colors">
-                  White-Glove Shipping
-                </Link>
-              </li>
-              <li>
-                <Link to="/policies/returns" className="hover:text-foreground transition-colors">
-                  Returns & Guarantee
-                </Link>
-              </li>
-              <li>
                 <Link to="/policies/privacy" className="hover:text-foreground transition-colors">
                   Privacy Policy
                 </Link>
@@ -182,11 +96,6 @@ export const Footer: React.FC = () => {
               <li>
                 <Link to="/policies/terms" className="hover:text-foreground transition-colors">
                   Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="hover:text-foreground transition-colors">
-                  Care & FAQ
                 </Link>
               </li>
               <li>

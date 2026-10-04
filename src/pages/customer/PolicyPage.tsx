@@ -1,5 +1,5 @@
 import React from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 
 export const PolicyPage: React.FC = () => {
@@ -89,7 +89,7 @@ export const PolicyPage: React.FC = () => {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
       <Breadcrumbs
         items={[
-          { label: 'Policies', href: '/policies/shipping' },
+          { label: 'Policies', href: '/policies/privacy' },
           { label: current.title },
         ]}
         className="mb-3 sm:mb-4"
@@ -112,39 +112,6 @@ export const PolicyPage: React.FC = () => {
             <p className="text-xs text-muted leading-relaxed">{sec.body}</p>
           </div>
         ))}
-      </div>
-
-      {/* Other Policies Switcher */}
-      <div className="mt-16 pt-8 border-t border-border">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted block mb-3">
-          Explore Other Policies
-        </span>
-        <div className="flex flex-wrap gap-4 text-xs">
-          <Link
-            to="/policies/shipping"
-            className={`hover:text-foreground ${policyType === 'shipping' ? 'font-semibold text-foreground underline' : 'text-muted'}`}
-          >
-            White-Glove Shipping
-          </Link>
-          <Link
-            to="/policies/returns"
-            className={`hover:text-foreground ${policyType === 'returns' ? 'font-semibold text-foreground underline' : 'text-muted'}`}
-          >
-            Returns & Guarantee
-          </Link>
-          <Link
-            to="/policies/privacy"
-            className={`hover:text-foreground ${policyType === 'privacy' ? 'font-semibold text-foreground underline' : 'text-muted'}`}
-          >
-            Privacy Policy
-          </Link>
-          <Link
-            to="/policies/terms"
-            className={`hover:text-foreground ${policyType === 'terms' ? 'font-semibold text-foreground underline' : 'text-muted'}`}
-          >
-            Terms of Service
-          </Link>
-        </div>
       </div>
     </div>
   )
