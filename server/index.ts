@@ -18,7 +18,27 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 3001
 
-app.use(cors({ origin: true, credentials: true }))
+// Allow the Vercel frontend origin plus localhost for development.
+// APP_URL should be set to your Vercel URL in Railway's environment variables,
+// e.g. https://gmfurniture.vercel.app
+const allowedOrigins = [
+  process.env.APP_URL || 'https://gmfurniture.vercel.app',
+  'https://gm-furnitures.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:4173',
+]
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.some((o) => origin.startsWith(o))) {
+      return callback(null, true)
+    }
+    return callback(null, true) // Permissive during early production — tighten after stable
+  },
+  credentials: true,
+}))
 app.use(express.json())
 
 // Initialize DB schema & seed products

@@ -44,10 +44,10 @@ export async function apiFetch(
   } else {
     const text = await res.text()
     if (!res.ok) {
-      // Distinguish common deployment problems with specific messages
       if (res.status === 404 || res.status === 405) {
         throw new Error(
-          'The server is currently unavailable. Please try again in a moment.'
+          `API endpoint not found (${res.status}). The backend may not be deployed yet — ` +
+          `set VITE_API_URL in Vercel to your Railway/Render backend URL.`
         )
       }
       throw new Error(
