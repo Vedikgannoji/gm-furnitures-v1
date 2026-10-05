@@ -6,11 +6,12 @@ export interface ColorOption {
 }
 
 export interface ProductDimensions {
-  width: string
-  depth: string
-  height: string
+  width: string | null
+  depth: string | null
+  height: string | null
   seatHeight?: string
-  weight?: string
+  weight?: string | null
+  unspecified?: boolean
 }
 
 export interface SpecificationItem {

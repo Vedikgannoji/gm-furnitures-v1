@@ -37,10 +37,11 @@ export const AdminProductFormPage: React.FC = () => {
     shortDescription: '',
     material: 'Solid European White Oak',
     finish: 'Natural Matte Hardwax Oil',
-    width: '180 cm',
-    depth: '90 cm',
-    height: '75 cm',
-    weight: '45 kg',
+    width: '',
+    depth: '',
+    height: '',
+    weight: '',
+    dimensionsUnspecified: false,
     stock: 5,
     threshold: 3,
     status: 'published',
@@ -78,6 +79,8 @@ export const AdminProductFormPage: React.FC = () => {
 
         const p = await res.json()
         if (isMounted) {
+          // Detect whether the stored dimensions were marked unspecified
+          const dimsUnspecified = Boolean(p.dimensions?.unspecified)
           setForm({
             name: p.name || '',
             slug: p.slug || '',
@@ -92,10 +95,11 @@ export const AdminProductFormPage: React.FC = () => {
             shortDescription: p.shortDescription || '',
             material: p.material || '',
             finish: p.finish || '',
-            width: p.dimensions?.width || '',
-            depth: p.dimensions?.depth || '',
-            height: p.dimensions?.height || '',
-            weight: p.dimensions?.weight || '',
+            width: dimsUnspecified ? '' : (p.dimensions?.width || ''),
+            depth: dimsUnspecified ? '' : (p.dimensions?.depth || ''),
+            height: dimsUnspecified ? '' : (p.dimensions?.height || ''),
+            weight: dimsUnspecified ? '' : (p.dimensions?.weight || ''),
+            dimensionsUnspecified: dimsUnspecified,
             stock: p.stock !== undefined ? p.stock : 5,
             threshold: 3,
             status: p.status || 'published',
@@ -288,10 +292,15 @@ export const AdminProductFormPage: React.FC = () => {
       images: validImages,
       colors: form.colors,
       dimensions: {
-        width: form.width,
-        depth: form.depth,
-        height: form.height,
-        weight: form.weight,
+        ...(form.dimensionsUnspecified
+          ? { unspecified: true, width: null, depth: null, height: null, weight: null }
+          : {
+              unspecified: false,
+              width: form.width,
+              depth: form.depth,
+              height: form.height,
+              weight: form.weight,
+            }),
       },
       material: form.material.trim(),
       finish: form.finish.trim(),
@@ -749,62 +758,56 @@ export const AdminProductFormPage: React.FC = () => {
               Dimensions & Specifications
             </h3>
 
+            {/* Dimensions unspecified toggle */}
+            <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.dimensionsUnspecified}
+                onChange={(e) => {
+                  const checked = e.target.checked
+                  setForm((prev) => ({
+                    ...prev,
+                    dimensionsUnspecified: checked,
+                    // Clear values when marking unspecified so stale data isn't visible
+                    ...(checked ? { width: '', depth: '', height: '', weight: '' } : {}),
+                  }))
+                }}
+                className="w-3.5 h-3.5 accent-foreground"
+              />
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                Dimensions unspecified
+              </span>
+              {form.dimensionsUnspecified && (
+                <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 font-medium">
+                  Storefront will display "Unspecified"
+                </span>
+              )}
+            </label>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Width
-                </label>
-                <input
-                  type="text"
-                  name="width"
-                  value={form.width}
-                  onChange={handleChange}
-                  placeholder="240 cm"
-                  className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Depth
-                </label>
-                <input
-                  type="text"
-                  name="depth"
-                  value={form.depth}
-                  onChange={handleChange}
-                  placeholder="100 cm"
-                  className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Height
-                </label>
-                <input
-                  type="text"
-                  name="height"
-                  value={form.height}
-                  onChange={handleChange}
-                  placeholder="76 cm"
-                  className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Weight
-                </label>
-                <input
-                  type="text"
-                  name="weight"
-                  value={form.weight}
-                  onChange={handleChange}
-                  placeholder="85 kg"
-                  className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
-                />
-              </div>
+              {(['width', 'depth', 'height', 'weight'] as const).map((dim) => (
+                <div key={dim}>
+                  <label className={`block text-[11px] font-medium uppercase tracking-wider mb-1 ${
+                    form.dimensionsUnspecified ? 'text-border' : 'text-muted'
+                  }`}>
+                    {dim.charAt(0).toUpperCase() + dim.slice(1)}
+                  </label>
+                  {form.dimensionsUnspecified ? (
+                    <div className="w-full h-10 bg-surface border border-border px-3 flex items-center text-xs text-border italic select-none cursor-not-allowed">
+                      Unspecified
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      name={dim}
+                      value={form[dim]}
+                      onChange={handleChange}
+                      placeholder={dim === 'weight' ? '85 kg' : dim === 'height' ? '76 cm' : dim === 'depth' ? '100 cm' : '240 cm'}
+                      className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
+                    />
+                  )}
+                </div>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">

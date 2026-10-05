@@ -3,7 +3,7 @@ import { Plus, Edit3, Trash2, Home, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { mockRooms, mockProducts } from '@/data/mockData'
+import { mockRooms } from '@/data/mockData'
 import { Room } from '@/types'
 import { useToast } from '@/context/ToastContext'
 
@@ -29,7 +29,7 @@ export const AdminRoomsPage: React.FC = () => {
       tagline: '',
       description: '',
       image: '',
-      featuredProductIds: ['gm-prod-01', 'gm-prod-03'],
+      featuredProductIds: [],
     })
     setIsModalOpen(true)
   }

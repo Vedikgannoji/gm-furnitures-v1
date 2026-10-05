@@ -103,25 +103,39 @@ export const ProductDetailPage: React.FC = () => {
       title: 'Dimensions & Sizing',
       content: (
         <div className="space-y-2 text-xs">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3 border border-border">
-            <div>
-              <span className="text-[10px] text-muted uppercase tracking-wider block">Width</span>
-              <span className="font-semibold text-foreground text-sm">{product.dimensions.width}</span>
+          {product.dimensions?.unspecified ? (
+            <div className="bg-surface p-3 border border-border text-xs text-muted italic">
+              Dimensions not specified for this piece. Please contact us for detailed measurements.
             </div>
-            <div>
-              <span className="text-[10px] text-muted uppercase tracking-wider block">Depth</span>
-              <span className="font-semibold text-foreground text-sm">{product.dimensions.depth}</span>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3 border border-border">
+              <div>
+                <span className="text-[10px] text-muted uppercase tracking-wider block">Width</span>
+                <span className="font-semibold text-foreground text-sm">
+                  {product.dimensions?.width || 'Unspecified'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-muted uppercase tracking-wider block">Depth</span>
+                <span className="font-semibold text-foreground text-sm">
+                  {product.dimensions?.depth || 'Unspecified'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-muted uppercase tracking-wider block">Height</span>
+                <span className="font-semibold text-foreground text-sm">
+                  {product.dimensions?.height || 'Unspecified'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-muted uppercase tracking-wider block">Weight</span>
+                <span className="font-semibold text-foreground text-sm">
+                  {product.dimensions?.weight || 'Unspecified'}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] text-muted uppercase tracking-wider block">Height</span>
-              <span className="font-semibold text-foreground text-sm">{product.dimensions.height}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-muted uppercase tracking-wider block">Weight</span>
-              <span className="font-semibold text-foreground text-sm">{product.dimensions.weight || '32 kg'}</span>
-            </div>
-          </div>
-          {product.dimensions.seatHeight && (
+          )}
+          {!product.dimensions?.unspecified && product.dimensions?.seatHeight && (
             <p className="text-xs text-muted pt-1">
               Seat Height from floor: <span className="font-medium text-foreground">{product.dimensions.seatHeight}</span>
             </p>

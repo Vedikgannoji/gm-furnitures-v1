@@ -1096,6 +1096,327 @@ app.get('/api/admin/stats', verifyAdmin, (req: AuthenticatedRequest, res: Respon
   }
 })
 
+// ==========================================
+// 7. ADMIN ORDERS ENDPOINTS (verifyAdmin protected)
+// ==========================================
+
+// GET /api/admin/orders — all orders with customer info
+app.get('/api/admin/orders', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const rows = db.prepare(`
+      SELECT
+        o.id, o.order_number, o.subtotal, o.discount, o.total,
+        o.status, o.delivery_address_json, o.items_json, o.created_at,
+        u.id as user_id, u.name as customer_name, u.email as customer_email
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      ORDER BY o.created_at DESC
+    `).all() as any[]
+
+    const orders = rows.map((r) => ({
+      id: r.id,
+      orderNumber: r.order_number,
+      date: new Date(r.created_at).toLocaleDateString('en-IN', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      }),
+      createdAt: r.created_at,
+      customer: {
+        id: r.user_id || '',
+        name: r.customer_name || 'Guest',
+        email: r.customer_email || '',
+      },
+      items: JSON.parse(r.items_json || '[]'),
+      subtotal: r.subtotal,
+      discount: r.discount,
+      total: r.total,
+      status: r.status,
+      deliveryAddress: JSON.parse(r.delivery_address_json || '{}'),
+    }))
+
+    return res.json(orders)
+  } catch (error: any) {
+    console.error('Admin fetch orders error:', error)
+    return res.status(500).json({ error: 'Failed to fetch orders.' })
+  }
+})
+
+// GET /api/admin/orders/:id — single order detail
+app.get('/api/admin/orders/:id', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params
+    const r = db.prepare(`
+      SELECT
+        o.id, o.order_number, o.subtotal, o.discount, o.total,
+        o.status, o.delivery_address_json, o.items_json, o.created_at,
+        u.id as user_id, u.name as customer_name, u.email as customer_email
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      WHERE o.id = ?
+    `).get(id) as any
+
+    if (!r) {
+      return res.status(404).json({ error: 'Order not found.' })
+    }
+
+    return res.json({
+      id: r.id,
+      orderNumber: r.order_number,
+      date: new Date(r.created_at).toLocaleDateString('en-IN', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      }),
+      createdAt: r.created_at,
+      customer: {
+        id: r.user_id || '',
+        name: r.customer_name || 'Guest',
+        email: r.customer_email || '',
+      },
+      items: JSON.parse(r.items_json || '[]'),
+      subtotal: r.subtotal,
+      discount: r.discount,
+      total: r.total,
+      status: r.status,
+      deliveryAddress: JSON.parse(r.delivery_address_json || '{}'),
+    })
+  } catch (error: any) {
+    console.error('Admin fetch order detail error:', error)
+    return res.status(500).json({ error: 'Failed to fetch order.' })
+  }
+})
+
+// PATCH /api/admin/orders/:id/status — update order fulfillment status
+app.patch('/api/admin/orders/:id/status', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    const allowed = ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
+    if (!status || !allowed.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` })
+    }
+
+    const existing = db.prepare('SELECT id FROM orders WHERE id = ?').get(id)
+    if (!existing) {
+      return res.status(404).json({ error: 'Order not found.' })
+    }
+
+    db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, id)
+    return res.json({ success: true, status })
+  } catch (error: any) {
+    console.error('Admin update order status error:', error)
+    return res.status(500).json({ error: 'Failed to update order status.' })
+  }
+})
+
+// ==========================================
+// 8. ADMIN CUSTOMERS ENDPOINT (verifyAdmin protected)
+// ==========================================
+
+// GET /api/admin/customers — all non-admin users with order aggregates
+app.get('/api/admin/customers', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const users = db.prepare(`
+      SELECT id, name, email, provider, created_at
+      FROM users
+      WHERE role != 'admin'
+      ORDER BY created_at DESC
+    `).all() as any[]
+
+    const customers = users.map((u) => {
+      const orderAgg = db.prepare(`
+        SELECT COUNT(*) as total_orders, COALESCE(SUM(total), 0) as total_spent,
+               MAX(created_at) as last_order_date
+        FROM orders WHERE user_id = ?
+      `).get(u.id) as any
+
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        provider: u.provider,
+        joinedDate: new Date(u.created_at).toLocaleDateString('en-IN', {
+          month: 'short', day: 'numeric', year: 'numeric',
+        }),
+        totalOrders: orderAgg?.total_orders || 0,
+        totalSpent: orderAgg?.total_spent || 0,
+        lastOrderDate: orderAgg?.last_order_date
+          ? new Date(orderAgg.last_order_date).toLocaleDateString('en-IN', {
+              month: 'short', day: 'numeric', year: 'numeric',
+            })
+          : null,
+      }
+    })
+
+    return res.json(customers)
+  } catch (error: any) {
+    console.error('Admin fetch customers error:', error)
+    return res.status(500).json({ error: 'Failed to fetch customers.' })
+  }
+})
+
+// ==========================================
+// 9. ADMIN ANALYTICS ENDPOINT (verifyAdmin protected)
+// ==========================================
+
+// GET /api/admin/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD
+app.get('/api/admin/analytics', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { from, to } = req.query as { from?: string; to?: string }
+
+    // Build date filter — default to all time
+    let dateFilter = ''
+    const params: any[] = []
+    if (from) {
+      dateFilter += ' AND o.created_at >= ?'
+      params.push(from)
+    }
+    if (to) {
+      // Include the full `to` day by going to midnight of the next day
+      dateFilter += ' AND o.created_at < ?'
+      const toDate = new Date(to)
+      toDate.setDate(toDate.getDate() + 1)
+      params.push(toDate.toISOString().split('T')[0])
+    }
+
+    // KPI totals
+    const kpiRow = db.prepare(`
+      SELECT
+        COUNT(*)                            AS total_orders,
+        COALESCE(SUM(o.total), 0)          AS total_revenue,
+        COALESCE(AVG(o.total), 0)          AS avg_order_value
+      FROM orders o
+      WHERE 1=1 ${dateFilter}
+    `).get(...params) as any
+
+    const totalOrders: number  = kpiRow?.total_orders  || 0
+    const totalRevenue: number = kpiRow?.total_revenue || 0
+    const avgOrderValue: number = kpiRow?.avg_order_value || 0
+
+    // Total customers (registered non-admin users, not date-filtered — it's a cumulative metric)
+    const totalCustomers: number = (db.prepare(
+      "SELECT COUNT(*) as c FROM users WHERE role != 'admin'"
+    ).get() as any).c || 0
+
+    // Repeat customer ratio: customers with >1 order / customers with ≥1 order
+    const repeatRow = db.prepare(`
+      SELECT
+        COUNT(CASE WHEN order_count > 1 THEN 1 END) AS repeat_customers,
+        COUNT(*) AS customers_with_orders
+      FROM (
+        SELECT user_id, COUNT(*) AS order_count FROM orders GROUP BY user_id
+      )
+    `).get() as any
+    const repeatRatio = repeatRow?.customers_with_orders > 0
+      ? Math.round((repeatRow.repeat_customers / repeatRow.customers_with_orders) * 100)
+      : 0
+
+    // Monthly revenue breakdown (last 6 months within range)
+    const monthlyRows = db.prepare(`
+      SELECT
+        strftime('%b', o.created_at) AS month,
+        strftime('%Y-%m', o.created_at) AS month_key,
+        COUNT(*) AS orders,
+        COALESCE(SUM(o.total), 0) AS revenue
+      FROM orders o
+      WHERE 1=1 ${dateFilter}
+      GROUP BY month_key
+      ORDER BY month_key ASC
+      LIMIT 12
+    `).all(...params) as any[]
+
+    // Category sales from order items (items_json is an array of {productId, name, sku, price, quantity})
+    const allOrders = db.prepare(`
+      SELECT o.items_json, o.total
+      FROM orders o
+      WHERE 1=1 ${dateFilter}
+    `).all(...params) as any[]
+
+    const categoryMap: Record<string, number> = {}
+    const productMap: Record<string, { name: string; sku: string; image: string; revenue: number; units: number }> = {}
+
+    for (const order of allOrders) {
+      let items: any[] = []
+      try { items = JSON.parse(order.items_json || '[]') } catch {}
+
+      for (const item of items) {
+        const lineTotal = (item.price || 0) * (item.quantity || 1)
+
+        // Look up the product's category from the products table
+        const prod = db.prepare('SELECT category, images_json FROM products WHERE id = ? OR sku = ?')
+          .get(item.productId || '', item.sku || '') as any
+
+        const category = prod?.category || 'other'
+        categoryMap[category] = (categoryMap[category] || 0) + lineTotal
+
+        // Product performance
+        const key = item.productId || item.sku || item.name
+        if (!productMap[key]) {
+          let firstImg = ''
+          try { firstImg = prod ? JSON.parse(prod.images_json || '[]')[0] || '' : '' } catch {}
+          productMap[key] = { name: item.name || '', sku: item.sku || '', image: firstImg, revenue: 0, units: 0 }
+        }
+        productMap[key].revenue += lineTotal
+        productMap[key].units   += item.quantity || 1
+      }
+    }
+
+    const categorySales = Object.entries(categoryMap)
+      .map(([category, value]) => ({ category, value }))
+      .sort((a, b) => b.value - a.value)
+
+    const topProducts = Object.values(productMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+
+    return res.json({
+      totalOrders,
+      totalRevenue,
+      avgOrderValue: Math.round(avgOrderValue),
+      totalCustomers,
+      repeatRatio,
+      monthlyRevenue: monthlyRows.map((r) => ({
+        month: r.month,
+        revenue: r.revenue,
+        orders: r.orders,
+      })),
+      categorySales,
+      topProducts,
+    })
+  } catch (error: any) {
+    console.error('Admin analytics error:', error)
+    return res.status(500).json({ error: 'Failed to compute analytics.' })
+  }
+})
+
+// ==========================================
+// 10. ADMIN STOCK PATCH (verifyAdmin protected)
+// ==========================================
+
+// PATCH /api/admin/products/:id/stock — increment or decrement stock by delta
+app.patch('/api/admin/products/:id/stock', verifyAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params
+    const { delta } = req.body   // +1 or -1
+
+    if (delta === undefined || typeof delta !== 'number') {
+      return res.status(400).json({ error: 'delta (number) is required.' })
+    }
+
+    const existing = db.prepare('SELECT id, stock FROM products WHERE id = ?').get(id) as any
+    if (!existing) {
+      return res.status(404).json({ error: 'Product not found.' })
+    }
+
+    const newStock = Math.max(0, existing.stock + delta)
+    db.prepare('UPDATE products SET stock = ?, updated_at = ? WHERE id = ?')
+      .run(newStock, new Date().toISOString(), id)
+
+    return res.json({ success: true, stock: newStock })
+  } catch (error: any) {
+    console.error('Admin stock patch error:', error)
+    return res.status(500).json({ error: 'Failed to update stock.' })
+  }
+})
+
 // Start Express Server
 app.listen(PORT, () => {
   console.log(`[GM Furniture API Server] Running on http://localhost:${PORT}`)

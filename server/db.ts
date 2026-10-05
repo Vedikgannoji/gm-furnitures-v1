@@ -121,7 +121,9 @@ export function initDatabase() {
   } catch {}
 
   seedAdminUser()
-  seedProducts()
+  // NOTE: seedProducts() intentionally removed.
+  // Products are entered manually through Admin → Products.
+  // Do NOT re-add automatic product seeding.
 }
 
 function seedProducts() {
