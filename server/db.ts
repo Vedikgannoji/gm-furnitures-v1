@@ -367,7 +367,7 @@ function seedProducts() {
 }
 
 export function seedAdminUser() {
-  const adminEmail = (process.env.ADMIN_EMAIL || 'vedikgannoi5126@gmail.com').trim().toLowerCase()
+  const adminEmail = (process.env.ADMIN_EMAIL || 'vedikgannoji5126@gmail.com').trim().toLowerCase()
   const adminPassword = process.env.ADMIN_PASSWORD || 'Vedik@2006'
   const hash = bcrypt.hashSync(adminPassword, 10)
   const now = new Date().toISOString()

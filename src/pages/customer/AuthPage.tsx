@@ -16,7 +16,28 @@ export const AuthPage: React.FC = () => {
   const { user, login, register, loginWithGoogle, logout, isAuthenticated } = useAuth()
 
   const isAdminLogin = location.pathname.startsWith('/admin') || searchParams.get('redirect')?.startsWith('/admin') === true
-  const redirectUrl = searchParams.get('redirect') || (isAdminLogin ? '/admin' : '/account')
+  const requestedRedirect = searchParams.get('redirect') || ''
+
+  /**
+   * Compute the final post-login destination based on the authenticated user's
+   * actual role returned from the server. This is the only source of truth for
+   * role-based routing — never a frontend variable or query param alone.
+   *
+   * Security rule: a ?redirect=/admin param cannot grant a normal user admin
+   * access because isAdminLogin will be true in that case, and the non-admin
+   * branch below calls logout() + shows an error instead of navigating.
+   */
+  function getRedirectDestination(loggedInUser: { role?: string }): string {
+    if (loggedInUser.role === 'admin') {
+      return '/admin'
+    }
+    // For normal users: honour an explicit customer-page redirect, but never
+    // let them be sent to an admin route via a crafted query param.
+    if (requestedRedirect && !requestedRedirect.startsWith('/admin')) {
+      return requestedRedirect
+    }
+    return '/'
+  }
 
   const [tab, setTab] = useState<'login' | 'register' | 'forgot'>('login')
   const [isLoading, setIsLoading] = useState(false)
@@ -28,18 +49,19 @@ export const AuthPage: React.FC = () => {
 
   // If already authenticated, redirect appropriately
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       if (isAdminLogin) {
-        if (user?.role === 'admin') {
+        if (user.role === 'admin') {
           navigate('/admin', { replace: true })
         } else {
           setErrorMessage('Access denied. Your active account is not an administrator.')
         }
       } else {
-        navigate(redirectUrl, { replace: true })
+        navigate(getRedirectDestination(user), { replace: true })
       }
     }
-  }, [isAuthenticated, user, isAdminLogin, navigate, redirectUrl])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user, isAdminLogin])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,12 +87,12 @@ export const AuthPage: React.FC = () => {
           }
         } else {
           showToast('Signed In', 'Welcome back.', 'success')
-          navigate(redirectUrl, { replace: true })
+          navigate(getRedirectDestination(loggedInUser), { replace: true })
         }
       } else if (tab === 'register') {
         await register(name, email, password)
         showToast('Account Created', 'Your account has been created.', 'success')
-        navigate(redirectUrl, { replace: true })
+        navigate('/', { replace: true })
       } else {
         showToast('Instructions Sent', 'If an account exists with this email, password reset instructions have been sent.', 'info')
         setTab('login')
@@ -102,7 +124,7 @@ export const AuthPage: React.FC = () => {
         }
       } else {
         showToast('Signed In', 'Signed in with Google.', 'success')
-        navigate(redirectUrl, { replace: true })
+        navigate(getRedirectDestination(loggedInUser), { replace: true })
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Google authentication failed.')
