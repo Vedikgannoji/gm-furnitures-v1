@@ -1,31 +1,51 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { SlidersHorizontal, X, RotateCcw, Search } from 'lucide-react'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { useProducts } from '@/hooks/useProducts'
-import { isProductAvailableForPurchase } from '@/utils/availability'
+import { Category } from '@/types'
 
 export const ShopPage: React.FC = () => {
   const { products } = useProducts()
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [maxPrice, setMaxPrice] = useState<number>(300000)
   const [sortBy, setSortBy] = useState<string>('featured')
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false)
 
-  // Launch Availability Rule: Dining Tables Only
-  const availableDiningTables = useMemo(() => {
-    return products.filter(isProductAvailableForPurchase)
-  }, [products])
+  useEffect(() => {
+    let isMounted = true
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/categories')
+        if (res.ok) {
+          const data = await res.json()
+          if (isMounted) setCategories(data)
+        }
+      } catch (err) {
+        console.error('Failed to load categories in shop page:', err)
+      }
+    }
+    loadCategories()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
-  // Filter products strictly based on active dining tables
+  // Filter products based on selected category and price
   const filteredProducts = useMemo(() => {
-    return availableDiningTables.filter((product) => {
-      if (product.price > maxPrice) return false
+    return products.filter((product) => {
+      if (selectedCategory !== 'all' && product.category !== selectedCategory) {
+        return false
+      }
+      if (product.price > maxPrice) {
+        return false
+      }
       return true
     })
-  }, [availableDiningTables, maxPrice])
+  }, [products, selectedCategory, maxPrice])
 
   const sortedProducts = useMemo(() => {
     const list = [...filteredProducts]
@@ -42,13 +62,14 @@ export const ShopPage: React.FC = () => {
   }, [filteredProducts, sortBy])
 
   const resetFilters = () => {
+    setSelectedCategory('all')
     setMaxPrice(300000)
     setSortBy('featured')
   }
 
-  const activeFilterCount = maxPrice < 300000 ? 1 : 0
+  const activeFilterCount = (selectedCategory !== 'all' ? 1 : 0) + (maxPrice < 300000 ? 1 : 0)
 
-  // Filter Sidebar Content (Material & Stock filters completely removed)
+  // Filter Sidebar Content
   const filterControls = (
     <div className="space-y-6 text-xs">
       {/* Active filters header */}
@@ -67,18 +88,43 @@ export const ShopPage: React.FC = () => {
         )}
       </div>
 
-      {/* Category — Dining Tables active */}
+      {/* Category Filter */}
       <div>
         <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted mb-2.5">
           Category
         </h4>
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2 py-1 text-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-foreground" />
-            <span className="font-semibold tracking-wider uppercase text-xs">
-              Dining Tables ({availableDiningTables.length})
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedCategory('all')}
+            className={`w-full text-left py-1 px-2 text-xs flex items-center justify-between rounded transition-colors ${
+              selectedCategory === 'all'
+                ? 'bg-foreground text-background font-medium'
+                : 'text-foreground hover:bg-surface'
+            }`}
+          >
+            <span>All Categories</span>
+            <span className="text-[10px] opacity-75">{products.length}</span>
+          </button>
+
+          {categories.map((cat) => {
+            const count = products.filter((p) => p.category === cat.slug).length
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.slug)}
+                className={`w-full text-left py-1 px-2 text-xs flex items-center justify-between rounded transition-colors ${
+                  selectedCategory === cat.slug
+                    ? 'bg-foreground text-background font-medium'
+                    : 'text-foreground hover:bg-surface'
+                }`}
+              >
+                <span>{cat.name}</span>
+                <span className="text-[10px] opacity-75">{count}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -94,7 +140,7 @@ export const ShopPage: React.FC = () => {
         </div>
         <input
           type="range"
-          min={100000}
+          min={10000}
           max={300000}
           step={5000}
           value={maxPrice}
@@ -102,7 +148,7 @@ export const ShopPage: React.FC = () => {
           className="w-full accent-foreground cursor-pointer"
         />
         <div className="flex justify-between text-[10px] text-muted mt-1">
-          <span>₹1,00,000</span>
+          <span>₹10,000</span>
           <span>₹3,00,000</span>
         </div>
       </div>
@@ -118,7 +164,7 @@ export const ShopPage: React.FC = () => {
           The Complete Collection
         </h1>
         <p className="mt-2 text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-          Explore our handcrafted dining tables engineered with traditional Mortise-and-Tenon joinery, solid European oak, honed Carrara marble, and organic matte finishes.
+          Explore handcrafted solid wood furniture engineered with traditional joinery, organic matte finishes, and timeless aesthetics.
         </p>
       </div>
 
@@ -133,7 +179,7 @@ export const ShopPage: React.FC = () => {
             <span>Filters {activeFilterCount > 0 && `(${activeFilterCount})`}</span>
           </button>
           <span className="text-xs text-muted">
-            Showing <span className="font-semibold text-foreground">{sortedProducts.length}</span> Dining Tables
+            Showing <span className="font-semibold text-foreground">{sortedProducts.length}</span> Products
           </span>
         </div>
 
@@ -161,6 +207,12 @@ export const ShopPage: React.FC = () => {
       {activeFilterCount > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-8">
           <span className="text-[11px] uppercase tracking-wider text-muted mr-1">Active:</span>
+          {selectedCategory !== 'all' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
+              Category: {categories.find((c) => c.slug === selectedCategory)?.name || selectedCategory}
+              <X className="w-3 h-3 cursor-pointer hover:text-foreground" onClick={() => setSelectedCategory('all')} />
+            </span>
+          )}
           {maxPrice < 300000 && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-border text-xs">
               Under ₹{(maxPrice / 1000).toFixed(0)}k
@@ -190,30 +242,17 @@ export const ShopPage: React.FC = () => {
           {sortedProducts.length === 0 ? (
             <EmptyState
               icon={Search}
-              title="No dining tables matched your criteria"
-              description="Try adjusting your price range filter to view available dining tables."
+              title="No products matched your criteria"
+              description="Try adjusting your category selection or price range filter to view available furniture."
               actionLabel="Reset Filters"
               onAction={resetFilters}
             />
           ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-                {sortedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-
-              {/* Editorial Coming Soon Callout for remaining collections */}
-              <div className="mt-14 p-8 sm:p-12 border border-border bg-surface text-center flex flex-col items-center justify-center">
-                <ComingSoonBadge label="COMING SOON" className="mb-3" />
-                <h3 className="text-sm sm:text-base font-light tracking-tight text-foreground uppercase max-w-md">
-                  More collections are in development.
-                </h3>
-                <p className="mt-2 text-xs text-muted max-w-md leading-relaxed">
-                  Sofas, lounge chairs, beds, and storage furniture will be released in upcoming drops.
-                </p>
-              </div>
-            </>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
+              {sortedProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           )}
         </div>
       </div>

@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { mockOrders } from '@/data/mockData'
 import { formatCurrency } from '@/lib/utils'
+import { useSettings } from '@/context/SettingsContext'
 
 export const AccountOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
+  const { settings } = useSettings()
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
 
   const order = mockOrders.find((o) => o.id === id) || mockOrders[0]
@@ -118,17 +120,25 @@ export const AccountOrderDetailPage: React.FC = () => {
 
           <div className="pt-4 border-t border-border space-y-2 text-xs">
             <div className="flex justify-between text-muted">
-              <span>Subtotal</span>
+              <span>Product Price</span>
               <span className="font-semibold text-foreground">{formatCurrency(order.subtotal)}</span>
             </div>
             <div className="flex justify-between text-muted">
-              <span>GST Tax (18%)</span>
-              <span className="font-semibold text-foreground">{formatCurrency(order.tax)}</span>
+              <span>Assembly Charge</span>
+              <span className="font-semibold text-foreground">
+                {formatCurrency(order.assemblyCharge ?? (order.shipping || 0))}
+              </span>
             </div>
+            {order.convenienceFee !== undefined && order.convenienceFee > 0 && (
+              <div className="flex justify-between text-muted">
+                <span>Convenience Fee {order.convenienceFeePercent ? `(${order.convenienceFeePercent}%)` : ''}</span>
+                <span className="font-semibold text-foreground">{formatCurrency(order.convenienceFee)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-muted">
-              <span>Delivery & Assembly</span>
-              <span className="font-semibold text-emerald-700">
-                {order.shipping === 0 ? 'COMPLIMENTARY' : formatCurrency(order.shipping)}
+              <span>GST {order.gstPercent ? `(${order.gstPercent}%)` : '(18%)'}</span>
+              <span className="font-semibold text-foreground">
+                {formatCurrency(order.gst ?? (order.tax || 0))}
               </span>
             </div>
             <div className="pt-2 border-t border-border flex justify-between items-baseline">
@@ -182,10 +192,10 @@ export const AccountOrderDetailPage: React.FC = () => {
           <div className="flex justify-between items-start pb-4 border-b border-zinc-200">
             <div>
               <h2 className="text-base font-bold tracking-widest uppercase text-black">
-                GM FURNITURE ATELIER
+                {settings.storeName}
               </h2>
-              <p className="text-[11px] text-zinc-500 mt-1">Sector 44, Institutional Area, Gurugram, HR 122003</p>
-              <p className="text-[11px] font-mono text-zinc-500">GSTIN: 36AFNPV7079J1ZG</p>
+              <p className="text-[11px] text-zinc-500 mt-1">{settings.registeredAddress}</p>
+              <p className="text-[11px] font-mono text-zinc-500">GSTIN: {settings.gstin}</p>
             </div>
             <div className="text-right">
               <span className="text-xs font-mono font-bold block text-black">
@@ -253,16 +263,18 @@ export const AccountOrderDetailPage: React.FC = () => {
                 <span className="font-semibold">{formatCurrency(order.subtotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span>CGST (9.0%)</span>
-                <span>{formatCurrency(Math.round(order.tax / 2))}</span>
+                <span>Assembly Charge</span>
+                <span>{formatCurrency(order.assemblyCharge ?? (order.shipping || 0))}</span>
               </div>
+              {order.convenienceFee !== undefined && order.convenienceFee > 0 && (
+                <div className="flex justify-between">
+                  <span>Convenience Fee</span>
+                  <span>{formatCurrency(order.convenienceFee)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span>SGST (9.0%)</span>
-                <span>{formatCurrency(Math.round(order.tax / 2))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping & Assembly</span>
-                <span>{order.shipping === 0 ? '₹0.00' : formatCurrency(order.shipping)}</span>
+                <span>GST ({order.gstPercent || 18}%)</span>
+                <span>{formatCurrency(order.gst ?? (order.tax || 0))}</span>
               </div>
               <div className="pt-2 border-t border-zinc-300 flex justify-between font-bold text-sm text-black">
                 <span>Total Amount</span>

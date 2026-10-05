@@ -427,6 +427,183 @@ app.get('/api/products/:slugOrId', async (req: Request, res: Response) => {
 })
 
 // ==========================================
+// 2b. TAXONOMY & STORE SETTINGS (Public)
+// ==========================================
+
+// GET /api/settings - Store settings & GSTIN single source of truth
+app.get('/api/settings', async (_req: Request, res: Response) => {
+  try {
+    const row = await queryOne('SELECT * FROM store_settings WHERE id = $1', ['default'])
+    if (!row) {
+      res.json({
+        storeName: 'GM Furniture',
+        brandTagline: 'Handcrafted Solid Wood Furniture for Modern Living',
+        supportEmail: 'support@gmfurniture.in',
+        supportPhone: '+91 (011) 4920-8000',
+        registeredAddress: 'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
+        gstin: '36AFNPV7079J1ZG',
+        pan: 'AAACG1234F',
+        currency: 'INR (₹)',
+        assemblyCharge: 3000,
+        convenienceFeePercent: 0,
+        gstPercent: 18,
+      })
+      return
+    }
+
+    res.json({
+      storeName: row.store_name,
+      brandTagline: row.brand_tagline,
+      supportEmail: row.support_email,
+      supportPhone: row.support_phone,
+      registeredAddress: row.registered_address,
+      gstin: row.gstin,
+      pan: row.pan,
+      currency: row.currency,
+      assemblyCharge: Number(row.assembly_charge !== undefined ? row.assembly_charge : 3000),
+      convenienceFeePercent: Number(row.convenience_fee_percent !== undefined ? row.convenience_fee_percent : 0),
+      gstPercent: Number(row.gst_percent !== undefined ? row.gst_percent : 18),
+    })
+  } catch (error: any) {
+    console.error('Fetch settings error:', error)
+    res.status(500).json({ error: 'Failed to fetch store settings.' })
+  }
+})
+
+// GET /api/categories - All categories with dynamically computed published item count
+app.get('/api/categories', async (_req: Request, res: Response) => {
+  try {
+    const rows = await query(`
+      SELECT 
+        c.id, c.slug, c.name, c.description, c.image,
+        COALESCE((SELECT COUNT(*) FROM products p WHERE p.category = c.slug AND p.status = 'published'), 0) as item_count
+      FROM categories c
+      ORDER BY c.created_at ASC
+    `)
+    res.json(rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      description: r.description,
+      image: r.image,
+      itemCount: Number(r.item_count || 0),
+    })))
+  } catch (error: any) {
+    console.error('Fetch categories error:', error)
+    res.status(500).json({ error: 'Failed to fetch categories.' })
+  }
+})
+
+// GET /api/rooms - All rooms
+app.get('/api/rooms', async (_req: Request, res: Response) => {
+  try {
+    const rows = await query('SELECT * FROM rooms ORDER BY created_at ASC')
+    res.json(rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      tagline: r.tagline,
+      description: r.description,
+      image: r.image,
+      comingSoon: Boolean(r.coming_soon),
+    })))
+  } catch (error: any) {
+    console.error('Fetch rooms error:', error)
+    res.status(500).json({ error: 'Failed to fetch rooms.' })
+  }
+})
+
+// GET /api/rooms/:slugOrId - Room details and associated products
+app.get('/api/rooms/:slugOrId', async (req: Request, res: Response) => {
+  try {
+    const slugOrId = String(req.params.slugOrId)
+    const room = await queryOne('SELECT * FROM rooms WHERE slug = $1 OR id = $2', [slugOrId, slugOrId])
+    if (!room) {
+      res.status(404).json({ error: 'Room not found.' })
+      return
+    }
+
+    const prods = await query(
+      "SELECT * FROM products WHERE room = $1 AND status = 'published' ORDER BY created_at ASC",
+      [room.slug]
+    )
+
+    res.json({
+      room: {
+        id: room.id,
+        slug: room.slug,
+        name: room.name,
+        tagline: room.tagline,
+        description: room.description,
+        image: room.image,
+        comingSoon: Boolean(room.coming_soon),
+      },
+      products: prods.map(formatProductRow),
+    })
+  } catch (error: any) {
+    console.error('Fetch room detail error:', error)
+    res.status(500).json({ error: 'Failed to fetch room detail.' })
+  }
+})
+
+// GET /api/collections - All collections with dynamic product count
+app.get('/api/collections', async (_req: Request, res: Response) => {
+  try {
+    const rows = await query(`
+      SELECT 
+        c.id, c.slug, c.name, c.tagline, c.description, c.image,
+        COALESCE((SELECT COUNT(*) FROM products p WHERE p.collection = c.slug AND p.status = 'published'), 0) as product_count
+      FROM collections c
+      ORDER BY c.created_at ASC
+    `)
+    res.json(rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      tagline: r.tagline,
+      description: r.description,
+      image: r.image,
+      productCount: Number(r.product_count || 0),
+    })))
+  } catch (error: any) {
+    console.error('Fetch collections error:', error)
+    res.status(500).json({ error: 'Failed to fetch collections.' })
+  }
+})
+
+// GET /api/collections/:slugOrId - Collection details and associated products
+app.get('/api/collections/:slugOrId', async (req: Request, res: Response) => {
+  try {
+    const slugOrId = String(req.params.slugOrId)
+    const col = await queryOne('SELECT * FROM collections WHERE slug = $1 OR id = $2', [slugOrId, slugOrId])
+    if (!col) {
+      res.status(404).json({ error: 'Collection not found.' })
+      return
+    }
+
+    const prods = await query(
+      "SELECT * FROM products WHERE collection = $1 AND status = 'published' ORDER BY created_at ASC",
+      [col.slug]
+    )
+
+    res.json({
+      collection: {
+        id: col.id,
+        slug: col.slug,
+        name: col.name,
+        tagline: col.tagline,
+        description: col.description,
+        image: col.image,
+      },
+      products: prods.map(formatProductRow),
+    })
+  } catch (error: any) {
+    console.error('Fetch collection detail error:', error)
+    res.status(500).json({ error: 'Failed to fetch collection detail.' })
+  }
+})
+
+// ==========================================
 // 3. PERSISTENT CART ENDPOINTS (User-Scoped)
 // ==========================================
 
@@ -776,7 +953,17 @@ app.get('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Respon
 app.post('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
-    const { items, subtotal, discount = 0, paymentMethod = 'cod' } = req.body
+    const {
+      items,
+      subtotal,
+      discount = 0,
+      assemblyCharge = 0,
+      convenienceFee = 0,
+      convenienceFeePercent = 0,
+      gst = 0,
+      gstPercent = 18,
+      paymentMethod = 'cashfree',
+    } = req.body
     const deliveryAddress = req.body.deliveryAddress || req.body.shippingAddress
     const total = req.body.total || req.body.grandTotal || subtotal
 
@@ -789,19 +976,25 @@ app.post('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Respo
     const orderNumber = `GM-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`
     const now = new Date()
 
-    // 1. Insert order record
+    // 1. Insert order record with immutable historical charges
     await execute(
       `INSERT INTO orders (
-        id, order_number, user_id, subtotal, discount, total,
-        status, payment_status, payment_method, delivery_address_json, items_json,
+        id, order_number, user_id, subtotal, discount, assembly_charge, convenience_fee,
+        convenience_fee_percent, gst, gst_percent, total,
+        status, payment_status, payment_method, payment_gateway, delivery_address_json, items_json,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', 'pending', $7, $8, $9, $10, $11)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'pending', $12, 'cashfree', $13, $14, $15, $16)`,
       [
         orderId,
         orderNumber,
         userId,
         Math.round(Number(subtotal)),
         Math.round(Number(discount || 0)),
+        Math.round(Number(assemblyCharge || 0)),
+        Math.round(Number(convenienceFee || 0)),
+        Number(convenienceFeePercent || 0),
+        Math.round(Number(gst || 0)),
+        Number(gstPercent || 18),
         Math.round(Number(total)),
         paymentMethod,
         JSON.stringify(deliveryAddress),
@@ -1099,7 +1292,7 @@ app.post('/api/admin/products', verifyAdmin, async (req: AuthenticatedRequest, r
         JSON.stringify(dimensions),
         material.trim(),
         finish.trim(),
-        leadTime || '2-4 Weeks White-Glove Delivery',
+        leadTime || '2-4 Weeks Delivery & Assembly',
         warranty || '5-Year Structural Warranty',
         JSON.stringify(specsArr),
         JSON.stringify(careArr),
@@ -1392,6 +1585,312 @@ app.patch('/api/admin/products/:id/stock', verifyAdmin, async (req: Authenticate
   } catch (error: any) {
     console.error('Admin stock patch error:', error)
     res.status(500).json({ error: 'Failed to update stock.' })
+  }
+})
+
+// ==========================================
+// 7b. ADMIN SETTINGS, CATEGORIES, ROOMS, COLLECTIONS
+// ==========================================
+
+// PUT /api/admin/settings - Save store settings permanently in PostgreSQL
+app.put('/api/admin/settings', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const {
+      storeName,
+      brandTagline,
+      supportEmail,
+      supportPhone,
+      registeredAddress,
+      gstin,
+      pan,
+      assemblyCharge,
+      convenienceFeePercent,
+      gstPercent,
+    } = req.body
+
+    const cleanGstin = gstin ? String(gstin).trim().toUpperCase() : '36AFNPV7079J1ZG'
+    const cleanAssembly = Number(assemblyCharge) >= 0 ? Math.round(Number(assemblyCharge)) : 3000
+    const cleanConvFee = Number(convenienceFeePercent) >= 0 ? Number(convenienceFeePercent) : 0
+    const cleanGst = Number(gstPercent) >= 0 ? Number(gstPercent) : 18
+
+    await execute(
+      `INSERT INTO store_settings (
+        id, store_name, brand_tagline, support_email, support_phone,
+        registered_address, gstin, pan, currency,
+        assembly_charge, convenience_fee_percent, gst_percent, updated_at
+      ) VALUES (
+        'default', $1, $2, $3, $4, $5, $6, $7, 'INR (₹)', $8, $9, $10, NOW()
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        store_name = EXCLUDED.store_name,
+        brand_tagline = EXCLUDED.brand_tagline,
+        support_email = EXCLUDED.support_email,
+        support_phone = EXCLUDED.support_phone,
+        registered_address = EXCLUDED.registered_address,
+        gstin = EXCLUDED.gstin,
+        pan = EXCLUDED.pan,
+        assembly_charge = EXCLUDED.assembly_charge,
+        convenience_fee_percent = EXCLUDED.convenience_fee_percent,
+        gst_percent = EXCLUDED.gst_percent,
+        updated_at = NOW()`,
+      [
+        storeName ? String(storeName).trim() : 'GM Furniture',
+        brandTagline ? String(brandTagline).trim() : 'Handcrafted Solid Wood Furniture for Modern Living',
+        supportEmail ? String(supportEmail).trim() : 'support@gmfurniture.in',
+        supportPhone ? String(supportPhone).trim() : '+91 (011) 4920-8000',
+        registeredAddress ? String(registeredAddress).trim() : 'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
+        cleanGstin,
+        pan ? String(pan).trim().toUpperCase() : 'AAACG1234F',
+        cleanAssembly,
+        cleanConvFee,
+        cleanGst,
+      ]
+    )
+
+    const updated = await queryOne('SELECT * FROM store_settings WHERE id = $1', ['default'])
+    res.json({
+      success: true,
+      message: 'Store settings successfully saved.',
+      settings: {
+        storeName: updated.store_name,
+        brandTagline: updated.brand_tagline,
+        supportEmail: updated.support_email,
+        supportPhone: updated.support_phone,
+        registeredAddress: updated.registered_address,
+        gstin: updated.gstin,
+        pan: updated.pan,
+        currency: updated.currency,
+        assemblyCharge: Number(updated.assembly_charge),
+        convenienceFeePercent: Number(updated.convenience_fee_percent),
+        gstPercent: Number(updated.gst_percent),
+      },
+    })
+  } catch (error: any) {
+    console.error('Save settings error:', error)
+    res.status(500).json({ error: error.message || 'Failed to save store settings.' })
+  }
+})
+
+// Categories Admin CRUD
+app.post('/api/admin/categories', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { name, slug: rawSlug, description = '', image = '' } = req.body
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: 'Category name is required.' })
+      return
+    }
+    const slug = (rawSlug && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+    const id = `cat-${Date.now().toString(36)}`
+    await execute(
+      `INSERT INTO categories (id, slug, name, description, image, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [id, slug, name.trim(), description.trim(), image.trim()]
+    )
+    const created = await queryOne('SELECT * FROM categories WHERE id = $1', [id])
+    res.status(201).json({ success: true, category: created })
+  } catch (error: any) {
+    console.error('Create category error:', error)
+    res.status(500).json({ error: error.message || 'Failed to create category.' })
+  }
+})
+
+app.put('/api/admin/categories/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    const { name, slug: rawSlug, description, image } = req.body
+    const existing = await queryOne('SELECT * FROM categories WHERE id = $1', [id])
+    if (!existing) {
+      res.status(404).json({ error: 'Category not found.' })
+      return
+    }
+
+    const slug = (rawSlug && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : existing.slug
+
+    await execute(
+      `UPDATE categories
+       SET name = COALESCE($1, name),
+           slug = COALESCE($2, slug),
+           description = COALESCE($3, description),
+           image = COALESCE($4, image),
+           updated_at = NOW()
+       WHERE id = $5`,
+      [name?.trim() || null, slug || null, description !== undefined ? description.trim() : null, image !== undefined ? image.trim() : null, id]
+    )
+    const updated = await queryOne('SELECT * FROM categories WHERE id = $1', [id])
+    res.json({ success: true, category: updated })
+  } catch (error: any) {
+    console.error('Update category error:', error)
+    res.status(500).json({ error: error.message || 'Failed to update category.' })
+  }
+})
+
+app.delete('/api/admin/categories/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    await execute('DELETE FROM categories WHERE id = $1', [id])
+    res.json({ success: true, message: 'Category deleted successfully.' })
+  } catch (error: any) {
+    console.error('Delete category error:', error)
+    res.status(500).json({ error: error.message || 'Failed to delete category.' })
+  }
+})
+
+// Rooms Admin CRUD
+app.post('/api/admin/rooms', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { name, slug: rawSlug, tagline = '', description = '', image = '', comingSoon = false } = req.body
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: 'Room name is required.' })
+      return
+    }
+    const slug = (rawSlug && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+    const id = `room-${Date.now().toString(36)}`
+    await execute(
+      `INSERT INTO rooms (id, slug, name, tagline, description, image, coming_soon, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+      [id, slug, name.trim(), tagline.trim(), description.trim(), image.trim(), comingSoon ? 1 : 0]
+    )
+    const created = await queryOne('SELECT * FROM rooms WHERE id = $1', [id])
+    res.status(201).json({ success: true, room: created })
+  } catch (error: any) {
+    console.error('Create room error:', error)
+    res.status(500).json({ error: error.message || 'Failed to create room.' })
+  }
+})
+
+app.put('/api/admin/rooms/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    const { name, slug: rawSlug, tagline, description, image, comingSoon } = req.body
+    const existing = await queryOne('SELECT * FROM rooms WHERE id = $1', [id])
+    if (!existing) {
+      res.status(404).json({ error: 'Room not found.' })
+      return
+    }
+    const slug = (rawSlug && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : existing.slug
+
+    await execute(
+      `UPDATE rooms
+       SET name = COALESCE($1, name),
+           slug = COALESCE($2, slug),
+           tagline = COALESCE($3, tagline),
+           description = COALESCE($4, description),
+           image = COALESCE($5, image),
+           coming_soon = COALESCE($6, coming_soon),
+           updated_at = NOW()
+       WHERE id = $7`,
+      [
+        name?.trim() || null,
+        slug || null,
+        tagline !== undefined ? tagline.trim() : null,
+        description !== undefined ? description.trim() : null,
+        image !== undefined ? image.trim() : null,
+        comingSoon !== undefined ? (comingSoon ? 1 : 0) : null,
+        id,
+      ]
+    )
+    const updated = await queryOne('SELECT * FROM rooms WHERE id = $1', [id])
+    res.json({ success: true, room: updated })
+  } catch (error: any) {
+    console.error('Update room error:', error)
+    res.status(500).json({ error: error.message || 'Failed to update room.' })
+  }
+})
+
+app.delete('/api/admin/rooms/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    await execute('DELETE FROM rooms WHERE id = $1', [id])
+    res.json({ success: true, message: 'Room deleted successfully.' })
+  } catch (error: any) {
+    console.error('Delete room error:', error)
+    res.status(500).json({ error: error.message || 'Failed to delete room.' })
+  }
+})
+
+// Collections Admin CRUD
+app.post('/api/admin/collections', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { name, slug: rawSlug, tagline = '', description = '', image = '' } = req.body
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: 'Collection name is required.' })
+      return
+    }
+    const slug = (rawSlug && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+    const id = `col-${Date.now().toString(36)}`
+    await execute(
+      `INSERT INTO collections (id, slug, name, tagline, description, image, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+      [id, slug, name.trim(), tagline.trim(), description.trim(), image.trim()]
+    )
+    const created = await queryOne('SELECT * FROM collections WHERE id = $1', [id])
+    res.status(201).json({ success: true, collection: created })
+  } catch (error: any) {
+    console.error('Create collection error:', error)
+    res.status(500).json({ error: error.message || 'Failed to create collection.' })
+  }
+})
+
+app.put('/api/admin/collections/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    const { name, slug: rawSlug, tagline, description, image } = req.body
+    const existing = await queryOne('SELECT * FROM collections WHERE id = $1', [id])
+    if (!existing) {
+      res.status(404).json({ error: 'Collection not found.' })
+      return
+    }
+    const slug = (rawSlug && rawSlug.trim())
+      ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : existing.slug
+
+    await execute(
+      `UPDATE collections
+       SET name = COALESCE($1, name),
+           slug = COALESCE($2, slug),
+           tagline = COALESCE($3, tagline),
+           description = COALESCE($4, description),
+           image = COALESCE($5, image),
+           updated_at = NOW()
+       WHERE id = $6`,
+      [
+        name?.trim() || null,
+        slug || null,
+        tagline !== undefined ? tagline.trim() : null,
+        description !== undefined ? description.trim() : null,
+        image !== undefined ? image.trim() : null,
+        id,
+      ]
+    )
+    const updated = await queryOne('SELECT * FROM collections WHERE id = $1', [id])
+    res.json({ success: true, collection: updated })
+  } catch (error: any) {
+    console.error('Update collection error:', error)
+    res.status(500).json({ error: error.message || 'Failed to update collection.' })
+  }
+})
+
+app.delete('/api/admin/collections/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    await execute('DELETE FROM collections WHERE id = $1', [id])
+    res.json({ success: true, message: 'Collection deleted successfully.' })
+  } catch (error: any) {
+    console.error('Delete collection error:', error)
+    res.status(500).json({ error: error.message || 'Failed to delete collection.' })
   }
 })
 

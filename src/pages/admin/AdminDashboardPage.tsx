@@ -99,10 +99,10 @@ export const AdminDashboardPage: React.FC = () => {
         <div>
           <span className="editorial-badge text-muted">Operations & Oversight</span>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight mt-1">
-            Store Performance & Atelier Metrics
+            Store Performance & Sales Metrics
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Real-time synthesis of SQLite database records, inventory velocity, and customer accounts.
+            Real-time overview of store database records, inventory velocity, and customer orders.
           </p>
         </div>
 

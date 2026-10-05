@@ -1,34 +1,27 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
-import { Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Plus, Minus, Tag, Check } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Plus, Minus } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/commerce/EmptyState'
 import { useCart } from '@/context/CartContext'
-import { useToast } from '@/context/ToastContext'
 import { formatCurrency } from '@/lib/utils'
 
 export const CartPage: React.FC = () => {
-  const { items, updateQuantity, removeFromCart, clearCart, subtotal, tax, shipping, total, cartCount } = useCart()
-  const { showToast } = useToast()
-
-  const [promoCode, setPromoCode] = useState('')
-  const [appliedDiscount, setAppliedDiscount] = useState<number>(0)
-  const [promoApplied, setPromoApplied] = useState(false)
-
-  const handleApplyPromo = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (promoCode.trim().toUpperCase() === 'ATELIER10') {
-      const discount = Math.round(subtotal * 0.1)
-      setAppliedDiscount(discount)
-      setPromoApplied(true)
-      showToast('Promo Code Applied', '10% Atelier inaugural discount deducted from total.', 'success')
-    } else {
-      showToast('Invalid Code', 'Try promotional code ATELIER10', 'error')
-    }
-  }
-
-  const finalTotal = Math.max(0, total - appliedDiscount)
+  const {
+    items,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    subtotal,
+    assemblyCharge,
+    convenienceFee,
+    convenienceFeePercent,
+    gst,
+    gstPercent,
+    total,
+    cartCount,
+  } = useCart()
 
   if (items.length === 0) {
     return (
@@ -172,72 +165,36 @@ export const CartPage: React.FC = () => {
 
           <div className="space-y-3 pt-5 text-xs">
             <div className="flex justify-between">
-              <span className="text-muted">Items Subtotal</span>
+              <span className="text-muted">Product Price</span>
               <span className="font-semibold text-foreground">{formatCurrency(subtotal)}</span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-muted">GST Tax (18%)</span>
-              <span className="font-semibold text-foreground">{formatCurrency(tax)}</span>
+              <span className="text-muted">Assembly Charge</span>
+              <span className="font-semibold text-foreground">{formatCurrency(assemblyCharge)}</span>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-muted">Delivery & Assembly</span>
-              <span>
-                {shipping === 0 ? (
-                  <span className="text-emerald-700 font-semibold uppercase text-[11px]">
-                    Complimentary
-                  </span>
-                ) : (
-                  <span className="font-semibold text-foreground">{formatCurrency(shipping)}</span>
-                )}
-              </span>
-            </div>
-
-            {appliedDiscount > 0 && (
-              <div className="flex justify-between text-emerald-700 font-medium pt-1">
-                <span>Discount (10%)</span>
-                <span>-{formatCurrency(appliedDiscount)}</span>
+            {convenienceFeePercent > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted">Convenience Fee ({convenienceFeePercent}%)</span>
+                <span className="font-semibold text-foreground">{formatCurrency(convenienceFee)}</span>
               </div>
             )}
 
+            <div className="flex justify-between">
+              <span className="text-muted">GST on Convenience Fee ({gstPercent}%)</span>
+              <span className="font-semibold text-foreground">{formatCurrency(gst)}</span>
+            </div>
+
             <div className="pt-4 border-t border-border flex justify-between items-baseline">
               <span className="text-sm font-semibold uppercase tracking-wider text-foreground">
-                Estimated Total
+                Grand Total
               </span>
               <span className="text-xl font-bold text-foreground">
-                {formatCurrency(finalTotal)}
+                {formatCurrency(total)}
               </span>
             </div>
           </div>
-
-          {/* Promo Code Input */}
-          <form onSubmit={handleApplyPromo} className="mt-6 pt-5 border-t border-border">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-muted block mb-1.5">
-              Promo Code
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                placeholder="Enter ATELIER10"
-                disabled={promoApplied}
-                className="bg-background border border-border px-3 py-2 text-xs flex-1 uppercase focus:outline-none focus:border-foreground disabled:opacity-50"
-              />
-              <Button
-                type="submit"
-                variant={promoApplied ? 'secondary' : 'primary'}
-                size="sm"
-                disabled={promoApplied || !promoCode}
-              >
-                {promoApplied ? <Check className="w-3.5 h-3.5" /> : 'Apply'}
-              </Button>
-            </div>
-            {promoApplied && (
-              <p className="text-[11px] text-emerald-700 mt-1">Code ATELIER10 active</p>
-            )}
-          </form>
 
           {/* Checkout CTA */}
           <div className="mt-8 space-y-3">
@@ -263,7 +220,7 @@ export const CartPage: React.FC = () => {
             </p>
             <p className="flex items-center gap-2">
               <Truck className="w-3.5 h-3.5 text-foreground shrink-0" />
-              <span>Scheduled appointment delivery & packaging disposal</span>
+              <span>Doorstep delivery & expert assembly service</span>
             </p>
           </div>
         </div>

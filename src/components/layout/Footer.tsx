@@ -2,9 +2,11 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Check } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
+import { useSettings } from '@/context/SettingsContext'
 
 export const Footer: React.FC = () => {
   const { showToast } = useToast()
+  const { settings } = useSettings()
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
 
@@ -25,12 +27,17 @@ export const Footer: React.FC = () => {
           <div className="lg:col-span-2 pr-0 lg:pr-8">
             <Link to="/" className="inline-block">
               <span className="text-sm font-semibold tracking-[0.25em] uppercase text-foreground">
-                GM FURNITURE
+                {settings.storeName || 'GM FURNITURE'}
               </span>
             </Link>
             <p className="mt-3 text-xs text-muted leading-relaxed max-w-sm">
               Handcrafted solid wood furniture and architectural interiors by GM Group. Designed for modern living spaces across India.
             </p>
+            {settings.gstin && (
+              <p className="mt-2 text-[11px] text-muted tracking-wider">
+                GSTIN: <span className="font-mono text-foreground font-medium">{settings.gstin}</span>
+              </p>
+            )}
 
             <div className="mt-6">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground mb-1.5">
@@ -109,7 +116,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-[11px] text-muted space-y-4 md:space-y-0">
-          <p>© {new Date().getFullYear()} GM Furniture Atelier. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {settings.storeName || 'GM Furniture'}. All rights reserved.</p>
           <div className="flex items-center space-x-6">
             <a
               href="https://www.instagram.com/gm_interiors9/"

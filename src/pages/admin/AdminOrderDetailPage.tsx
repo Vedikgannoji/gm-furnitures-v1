@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { useSettings } from '@/context/SettingsContext'
 
 type OrderStatus = 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
 
@@ -43,6 +44,7 @@ export const AdminOrderDetailPage: React.FC = () => {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const { token } = useAuth()
+  const { settings } = useSettings()
 
   const [order, setOrder] = useState<AdminOrderDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -284,9 +286,9 @@ export const AdminOrderDetailPage: React.FC = () => {
         <div className="p-4 bg-white text-zinc-900 border border-zinc-200 text-xs space-y-6">
           <div className="flex justify-between items-start pb-4 border-b border-zinc-200">
             <div>
-              <h2 className="text-base font-bold tracking-widest uppercase text-black">GM FURNITURE ATELIER</h2>
-              <p className="text-[11px] text-zinc-500 mt-1">Sector 44, Institutional Area, Gurugram, HR 122003</p>
-              <p className="text-[11px] font-mono text-zinc-500">GSTIN: 36AFNPV7079J1ZG</p>
+              <h2 className="text-base font-bold tracking-widest uppercase text-black">{settings.storeName}</h2>
+              <p className="text-[11px] text-zinc-500 mt-1">{settings.registeredAddress}</p>
+              <p className="text-[11px] font-mono text-zinc-500">GSTIN: {settings.gstin}</p>
             </div>
             <div className="text-right">
               <span className="text-xs font-mono font-bold block text-black">{invoiceNumber}</span>

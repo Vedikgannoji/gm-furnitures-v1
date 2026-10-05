@@ -90,6 +90,18 @@ export interface CartItem {
   selectedColor?: string
 }
 
+export interface Address {
+  id: string
+  fullName: string
+  phone: string
+  addressLine: string
+  city: string
+  state: string
+  pincode: string
+  label?: 'Home' | 'Office' | 'Other'
+  isDefault?: boolean
+}
+
 export interface ShippingAddress {
   fullName: string
   streetAddress: string
@@ -134,10 +146,15 @@ export interface Order {
   }
   items: OrderItem[]
   subtotal: number
-  tax: number
-  shipping: number
+  assemblyCharge?: number
+  convenienceFee?: number
+  convenienceFeePercent?: number
+  gst?: number
+  gstPercent?: number
+  tax?: number
+  shipping?: number
   total: number
-  paymentMethod: 'credit_card' | 'upi' | 'net_banking' | 'cash_on_delivery'
+  paymentMethod: string
   paymentStatus: PaymentStatus
   status: OrderStatus
   shippingAddress: ShippingAddress
@@ -183,10 +200,8 @@ export interface StoreSettings {
   gstin: string
   pan: string
   currency: string
-  freeShippingThreshold: number
-  standardShippingFee: number
-  whiteGloveAssemblyFee: number
-  orderNotificationEmail: string
-  enableLowStockAlerts: boolean
-  lowStockThreshold: number
+  assemblyCharge: number
+  convenienceFeePercent: number
+  gstPercent: number
 }
+

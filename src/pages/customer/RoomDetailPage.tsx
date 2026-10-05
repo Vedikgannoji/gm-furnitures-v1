@@ -1,15 +1,85 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
-import { mockRooms } from '@/data/mockData'
+import { ProductCard } from '@/components/commerce/ProductCard'
+import { EmptyState } from '@/components/commerce/EmptyState'
+import { Room, Product } from '@/types'
+import { Search, Loader2 } from 'lucide-react'
 
 export const RoomDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>()
-  const room = mockRooms.find((r) => r.slug === slug)
+  const [room, setRoom] = useState<Room | null>(null)
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const roomName = room ? room.name : 'Room Suite'
+  useEffect(() => {
+    let isMounted = true
+    async function loadRoomAndProducts() {
+      if (!slug) return
+      setIsLoading(true)
+      try {
+        const [roomRes, prodRes] = await Promise.all([
+          fetch(`/api/rooms/${encodeURIComponent(slug)}`),
+          fetch(`/api/products?room=${encodeURIComponent(slug)}`),
+        ])
+
+        if (isMounted) {
+          if (roomRes.ok) {
+            const roomData = await roomRes.json()
+            setRoom(roomData)
+          } else {
+            // Fallback representation
+            setRoom({
+              id: slug,
+              name: slug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+              slug,
+              tagline: 'Curated Living Space',
+              description: 'Explore furniture designed for this room.',
+              image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80',
+              featuredProductIds: [],
+            })
+          }
+
+          if (prodRes.ok) {
+            const prodData = await prodRes.json()
+            setProducts(prodData)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load room details:', err)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    loadRoomAndProducts()
+    return () => {
+      isMounted = false
+    }
+  }, [slug])
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-24 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted mb-3" />
+        <span className="text-xs text-muted">Loading room collection...</span>
+      </div>
+    )
+  }
+
+  if (!room) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+        <EmptyState
+          icon={Search}
+          title="Room Not Found"
+          description="The room environment you requested could not be located."
+          actionLabel="Return to Rooms"
+          actionHref="/rooms"
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
@@ -17,59 +87,80 @@ export const RoomDetailPage: React.FC = () => {
       <Breadcrumbs
         items={[
           { label: 'Rooms', href: '/rooms' },
-          { label: roomName },
+          { label: room.name },
         ]}
         className="mb-3 sm:mb-4"
       />
 
-      <div className="bg-white border border-border overflow-hidden">
-        {room && (
+      <div className="bg-white border border-border overflow-hidden mb-12">
+        {room.image && (
           <div className="aspect-[21/9] w-full overflow-hidden relative bg-surface">
             <img
               src={room.image}
               alt={room.name}
-              className={`w-full h-full object-cover ${room.slug !== 'dining-room' ? 'opacity-85 brightness-105' : ''}`}
+              className="w-full h-full object-cover"
             />
-            {room.slug !== 'dining-room' && (
-              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2.5 text-center">
-                <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-white">
-                  COMING SOON
-                </span>
-              </div>
-            )}
           </div>
         )}
 
-        <div className="p-8 sm:p-14 max-w-3xl">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="editorial-badge text-muted">
-              {room?.tagline || 'Room Collection'}
-            </span>
-            {room?.slug !== 'dining-room' && <ComingSoonBadge label="COMING SOON" />}
-          </div>
+        <div className="p-8 sm:p-12 max-w-3xl">
+          {room.tagline && (
+            <div className="mb-2">
+              <span className="editorial-badge text-muted">{room.tagline}</span>
+            </div>
+          )}
 
           <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-foreground">
-            {roomName}
+            {room.name}
           </h1>
 
           <p className="mt-4 text-sm sm:text-base text-muted leading-relaxed">
-            {room?.description || 'This room collection is currently being prepared by our design team.'}
+            {room.description}
           </p>
 
-          <div className="mt-8 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <span className="text-xs text-muted">
-              {room?.slug === 'dining-room'
-                ? 'Explore our available dining furniture pieces.'
-                : 'Room collection purchasing will launch with our upcoming release.'}
-            </span>
-            <Link
-              to="/shop"
-              className="inline-flex items-center gap-2 h-10 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest transition-colors shrink-0"
-            >
-              <span>EXPLORE CATALOG →</span>
-            </Link>
+          <div className="mt-6 flex items-center gap-3 text-xs text-muted">
+            <span className="font-semibold text-foreground">{products.length} Products</span>
+            <span>•</span>
+            <span>Handcrafted Solid Wood</span>
+            <span>•</span>
+            <span>Direct Delivery & Assembly</span>
           </div>
         </div>
+      </div>
+
+      {/* Linked Products Grid */}
+      <div>
+        <div className="pb-4 border-b border-border mb-8">
+          <h2 className="text-xl font-semibold text-foreground tracking-tight">
+            Furniture for {room.name}
+          </h2>
+          <p className="text-xs text-muted mt-1">
+            Browse pieces curated for this living space.
+          </p>
+        </div>
+
+        {products.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="border border-border bg-surface p-12 text-center max-w-xl mx-auto my-6">
+            <p className="text-sm font-medium text-foreground">No pieces assigned to this room yet.</p>
+            <p className="text-xs text-muted mt-1">
+              Check back soon or explore our complete catalog.
+            </p>
+            <div className="mt-6">
+              <Link
+                to="/shop"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background text-xs uppercase tracking-widest font-semibold hover:bg-black/85 transition-colors"
+              >
+                EXPLORE CATALOG →
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

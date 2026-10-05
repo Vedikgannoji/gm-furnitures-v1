@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, Link } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Package,
@@ -12,28 +12,40 @@ import {
   FileText,
   BarChart3,
   Settings,
-  ExternalLink,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 interface AdminSidebarProps {
   onItemClick?: () => void
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onItemClick }) => {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
+  const { showToast } = useToast()
+
   const navItems = [
     { label: 'Overview', href: '/admin', icon: LayoutDashboard, exact: true },
     { label: 'Products', href: '/admin/products', icon: Package },
     { label: 'Categories', href: '/admin/categories', icon: FolderTree },
     { label: 'Collections', href: '/admin/collections', icon: Layers },
-    { label: 'Rooms Curations', href: '/admin/rooms', icon: Home },
+    { label: 'Rooms', href: '/admin/rooms', icon: Home },
     { label: 'Inventory Stock', href: '/admin/inventory', icon: Boxes },
     { label: 'Customer Orders', href: '/admin/orders', icon: ShoppingBag },
-    { label: 'Customer CRM', href: '/admin/customers', icon: Users },
+    { label: 'Customers', href: '/admin/customers', icon: Users },
     { label: 'GST Invoices', href: '/admin/invoices', icon: FileText },
     { label: 'Analytics & KPIs', href: '/admin/analytics', icon: BarChart3 },
     { label: 'Store Settings', href: '/admin/settings', icon: Settings },
   ]
+
+  const handleSignOut = () => {
+    logout()
+    showToast('Signed Out', 'You have signed out from the admin panel.', 'info')
+    navigate('/', { replace: true })
+  }
 
   return (
     <aside className="w-64 h-full bg-background border-r border-border flex flex-col justify-between">
@@ -46,17 +58,17 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onItemClick }) => {
             </div>
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-foreground block">
-                Atelier Admin
+                GM Furniture Admin
               </span>
               <span className="text-[10px] text-muted tracking-wider block">
-                v1.0 (Phase 1)
+                Management Console
               </span>
             </div>
           </Link>
         </div>
 
         {/* Navigation list */}
-        <div className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-8rem)]">
+        <div className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-8.5rem)]">
           <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted">
             Management
           </div>
@@ -85,19 +97,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onItemClick }) => {
         </div>
       </div>
 
-      {/* Footer Switcher */}
+      {/* Footer Clearly Visible Sign Out Button */}
       <div className="p-4 border-t border-border bg-surface/50">
-        <Link
-          to="/"
-          target="_blank"
-          className="flex items-center justify-between text-xs text-muted hover:text-foreground transition-colors p-2 bg-background border border-border"
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-background hover:bg-rose-50 text-foreground hover:text-rose-600 border border-border hover:border-rose-300 text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm"
         >
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-medium text-[11px] uppercase tracking-wider">Live Storefront</span>
-          </span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </Link>
+          <LogOut className="w-4 h-4 text-muted hover:text-rose-600" />
+          <span>Sign Out</span>
+        </button>
       </div>
     </aside>
   )

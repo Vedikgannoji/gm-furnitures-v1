@@ -1,5 +1,5 @@
 import React from 'react'
-import { Menu, Bell, Search, ShieldCheck } from 'lucide-react'
+import { Menu, Search, ShieldCheck } from 'lucide-react'
 
 interface AdminHeaderProps {
   onMobileMenuToggle: () => void
@@ -29,23 +29,14 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMobileMenuToggle }) 
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Notification Bell */}
-        <button
-          className="p-2 text-muted hover:text-foreground transition-colors relative"
-          title="Stock & Order Alerts"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="w-2 h-2 rounded-full bg-amber-500 absolute top-2 right-2" />
-        </button>
-
-        {/* Admin Badge & Avatar */}
+        {/* Admin Badge & Avatar - Clean, no notification bell */}
         <div className="flex items-center gap-2.5 pl-3 border-l border-border">
           <div className="w-7 h-7 rounded-full bg-surface border border-border flex items-center justify-center text-xs font-semibold text-foreground">
             AD
           </div>
           <div className="hidden md:block text-left">
             <p className="text-xs font-medium text-foreground leading-none">
-              Atelier Administrator
+              Administrator
             </p>
             <p className="text-[10px] text-muted tracking-wider uppercase mt-1 flex items-center gap-1">
               <ShieldCheck className="w-3 h-3 text-emerald-600" />

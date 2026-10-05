@@ -41,7 +41,7 @@ var CANONICAL_PRODUCTS = [
     },
     material: "FSC-Certified American Black Walnut",
     finish: "Natural Matte Hardwax Oil",
-    leadTime: "2-3 Weeks White-Glove Installation",
+    leadTime: "2-3 Weeks Delivery & Assembly",
     warranty: "10-Year Framework Structural Warranty",
     specifications: [
       { label: "Timber Origin", value: "Sustainably Managed Appalachian Hardwoods" },
@@ -92,7 +92,7 @@ var CANONICAL_PRODUCTS = [
     },
     material: "Honed Carrara Marble & Cast Fluted Concrete",
     finish: "Penetrating Matte Nano-Sealant",
-    leadTime: "2-3 Weeks White-Glove Installation",
+    leadTime: "2-3 Weeks Delivery & Assembly",
     warranty: "10-Year Framework Structural Warranty",
     specifications: [
       { label: "Stone Origin", value: "Carrara Region, Tuscany, Italy" },
@@ -143,7 +143,7 @@ var CANONICAL_PRODUCTS = [
     },
     material: "Solid European White Oak",
     finish: "White-Pigmented Matte Hardwax Oil",
-    leadTime: "2-3 Weeks White-Glove Installation",
+    leadTime: "2-3 Weeks Delivery & Assembly",
     warranty: "10-Year Framework Structural Warranty",
     specifications: [
       { label: "Timber Origin", value: "FSC-Certified French White Oak" },
@@ -193,7 +193,7 @@ var CANONICAL_PRODUCTS = [
     },
     material: "Smoked European Oak & Italian Roman Travertine",
     finish: "Zero-VOC Natural Matte Finish",
-    leadTime: "3-4 Weeks White-Glove Installation",
+    leadTime: "3-4 Weeks Delivery & Assembly",
     warranty: "10-Year Framework Structural Warranty",
     specifications: [
       { label: "Stone Origin", value: "Tivoli, Italy" },
@@ -375,11 +375,19 @@ async function initDatabase() {
       user_id VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL,
       subtotal INTEGER NOT NULL,
       discount INTEGER NOT NULL DEFAULT 0,
+      assembly_charge INTEGER NOT NULL DEFAULT 0,
+      convenience_fee INTEGER NOT NULL DEFAULT 0,
+      convenience_fee_percent REAL NOT NULL DEFAULT 0,
+      gst INTEGER NOT NULL DEFAULT 0,
+      gst_percent REAL NOT NULL DEFAULT 18,
       total INTEGER NOT NULL,
       status VARCHAR(50) NOT NULL DEFAULT 'confirmed',
       payment_status VARCHAR(50) NOT NULL DEFAULT 'pending',
-      payment_method VARCHAR(50) NOT NULL DEFAULT 'cod',
+      payment_method VARCHAR(50) NOT NULL DEFAULT 'cashfree',
       payment_id VARCHAR(255),
+      payment_order_id VARCHAR(255),
+      payment_transaction_id VARCHAR(255),
+      payment_gateway VARCHAR(50) DEFAULT 'cashfree',
       delivery_address_json TEXT NOT NULL,
       items_json TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -399,11 +407,78 @@ async function initDatabase() {
       specifications_json TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS categories (
+      id VARCHAR(64) PRIMARY KEY,
+      slug VARCHAR(255) UNIQUE NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      image TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS rooms (
+      id VARCHAR(64) PRIMARY KEY,
+      slug VARCHAR(255) UNIQUE NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      tagline VARCHAR(255) NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      image TEXT NOT NULL DEFAULT '',
+      coming_soon INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS collections (
+      id VARCHAR(64) PRIMARY KEY,
+      slug VARCHAR(255) UNIQUE NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      tagline VARCHAR(255) NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      image TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS store_settings (
+      id VARCHAR(64) PRIMARY KEY DEFAULT 'default',
+      store_name VARCHAR(255) NOT NULL DEFAULT 'GM Furniture',
+      brand_tagline VARCHAR(255) NOT NULL DEFAULT 'Handcrafted Solid Wood Furniture for Modern Living',
+      support_email VARCHAR(255) NOT NULL DEFAULT 'support@gmfurniture.in',
+      support_phone VARCHAR(50) NOT NULL DEFAULT '+91 (011) 4920-8000',
+      registered_address TEXT NOT NULL DEFAULT 'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
+      gstin VARCHAR(50) NOT NULL DEFAULT '36AFNPV7079J1ZG',
+      pan VARCHAR(50) NOT NULL DEFAULT 'AAACG1234F',
+      currency VARCHAR(20) NOT NULL DEFAULT 'INR (\u20B9)',
+      assembly_charge INTEGER NOT NULL DEFAULT 3000,
+      convenience_fee_percent REAL NOT NULL DEFAULT 0,
+      gst_percent REAL NOT NULL DEFAULT 18,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
+  await query(`
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee_percent REAL NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_percent REAL NOT NULL DEFAULT 18;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree';
+  `).catch((err) => {
+    console.warn("[Database] Note on orders table schema migration:", err.message);
+  });
   await query(`
     CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
     CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
     CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+    CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+    CREATE INDEX IF NOT EXISTS idx_products_room ON products(room);
+    CREATE INDEX IF NOT EXISTS idx_products_collection ON products(collection);
+    CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
+    CREATE INDEX IF NOT EXISTS idx_rooms_slug ON rooms(slug);
+    CREATE INDEX IF NOT EXISTS idx_collections_slug ON collections(slug);
     CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
     CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
     CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
@@ -413,6 +488,7 @@ async function initDatabase() {
   `);
   await seedAdminUser();
   await seedInitialProducts();
+  await seedInitialTaxonomyAndSettings();
 }
 async function seedAdminUser() {
   const adminEmail = (process.env.ADMIN_EMAIL || "vedikgannoji5126@gmail.com").trim().toLowerCase();
@@ -488,7 +564,7 @@ async function seedInitialProducts() {
         JSON.stringify(p.dimensions || {}),
         p.material,
         p.finish,
-        p.leadTime || "2-3 Weeks White-Glove Installation",
+        p.leadTime || "2-3 Weeks Delivery & Assembly",
         p.warranty || "10-Year Framework Structural Warranty",
         JSON.stringify(p.specifications || []),
         JSON.stringify(p.careInstructions || []),
@@ -504,6 +580,154 @@ async function seedInitialProducts() {
     );
   }
   console.log(`[Database] Successfully seeded ${CANONICAL_PRODUCTS.length} canonical products.`);
+}
+async function seedInitialTaxonomyAndSettings() {
+  const catCountRow = await queryOne(
+    "SELECT COUNT(*) as count FROM categories"
+  );
+  if (Number(catCountRow?.count || 0) === 0) {
+    console.log("[Database] Seeding initial furniture categories...");
+    const defaultCategories = [
+      {
+        id: "cat-dining",
+        slug: "dining",
+        name: "Dining",
+        description: "Solid wood dining tables crafted for shared meals and celebrations.",
+        image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80"
+      },
+      {
+        id: "cat-sofas",
+        slug: "sofas",
+        name: "Living",
+        description: "Sofas and seating designed with balance and deep comfort.",
+        image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80"
+      },
+      {
+        id: "cat-beds",
+        slug: "beds",
+        name: "Bedroom",
+        description: "Minimalist platform beds and nightstands for restful bedrooms.",
+        image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80"
+      },
+      {
+        id: "cat-storage",
+        slug: "storage",
+        name: "Storage",
+        description: "Credenzas, sideboards, and storage cabinets.",
+        image: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=1200&q=80"
+      }
+    ];
+    for (const c of defaultCategories) {
+      await execute(
+        `INSERT INTO categories (id, slug, name, description, image, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [c.id, c.slug, c.name, c.description, c.image]
+      );
+    }
+  }
+  const roomCountRow = await queryOne(
+    "SELECT COUNT(*) as count FROM rooms"
+  );
+  if (Number(roomCountRow?.count || 0) === 0) {
+    console.log("[Database] Seeding initial rooms...");
+    const defaultRooms = [
+      {
+        id: "room-dining",
+        slug: "dining-room",
+        name: "Dining",
+        tagline: "Crafted for shared rituals and celebration",
+        description: "Solid timber dining tables and seating.",
+        image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1600&q=80",
+        coming_soon: 0
+      },
+      {
+        id: "room-living",
+        slug: "living-room",
+        name: "Living",
+        tagline: "A sanctuary of quiet contemplation",
+        description: "Oak silhouettes, soft boucl\xE9, and inviting seating.",
+        image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80",
+        coming_soon: 0
+      },
+      {
+        id: "room-bedroom",
+        slug: "bedroom",
+        name: "Bedroom",
+        tagline: "Understated serenity and restful proportions",
+        description: "Tactile platform frames and bedside nightstands.",
+        image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1600&q=80",
+        coming_soon: 0
+      }
+    ];
+    for (const r of defaultRooms) {
+      await execute(
+        `INSERT INTO rooms (id, slug, name, tagline, description, image, coming_soon, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [r.id, r.slug, r.name, r.tagline, r.description, r.image, r.coming_soon]
+      );
+    }
+  }
+  const colCountRow = await queryOne(
+    "SELECT COUNT(*) as count FROM collections"
+  );
+  if (Number(colCountRow?.count || 0) === 0) {
+    console.log("[Database] Seeding initial collections...");
+    const defaultCollections = [
+      {
+        id: "col-minimalist",
+        slug: "minimalist-line",
+        name: "Minimalist Line",
+        tagline: "Essentialism reduced to pure geometric grace",
+        description: "Pure form, tactile materiality, and enduring structural integrity.",
+        image: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1400&q=80"
+      },
+      {
+        id: "col-architectural",
+        slug: "architectural-series",
+        name: "Architectural Series",
+        tagline: "Bold monoliths and sculptural silhouettes",
+        description: "Designed as functional sculptures with robust proportions and honest joinery.",
+        image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80"
+      },
+      {
+        id: "col-classics",
+        slug: "considered-classics",
+        name: "Considered Classics",
+        tagline: "Heirloom pieces engineered to age gracefully",
+        description: "Classic craftsmanship utilizing sustainably harvested hardwoods.",
+        image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1400&q=80"
+      }
+    ];
+    for (const col of defaultCollections) {
+      await execute(
+        `INSERT INTO collections (id, slug, name, tagline, description, image, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [col.id, col.slug, col.name, col.tagline, col.description, col.image]
+      );
+    }
+  }
+  const settingsRow = await queryOne(
+    "SELECT id FROM store_settings WHERE id = 'default'"
+  );
+  if (!settingsRow) {
+    console.log("[Database] Initializing store settings row...");
+    await execute(
+      `INSERT INTO store_settings (
+        id, store_name, brand_tagline, support_email, support_phone,
+        registered_address, gstin, pan, currency,
+        assembly_charge, convenience_fee_percent, gst_percent, updated_at
+      ) VALUES (
+        'default', 'GM Furniture', 'Handcrafted Solid Wood Furniture for Modern Living',
+        'support@gmfurniture.in', '+91 (011) 4920-8000',
+        'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
+        '36AFNPV7079J1ZG', 'AAACG1234F', 'INR (\u20B9)',
+        3000, 0, 18, NOW()
+      )`
+    );
+  }
 }
 
 // server/auth.ts
@@ -925,6 +1149,162 @@ app.get("/api/products/:slugOrId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch product." });
   }
 });
+app.get("/api/settings", async (_req, res) => {
+  try {
+    const row = await queryOne("SELECT * FROM store_settings WHERE id = $1", ["default"]);
+    if (!row) {
+      res.json({
+        storeName: "GM Furniture",
+        brandTagline: "Handcrafted Solid Wood Furniture for Modern Living",
+        supportEmail: "support@gmfurniture.in",
+        supportPhone: "+91 (011) 4920-8000",
+        registeredAddress: "Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India",
+        gstin: "36AFNPV7079J1ZG",
+        pan: "AAACG1234F",
+        currency: "INR (\u20B9)",
+        assemblyCharge: 3e3,
+        convenienceFeePercent: 0,
+        gstPercent: 18
+      });
+      return;
+    }
+    res.json({
+      storeName: row.store_name,
+      brandTagline: row.brand_tagline,
+      supportEmail: row.support_email,
+      supportPhone: row.support_phone,
+      registeredAddress: row.registered_address,
+      gstin: row.gstin,
+      pan: row.pan,
+      currency: row.currency,
+      assemblyCharge: Number(row.assembly_charge !== void 0 ? row.assembly_charge : 3e3),
+      convenienceFeePercent: Number(row.convenience_fee_percent !== void 0 ? row.convenience_fee_percent : 0),
+      gstPercent: Number(row.gst_percent !== void 0 ? row.gst_percent : 18)
+    });
+  } catch (error) {
+    console.error("Fetch settings error:", error);
+    res.status(500).json({ error: "Failed to fetch store settings." });
+  }
+});
+app.get("/api/categories", async (_req, res) => {
+  try {
+    const rows = await query(`
+      SELECT 
+        c.id, c.slug, c.name, c.description, c.image,
+        COALESCE((SELECT COUNT(*) FROM products p WHERE p.category = c.slug AND p.status = 'published'), 0) as item_count
+      FROM categories c
+      ORDER BY c.created_at ASC
+    `);
+    res.json(rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      description: r.description,
+      image: r.image,
+      itemCount: Number(r.item_count || 0)
+    })));
+  } catch (error) {
+    console.error("Fetch categories error:", error);
+    res.status(500).json({ error: "Failed to fetch categories." });
+  }
+});
+app.get("/api/rooms", async (_req, res) => {
+  try {
+    const rows = await query("SELECT * FROM rooms ORDER BY created_at ASC");
+    res.json(rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      tagline: r.tagline,
+      description: r.description,
+      image: r.image,
+      comingSoon: Boolean(r.coming_soon)
+    })));
+  } catch (error) {
+    console.error("Fetch rooms error:", error);
+    res.status(500).json({ error: "Failed to fetch rooms." });
+  }
+});
+app.get("/api/rooms/:slugOrId", async (req, res) => {
+  try {
+    const slugOrId = String(req.params.slugOrId);
+    const room = await queryOne("SELECT * FROM rooms WHERE slug = $1 OR id = $2", [slugOrId, slugOrId]);
+    if (!room) {
+      res.status(404).json({ error: "Room not found." });
+      return;
+    }
+    const prods = await query(
+      "SELECT * FROM products WHERE room = $1 AND status = 'published' ORDER BY created_at ASC",
+      [room.slug]
+    );
+    res.json({
+      room: {
+        id: room.id,
+        slug: room.slug,
+        name: room.name,
+        tagline: room.tagline,
+        description: room.description,
+        image: room.image,
+        comingSoon: Boolean(room.coming_soon)
+      },
+      products: prods.map(formatProductRow)
+    });
+  } catch (error) {
+    console.error("Fetch room detail error:", error);
+    res.status(500).json({ error: "Failed to fetch room detail." });
+  }
+});
+app.get("/api/collections", async (_req, res) => {
+  try {
+    const rows = await query(`
+      SELECT 
+        c.id, c.slug, c.name, c.tagline, c.description, c.image,
+        COALESCE((SELECT COUNT(*) FROM products p WHERE p.collection = c.slug AND p.status = 'published'), 0) as product_count
+      FROM collections c
+      ORDER BY c.created_at ASC
+    `);
+    res.json(rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      tagline: r.tagline,
+      description: r.description,
+      image: r.image,
+      productCount: Number(r.product_count || 0)
+    })));
+  } catch (error) {
+    console.error("Fetch collections error:", error);
+    res.status(500).json({ error: "Failed to fetch collections." });
+  }
+});
+app.get("/api/collections/:slugOrId", async (req, res) => {
+  try {
+    const slugOrId = String(req.params.slugOrId);
+    const col = await queryOne("SELECT * FROM collections WHERE slug = $1 OR id = $2", [slugOrId, slugOrId]);
+    if (!col) {
+      res.status(404).json({ error: "Collection not found." });
+      return;
+    }
+    const prods = await query(
+      "SELECT * FROM products WHERE collection = $1 AND status = 'published' ORDER BY created_at ASC",
+      [col.slug]
+    );
+    res.json({
+      collection: {
+        id: col.id,
+        slug: col.slug,
+        name: col.name,
+        tagline: col.tagline,
+        description: col.description,
+        image: col.image
+      },
+      products: prods.map(formatProductRow)
+    });
+  } catch (error) {
+    console.error("Fetch collection detail error:", error);
+    res.status(500).json({ error: "Failed to fetch collection detail." });
+  }
+});
 app.get("/api/cart", verifyAuth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -1207,7 +1587,17 @@ app.get("/api/orders", verifyAuth, async (req, res) => {
 app.post("/api/orders", verifyAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { items, subtotal, discount = 0, paymentMethod = "cod" } = req.body;
+    const {
+      items,
+      subtotal,
+      discount = 0,
+      assemblyCharge = 0,
+      convenienceFee = 0,
+      convenienceFeePercent = 0,
+      gst = 0,
+      gstPercent = 18,
+      paymentMethod = "cashfree"
+    } = req.body;
     const deliveryAddress = req.body.deliveryAddress || req.body.shippingAddress;
     const total = req.body.total || req.body.grandTotal || subtotal;
     if (!items || !Array.isArray(items) || items.length === 0 || !deliveryAddress) {
@@ -1219,16 +1609,22 @@ app.post("/api/orders", verifyAuth, async (req, res) => {
     const now = /* @__PURE__ */ new Date();
     await execute(
       `INSERT INTO orders (
-        id, order_number, user_id, subtotal, discount, total,
-        status, payment_status, payment_method, delivery_address_json, items_json,
+        id, order_number, user_id, subtotal, discount, assembly_charge, convenience_fee,
+        convenience_fee_percent, gst, gst_percent, total,
+        status, payment_status, payment_method, payment_gateway, delivery_address_json, items_json,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', 'pending', $7, $8, $9, $10, $11)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'pending', $12, 'cashfree', $13, $14, $15, $16)`,
       [
         orderId,
         orderNumber,
         userId,
         Math.round(Number(subtotal)),
         Math.round(Number(discount || 0)),
+        Math.round(Number(assemblyCharge || 0)),
+        Math.round(Number(convenienceFee || 0)),
+        Number(convenienceFeePercent || 0),
+        Math.round(Number(gst || 0)),
+        Number(gstPercent || 18),
         Math.round(Number(total)),
         paymentMethod,
         JSON.stringify(deliveryAddress),
@@ -1468,7 +1864,7 @@ app.post("/api/admin/products", verifyAdmin, async (req, res) => {
         JSON.stringify(dimensions),
         material.trim(),
         finish.trim(),
-        leadTime || "2-4 Weeks White-Glove Delivery",
+        leadTime || "2-4 Weeks Delivery & Assembly",
         warranty || "5-Year Structural Warranty",
         JSON.stringify(specsArr),
         JSON.stringify(careArr),
@@ -1713,6 +2109,272 @@ app.patch("/api/admin/products/:id/stock", verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error("Admin stock patch error:", error);
     res.status(500).json({ error: "Failed to update stock." });
+  }
+});
+app.put("/api/admin/settings", verifyAdmin, async (req, res) => {
+  try {
+    const {
+      storeName,
+      brandTagline,
+      supportEmail,
+      supportPhone,
+      registeredAddress,
+      gstin,
+      pan,
+      assemblyCharge,
+      convenienceFeePercent,
+      gstPercent
+    } = req.body;
+    const cleanGstin = gstin ? String(gstin).trim().toUpperCase() : "36AFNPV7079J1ZG";
+    const cleanAssembly = Number(assemblyCharge) >= 0 ? Math.round(Number(assemblyCharge)) : 3e3;
+    const cleanConvFee = Number(convenienceFeePercent) >= 0 ? Number(convenienceFeePercent) : 0;
+    const cleanGst = Number(gstPercent) >= 0 ? Number(gstPercent) : 18;
+    await execute(
+      `INSERT INTO store_settings (
+        id, store_name, brand_tagline, support_email, support_phone,
+        registered_address, gstin, pan, currency,
+        assembly_charge, convenience_fee_percent, gst_percent, updated_at
+      ) VALUES (
+        'default', $1, $2, $3, $4, $5, $6, $7, 'INR (\u20B9)', $8, $9, $10, NOW()
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        store_name = EXCLUDED.store_name,
+        brand_tagline = EXCLUDED.brand_tagline,
+        support_email = EXCLUDED.support_email,
+        support_phone = EXCLUDED.support_phone,
+        registered_address = EXCLUDED.registered_address,
+        gstin = EXCLUDED.gstin,
+        pan = EXCLUDED.pan,
+        assembly_charge = EXCLUDED.assembly_charge,
+        convenience_fee_percent = EXCLUDED.convenience_fee_percent,
+        gst_percent = EXCLUDED.gst_percent,
+        updated_at = NOW()`,
+      [
+        storeName ? String(storeName).trim() : "GM Furniture",
+        brandTagline ? String(brandTagline).trim() : "Handcrafted Solid Wood Furniture for Modern Living",
+        supportEmail ? String(supportEmail).trim() : "support@gmfurniture.in",
+        supportPhone ? String(supportPhone).trim() : "+91 (011) 4920-8000",
+        registeredAddress ? String(registeredAddress).trim() : "Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India",
+        cleanGstin,
+        pan ? String(pan).trim().toUpperCase() : "AAACG1234F",
+        cleanAssembly,
+        cleanConvFee,
+        cleanGst
+      ]
+    );
+    const updated = await queryOne("SELECT * FROM store_settings WHERE id = $1", ["default"]);
+    res.json({
+      success: true,
+      message: "Store settings successfully saved.",
+      settings: {
+        storeName: updated.store_name,
+        brandTagline: updated.brand_tagline,
+        supportEmail: updated.support_email,
+        supportPhone: updated.support_phone,
+        registeredAddress: updated.registered_address,
+        gstin: updated.gstin,
+        pan: updated.pan,
+        currency: updated.currency,
+        assemblyCharge: Number(updated.assembly_charge),
+        convenienceFeePercent: Number(updated.convenience_fee_percent),
+        gstPercent: Number(updated.gst_percent)
+      }
+    });
+  } catch (error) {
+    console.error("Save settings error:", error);
+    res.status(500).json({ error: error.message || "Failed to save store settings." });
+  }
+});
+app.post("/api/admin/categories", verifyAdmin, async (req, res) => {
+  try {
+    const { name, slug: rawSlug, description = "", image = "" } = req.body;
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: "Category name is required." });
+      return;
+    }
+    const slug = rawSlug && rawSlug.trim() ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const id = `cat-${Date.now().toString(36)}`;
+    await execute(
+      `INSERT INTO categories (id, slug, name, description, image, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [id, slug, name.trim(), description.trim(), image.trim()]
+    );
+    const created = await queryOne("SELECT * FROM categories WHERE id = $1", [id]);
+    res.status(201).json({ success: true, category: created });
+  } catch (error) {
+    console.error("Create category error:", error);
+    res.status(500).json({ error: error.message || "Failed to create category." });
+  }
+});
+app.put("/api/admin/categories/:id", verifyAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { name, slug: rawSlug, description, image } = req.body;
+    const existing = await queryOne("SELECT * FROM categories WHERE id = $1", [id]);
+    if (!existing) {
+      res.status(404).json({ error: "Category not found." });
+      return;
+    }
+    const slug = rawSlug && rawSlug.trim() ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : existing.slug;
+    await execute(
+      `UPDATE categories
+       SET name = COALESCE($1, name),
+           slug = COALESCE($2, slug),
+           description = COALESCE($3, description),
+           image = COALESCE($4, image),
+           updated_at = NOW()
+       WHERE id = $5`,
+      [name?.trim() || null, slug || null, description !== void 0 ? description.trim() : null, image !== void 0 ? image.trim() : null, id]
+    );
+    const updated = await queryOne("SELECT * FROM categories WHERE id = $1", [id]);
+    res.json({ success: true, category: updated });
+  } catch (error) {
+    console.error("Update category error:", error);
+    res.status(500).json({ error: error.message || "Failed to update category." });
+  }
+});
+app.delete("/api/admin/categories/:id", verifyAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    await execute("DELETE FROM categories WHERE id = $1", [id]);
+    res.json({ success: true, message: "Category deleted successfully." });
+  } catch (error) {
+    console.error("Delete category error:", error);
+    res.status(500).json({ error: error.message || "Failed to delete category." });
+  }
+});
+app.post("/api/admin/rooms", verifyAdmin, async (req, res) => {
+  try {
+    const { name, slug: rawSlug, tagline = "", description = "", image = "", comingSoon = false } = req.body;
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: "Room name is required." });
+      return;
+    }
+    const slug = rawSlug && rawSlug.trim() ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const id = `room-${Date.now().toString(36)}`;
+    await execute(
+      `INSERT INTO rooms (id, slug, name, tagline, description, image, coming_soon, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+      [id, slug, name.trim(), tagline.trim(), description.trim(), image.trim(), comingSoon ? 1 : 0]
+    );
+    const created = await queryOne("SELECT * FROM rooms WHERE id = $1", [id]);
+    res.status(201).json({ success: true, room: created });
+  } catch (error) {
+    console.error("Create room error:", error);
+    res.status(500).json({ error: error.message || "Failed to create room." });
+  }
+});
+app.put("/api/admin/rooms/:id", verifyAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { name, slug: rawSlug, tagline, description, image, comingSoon } = req.body;
+    const existing = await queryOne("SELECT * FROM rooms WHERE id = $1", [id]);
+    if (!existing) {
+      res.status(404).json({ error: "Room not found." });
+      return;
+    }
+    const slug = rawSlug && rawSlug.trim() ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : existing.slug;
+    await execute(
+      `UPDATE rooms
+       SET name = COALESCE($1, name),
+           slug = COALESCE($2, slug),
+           tagline = COALESCE($3, tagline),
+           description = COALESCE($4, description),
+           image = COALESCE($5, image),
+           coming_soon = COALESCE($6, coming_soon),
+           updated_at = NOW()
+       WHERE id = $7`,
+      [
+        name?.trim() || null,
+        slug || null,
+        tagline !== void 0 ? tagline.trim() : null,
+        description !== void 0 ? description.trim() : null,
+        image !== void 0 ? image.trim() : null,
+        comingSoon !== void 0 ? comingSoon ? 1 : 0 : null,
+        id
+      ]
+    );
+    const updated = await queryOne("SELECT * FROM rooms WHERE id = $1", [id]);
+    res.json({ success: true, room: updated });
+  } catch (error) {
+    console.error("Update room error:", error);
+    res.status(500).json({ error: error.message || "Failed to update room." });
+  }
+});
+app.delete("/api/admin/rooms/:id", verifyAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    await execute("DELETE FROM rooms WHERE id = $1", [id]);
+    res.json({ success: true, message: "Room deleted successfully." });
+  } catch (error) {
+    console.error("Delete room error:", error);
+    res.status(500).json({ error: error.message || "Failed to delete room." });
+  }
+});
+app.post("/api/admin/collections", verifyAdmin, async (req, res) => {
+  try {
+    const { name, slug: rawSlug, tagline = "", description = "", image = "" } = req.body;
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: "Collection name is required." });
+      return;
+    }
+    const slug = rawSlug && rawSlug.trim() ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const id = `col-${Date.now().toString(36)}`;
+    await execute(
+      `INSERT INTO collections (id, slug, name, tagline, description, image, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+      [id, slug, name.trim(), tagline.trim(), description.trim(), image.trim()]
+    );
+    const created = await queryOne("SELECT * FROM collections WHERE id = $1", [id]);
+    res.status(201).json({ success: true, collection: created });
+  } catch (error) {
+    console.error("Create collection error:", error);
+    res.status(500).json({ error: error.message || "Failed to create collection." });
+  }
+});
+app.put("/api/admin/collections/:id", verifyAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { name, slug: rawSlug, tagline, description, image } = req.body;
+    const existing = await queryOne("SELECT * FROM collections WHERE id = $1", [id]);
+    if (!existing) {
+      res.status(404).json({ error: "Collection not found." });
+      return;
+    }
+    const slug = rawSlug && rawSlug.trim() ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : existing.slug;
+    await execute(
+      `UPDATE collections
+       SET name = COALESCE($1, name),
+           slug = COALESCE($2, slug),
+           tagline = COALESCE($3, tagline),
+           description = COALESCE($4, description),
+           image = COALESCE($5, image),
+           updated_at = NOW()
+       WHERE id = $6`,
+      [
+        name?.trim() || null,
+        slug || null,
+        tagline !== void 0 ? tagline.trim() : null,
+        description !== void 0 ? description.trim() : null,
+        image !== void 0 ? image.trim() : null,
+        id
+      ]
+    );
+    const updated = await queryOne("SELECT * FROM collections WHERE id = $1", [id]);
+    res.json({ success: true, collection: updated });
+  } catch (error) {
+    console.error("Update collection error:", error);
+    res.status(500).json({ error: error.message || "Failed to update collection." });
+  }
+});
+app.delete("/api/admin/collections/:id", verifyAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    await execute("DELETE FROM collections WHERE id = $1", [id]);
+    res.json({ success: true, message: "Collection deleted successfully." });
+  } catch (error) {
+    console.error("Delete collection error:", error);
+    res.status(500).json({ error: error.message || "Failed to delete collection." });
   }
 });
 app.get("/api/admin/stats", verifyAdmin, async (_req, res) => {

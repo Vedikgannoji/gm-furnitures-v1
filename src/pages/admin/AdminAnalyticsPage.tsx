@@ -77,7 +77,7 @@ export const AdminAnalyticsPage: React.FC = () => {
         <div>
           <span className="editorial-badge text-muted">Intelligence & Economics</span>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight mt-1">
-            Atelier Business Analytics
+            Store Business Analytics
           </h1>
           <p className="text-xs text-muted mt-0.5">
             All metrics calculated from real database records. No estimates or projections.

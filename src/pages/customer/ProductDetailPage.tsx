@@ -11,12 +11,14 @@ import {
   Minus,
   ArrowRight,
   Share2,
+  Maximize2,
 } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Button } from '@/components/ui/Button'
 import { Accordion } from '@/components/ui/Accordion'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
+import { ImageZoomModal } from '@/components/commerce/ImageZoomModal'
 import { useProducts } from '@/hooks/useProducts'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useCart } from '@/context/CartContext'
@@ -38,6 +40,7 @@ export const ProductDetailPage: React.FC = () => {
     product?.colors[0]?.name || 'Standard'
   )
   const [quantity, setQuantity] = useState<number>(1)
+  const [isZoomOpen, setIsZoomOpen] = useState<boolean>(false)
 
   if (!product) {
     return (
@@ -221,15 +224,19 @@ export const ProductDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* Large Main Showcase Image */}
-          <div className="relative flex-1 aspect-[4/5] sm:aspect-square lg:aspect-[4/5] bg-surface border border-border overflow-hidden">
+          {/* Large Main Showcase Image with Click to Zoom */}
+          <div
+            onClick={() => setIsZoomOpen(true)}
+            className="relative flex-1 aspect-[4/5] sm:aspect-square lg:aspect-[4/5] bg-surface border border-border overflow-hidden cursor-zoom-in group"
+            title="Click to zoom and inspect image"
+          >
             <img
               src={activeImage}
               alt={product.name}
-              className="w-full h-full object-cover object-center transition-all duration-300"
+              className="w-full h-full object-cover object-center transition-all duration-300 group-hover:scale-105"
             />
             {/* Top badges */}
-            <div className="absolute top-4 left-4 flex flex-col gap-2">
+            <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
               {product.newArrival && (
                 <span className="bg-background text-foreground border border-border text-[10px] font-semibold tracking-widest uppercase px-2.5 py-1">
                   New Arrival
@@ -237,16 +244,33 @@ export const ProductDetailPage: React.FC = () => {
               )}
             </div>
 
+            {/* Inspect / Zoom hint overlay button */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-black/75 backdrop-blur-sm text-white text-[11px] px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Click to Zoom</span>
+            </div>
+
             {/* Share action */}
             <button
-              onClick={handleShare}
-              className="absolute top-4 right-4 h-9 w-9 bg-background/90 hover:bg-background border border-border rounded-full flex items-center justify-center text-foreground transition-colors shadow-sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleShare()
+              }}
+              className="absolute top-4 right-4 h-9 w-9 bg-background/90 hover:bg-background border border-border rounded-full flex items-center justify-center text-foreground transition-colors shadow-sm z-10"
               title="Share piece"
             >
               <Share2 className="w-4 h-4" />
             </button>
           </div>
         </div>
+
+        {/* Lightbox Zoom Modal */}
+        <ImageZoomModal
+          isOpen={isZoomOpen}
+          imageSrc={activeImage}
+          altText={product.name}
+          onClose={() => setIsZoomOpen(false)}
+        />
 
         {/* RIGHT COLUMN: Product Information & Purchasing */}
         <div className="lg:col-span-5 flex flex-col space-y-6">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -13,8 +13,7 @@ import { useCart } from '@/context/CartContext'
 import { useWishlist } from '@/context/WishlistContext'
 import { useAuth } from '@/context/AuthContext'
 import { MobileNavDrawer } from './MobileNavDrawer'
-import { mockCategories } from '@/data/mockData'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
+import { Category } from '@/types'
 
 export const CustomerNavbar: React.FC = () => {
   const navigate = useNavigate()
@@ -25,6 +24,26 @@ export const CustomerNavbar: React.FC = () => {
   const [isShopHovered, setIsShopHovered] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/categories')
+        if (res.ok) {
+          const data = await res.json()
+          if (isMounted) setCategories(data)
+        }
+      } catch (err) {
+        console.error('Failed to load categories in navbar:', err)
+      }
+    }
+    loadCategories()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,7 +93,7 @@ export const CustomerNavbar: React.FC = () => {
                   GM FURNITURE
                 </span>
                 <span className="text-[9px] tracking-[0.25em] uppercase text-muted font-light leading-tight">
-                  ATELIER & LIVING
+                  SOLID WOOD & LIVING
                 </span>
               </div>
             </Link>
@@ -103,7 +122,7 @@ export const CustomerNavbar: React.FC = () => {
                     Furniture Categories
                   </div>
                   <div className="grid grid-cols-1 gap-1">
-                    {mockCategories.map((cat) => (
+                    {categories.map((cat) => (
                       <Link
                         key={cat.id}
                         to={`/shop/${cat.slug}`}
@@ -111,6 +130,9 @@ export const CustomerNavbar: React.FC = () => {
                         onClick={() => setIsShopHovered(false)}
                       >
                         <span>{cat.name}</span>
+                        {cat.itemCount !== undefined && (
+                          <span className="text-[10px] text-muted font-mono">{cat.itemCount}</span>
+                        )}
                       </Link>
                     ))}
                     <div className="pt-2 mt-1 border-t border-border">
@@ -127,22 +149,18 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            <div className="flex flex-col items-center justify-center cursor-not-allowed select-none py-1">
-              <span className="text-xs uppercase tracking-widest font-medium text-foreground">
-                Rooms
-              </span>
-              <ComingSoonBadge className="mt-0.5 text-[8px] px-1.5 py-0.5" />
-            </div>
+            <Link to="/rooms" className="text-foreground hover:opacity-70 transition-opacity">
+              Rooms
+            </Link>
 
-            <div className="flex flex-col items-center justify-center cursor-not-allowed select-none py-1">
-              <span className="text-xs uppercase tracking-widest font-medium text-foreground">
-                Collections
-              </span>
-              <ComingSoonBadge className="mt-0.5 text-[8px] px-1.5 py-0.5" />
-            </div>
+            <Link to="/collections" className="text-foreground hover:opacity-70 transition-opacity">
+              Collections
+            </Link>
+
             <Link to="/about" className="text-foreground hover:opacity-70 transition-opacity">
               About Us
             </Link>
+
             <Link to="/contact" className="text-foreground hover:opacity-70 transition-opacity">
               Contact
             </Link>
@@ -156,7 +174,7 @@ export const CustomerNavbar: React.FC = () => {
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <input
                     type="text"
-                    placeholder="Search furniture, oak, linen..."
+                    placeholder="Search furniture, oak, dining table..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
@@ -187,7 +205,7 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            {/* Auth State: Sign In button when logged out, Profile icon when logged in */}
+            {/* Auth State */}
             {isAuthenticated ? (
               <>
                 <Link
@@ -199,7 +217,6 @@ export const CustomerNavbar: React.FC = () => {
                   <User className="w-4 h-4 text-foreground" />
                 </Link>
 
-                {/* Wishlist (Authenticated only) */}
                 <Link
                   to="/account/wishlist"
                   className="p-1.5 text-foreground hover:opacity-70 transition-opacity relative"
@@ -214,7 +231,6 @@ export const CustomerNavbar: React.FC = () => {
                   )}
                 </Link>
 
-                {/* Cart Trigger (Authenticated only) */}
                 <button
                   onClick={() => setIsCartDrawerOpen(true)}
                   className="p-1.5 text-foreground hover:opacity-70 transition-opacity relative flex items-center gap-1.5"

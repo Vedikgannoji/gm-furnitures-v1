@@ -106,7 +106,7 @@ export const AdminProductsPage: React.FC = () => {
             Furniture Product Registry
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Manage SKUs, joinery specifications, price points, and published statuses directly in SQLite.
+            Manage SKUs, specifications, prices, and published statuses directly in PostgreSQL.
           </p>
         </div>
 
@@ -315,7 +315,7 @@ export const AdminProductsPage: React.FC = () => {
         {deleteModalProduct && (
           <div className="space-y-4 pt-2">
             <p className="text-xs text-muted">
-              You are about to remove <span className="font-semibold text-foreground">{deleteModalProduct.name}</span> ({deleteModalProduct.sku}) permanently from the SQLite database.
+              You are about to remove <span className="font-semibold text-foreground">{deleteModalProduct.name}</span> ({deleteModalProduct.sku}) permanently from the PostgreSQL database.
             </p>
             <div className="flex justify-end gap-3 pt-3 border-t border-border">
               <Button

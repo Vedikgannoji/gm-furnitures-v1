@@ -1,36 +1,65 @@
-import React, { useState } from 'react'
-import { Save, Building2, ShieldCheck, Bell, Truck, Check } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Save, Building2, ShieldCheck, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { mockStoreSettings } from '@/data/mockData'
 import { StoreSettings } from '@/types'
 import { useToast } from '@/context/ToastContext'
+import { useAuth } from '@/context/AuthContext'
+import { useSettings } from '@/context/SettingsContext'
 
 export const AdminSettingsPage: React.FC = () => {
   const { showToast } = useToast()
-  const [settings, setSettings] = useState<StoreSettings>(mockStoreSettings)
-  const [isSaving, setIsSaving] = useState(false)
+  const { token } = useAuth()
+  const { settings, updateSettings, isLoading } = useSettings()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const [formData, setFormData] = useState<StoreSettings>(settings)
+  const [isSaving, setIsSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Sync state when settings are loaded from backend
+  useEffect(() => {
+    setFormData(settings)
+  }, [settings])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked
-      setSettings((prev) => ({ ...prev, [name]: checked }))
-    } else {
-      setSettings((prev) => ({
-        ...prev,
-        [name]: type === 'number' ? Number(value) : value,
-      }))
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value,
+    }))
+  }
+
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setErrorMessage(null)
+
+    if (!formData.storeName.trim()) {
+      setErrorMessage('Store name is required.')
+      return
+    }
+
+    if (!formData.gstin.trim()) {
+      setErrorMessage('GSTIN is required.')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await updateSettings(formData, token)
+      showToast('Settings Saved', 'Store configuration and checkout charges updated in PostgreSQL.', 'success')
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to persist settings to database.')
+      showToast('Save Failed', err.message || 'Could not save settings.', 'error')
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSaving(true)
-
-    setTimeout(() => {
-      setIsSaving(false)
-      showToast('Settings Saved', 'Atelier configuration and taxation parameters updated.', 'success')
-    }, 600)
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center text-xs text-muted">
+        Loading store settings from database...
+      </div>
+    )
   }
 
   return (
@@ -40,10 +69,10 @@ export const AdminSettingsPage: React.FC = () => {
         <div>
           <span className="editorial-badge text-muted">Platform Controls</span>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight mt-1">
-            Atelier Configuration & Settings
+            Store Settings
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Manage legal registered entities, statutory GSTIN credentials, and logistics thresholds.
+            Manage store identity, registered legal details, GSTIN, and checkout charges.
           </p>
         </div>
 
@@ -52,7 +81,7 @@ export const AdminSettingsPage: React.FC = () => {
           variant="primary"
           size="sm"
           isLoading={isSaving}
-          onClick={handleSave}
+          onClick={() => handleSave()}
           className="flex items-center gap-1.5"
         >
           <Save className="w-3.5 h-3.5" />
@@ -60,23 +89,30 @@ export const AdminSettingsPage: React.FC = () => {
         </Button>
       </div>
 
+      {errorMessage && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+          {errorMessage}
+        </div>
+      )}
+
       <form onSubmit={handleSave} className="space-y-8">
         {/* 1. Store Identity */}
         <div className="bg-background border border-border p-6 space-y-4 text-xs">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-2 border-b border-border flex items-center gap-2">
             <Building2 className="w-4 h-4 text-foreground" />
-            <span>Store Identity & Atelier Branding</span>
+            <span>Store Identity & Branding</span>
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                Storefront Name
+                Store Name
               </label>
               <input
                 type="text"
                 name="storeName"
-                value={settings.storeName}
+                required
+                value={formData.storeName}
                 onChange={handleChange}
                 className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
               />
@@ -89,7 +125,35 @@ export const AdminSettingsPage: React.FC = () => {
               <input
                 type="text"
                 name="brandTagline"
-                value={settings.brandTagline}
+                value={formData.brandTagline}
+                onChange={handleChange}
+                className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                Support Email
+              </label>
+              <input
+                type="email"
+                name="supportEmail"
+                value={formData.supportEmail}
+                onChange={handleChange}
+                className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                Support Phone
+              </label>
+              <input
+                type="text"
+                name="supportPhone"
+                value={formData.supportPhone}
                 onChange={handleChange}
                 className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
               />
@@ -103,7 +167,7 @@ export const AdminSettingsPage: React.FC = () => {
             <textarea
               name="registeredAddress"
               rows={2}
-              value={settings.registeredAddress}
+              value={formData.registeredAddress}
               onChange={handleChange}
               className="w-full bg-surface border border-border p-3 text-xs focus:border-foreground focus:outline-none"
             />
@@ -125,10 +189,14 @@ export const AdminSettingsPage: React.FC = () => {
               <input
                 type="text"
                 name="gstin"
-                value={settings.gstin}
+                required
+                value={formData.gstin}
                 onChange={handleChange}
-                className="w-full h-10 bg-surface border border-border px-3 text-xs font-mono focus:border-foreground focus:outline-none"
+                className="w-full h-10 bg-surface border border-border px-3 text-xs font-mono uppercase focus:border-foreground focus:outline-none"
               />
+              <p className="text-[10px] text-muted mt-1">
+                Single source of truth used across invoices, checkout, footer, and confirmations.
+              </p>
             </div>
 
             <div>
@@ -138,103 +206,81 @@ export const AdminSettingsPage: React.FC = () => {
               <input
                 type="text"
                 name="pan"
-                value={settings.pan}
+                value={formData.pan}
                 onChange={handleChange}
-                className="w-full h-10 bg-surface border border-border px-3 text-xs font-mono focus:border-foreground focus:outline-none"
+                className="w-full h-10 bg-surface border border-border px-3 text-xs font-mono uppercase focus:border-foreground focus:outline-none"
               />
             </div>
           </div>
         </div>
 
-        {/* 3. Logistics & Freight Pricing */}
+        {/* 3. Checkout Charges Section */}
         <div className="bg-background border border-border p-6 space-y-4 text-xs">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-2 border-b border-border flex items-center gap-2">
-            <Truck className="w-4 h-4 text-foreground" />
-            <span>Shipping & White-Glove Thresholds</span>
+            <Receipt className="w-4 h-4 text-foreground" />
+            <span>Checkout Charges</span>
           </h2>
+          <p className="text-xs text-muted">
+            Configures mandatory delivery fees, convenience percentage, and statutory GST on convenience fee.
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                Complimentary Shipping Threshold (₹)
+                Assembly Charge (₹)
               </label>
               <input
                 type="number"
-                name="freeShippingThreshold"
-                value={settings.freeShippingThreshold}
+                min="0"
+                step="100"
+                name="assemblyCharge"
+                value={formData.assemblyCharge}
                 onChange={handleChange}
                 className="w-full h-10 bg-surface border border-border px-3 text-xs font-semibold focus:border-foreground focus:outline-none"
               />
+              <p className="text-[10px] text-muted mt-1">Default: ₹3,000</p>
             </div>
 
             <div>
               <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                Standard Logistics Fee (₹)
+                Convenience Fee (%)
               </label>
               <input
                 type="number"
-                name="standardShippingFee"
-                value={settings.standardShippingFee}
+                min="0"
+                max="100"
+                step="0.1"
+                name="convenienceFeePercent"
+                value={formData.convenienceFeePercent}
                 onChange={handleChange}
                 className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
               />
+              <p className="text-[10px] text-muted mt-1">Percentage of product price</p>
             </div>
 
             <div>
               <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                White-Glove Assembly Fee (₹)
+                GST on Convenience Fee (%)
               </label>
               <input
                 type="number"
-                name="whiteGloveAssemblyFee"
-                value={settings.whiteGloveAssemblyFee}
+                min="0"
+                max="100"
+                step="0.5"
+                name="gstPercent"
+                value={formData.gstPercent}
                 onChange={handleChange}
                 className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
               />
+              <p className="text-[10px] text-muted mt-1">Applied solely to the convenience fee (Default: 18%)</p>
             </div>
-          </div>
-        </div>
-
-        {/* 4. Notification Preferences */}
-        <div className="bg-background border border-border p-6 space-y-4 text-xs">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-2 border-b border-border flex items-center gap-2">
-            <Bell className="w-4 h-4 text-foreground" />
-            <span>Operational Dispatch & Alerts</span>
-          </h2>
-
-          <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-              Internal Order Dispatch Notification Email
-            </label>
-            <input
-              type="email"
-              name="orderNotificationEmail"
-              value={settings.orderNotificationEmail}
-              onChange={handleChange}
-              className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
-            />
-          </div>
-
-          <div className="pt-2">
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                name="enableLowStockAlerts"
-                checked={settings.enableLowStockAlerts}
-                onChange={handleChange}
-                className="accent-foreground w-4 h-4"
-              />
-              <span className="text-xs font-medium text-foreground">
-                Enable automated alerts when SKU inventory drops below safety threshold ({settings.lowStockThreshold} units)
-              </span>
-            </label>
           </div>
         </div>
 
         {/* Bottom submit */}
         <div className="flex justify-end gap-3 pt-4 border-t border-border">
           <Button type="submit" variant="primary" size="md" isLoading={isSaving}>
-            Commit Store Settings
+            Save Changes
           </Button>
         </div>
       </form>

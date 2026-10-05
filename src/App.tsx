@@ -5,6 +5,7 @@ import { ToastProvider } from './context/ToastContext'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import { WishlistProvider } from './context/WishlistContext'
+import { SettingsProvider } from './context/SettingsContext'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
@@ -13,11 +14,13 @@ export function App() {
   const content = (
     <ToastProvider>
       <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <RouterProvider router={router} />
-          </WishlistProvider>
-        </CartProvider>
+        <SettingsProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <RouterProvider router={router} />
+            </WishlistProvider>
+          </CartProvider>
+        </SettingsProvider>
       </AuthProvider>
     </ToastProvider>
   )

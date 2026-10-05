@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { CartItem, Product } from '@/types'
 import { useToast } from './ToastContext'
 import { useAuth } from './AuthContext'
+import { useSettings } from './SettingsContext'
 import { API_BASE } from '@/lib/api'
 
 interface CartContextType {
@@ -12,8 +13,11 @@ interface CartContextType {
   clearCart: () => void
   cartCount: number
   subtotal: number
-  tax: number
-  shipping: number
+  assemblyCharge: number
+  convenienceFee: number
+  convenienceFeePercent: number
+  gst: number
+  gstPercent: number
   total: number
   isCartDrawerOpen: boolean
   setIsCartDrawerOpen: (open: boolean) => void
@@ -26,13 +30,13 @@ const GUEST_CART_STORAGE_KEY = 'gm_furniture_guest_cart_v1'
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { showToast } = useToast()
-  const { user, token, isAuthenticated } = useAuth()
+  const { token, isAuthenticated } = useAuth()
+  const { settings } = useSettings()
   const [items, setItems] = useState<CartItem[]>([])
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false)
   const [isLoadingCart, setIsLoadingCart] = useState(false)
-  const hasMergedRef = useRef(false)
 
-  // Fetch cart from database when authenticated, or load guest cart when logged out
+  // Fetch cart from database when authenticated
   const fetchDBCart = useCallback(async (authToken: string) => {
     setIsLoadingCart(true)
     try {
@@ -67,7 +71,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const selectedColor = color || (product.colors?.[0]?.name ?? 'Standard')
 
-    // Optimistic / Local update
+    // Optimistic local update
     setItems((prev) => {
       const existingIndex = prev.findIndex(
         (item) => item.product.id === product.id && item.selectedColor === selectedColor
@@ -86,7 +90,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     showToast('Added to Cart', `${product.name} (${quantity}) added to your bag.`, 'success')
 
-    // If authenticated, persist to database
+    // Persist to PostgreSQL database
     if (isAuthenticated && token) {
       try {
         await fetch(`${API_BASE}/api/cart`, {
@@ -179,9 +183,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-  const tax = Math.round(subtotal * 0.18)
-  const shipping = subtotal === 0 || subtotal >= 50000 ? 0 : 2500
-  const total = subtotal + tax + shipping
+
+  // Dynamic calculations according to Store Settings from PostgreSQL
+  const assemblyCharge = items.length > 0 ? (settings.assemblyCharge ?? 3000) : 0
+  const convenienceFeePercent = settings.convenienceFeePercent ?? 0
+  const convenienceFee = items.length > 0 ? Math.round(subtotal * (convenienceFeePercent / 100)) : 0
+  const gstPercent = settings.gstPercent ?? 18
+  // IMPORTANT: GST is calculated on convenience fee ONLY, not on full product price
+  const gst = items.length > 0 ? Math.round(convenienceFee * (gstPercent / 100)) : 0
+  const total = items.length > 0 ? subtotal + assemblyCharge + convenienceFee + gst : 0
 
   return (
     <CartContext.Provider
@@ -193,8 +203,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         cartCount,
         subtotal,
-        tax,
-        shipping,
+        assemblyCharge,
+        convenienceFee,
+        convenienceFeePercent,
+        gst,
+        gstPercent,
         total,
         isCartDrawerOpen,
         setIsCartDrawerOpen,

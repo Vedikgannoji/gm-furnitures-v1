@@ -1,10 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Drawer } from '@/components/ui/Drawer'
-import { mockCategories, mockRooms, mockCollections } from '@/data/mockData'
+import { Category, Room, Collection } from '@/types'
 import { ArrowRight, User, Heart, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 
 export interface MobileNavDrawerProps {
   isOpen: boolean
@@ -13,6 +12,36 @@ export interface MobileNavDrawerProps {
 
 export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) => {
   const { user, isAuthenticated, logout } = useAuth()
+  const [categories, setCategories] = useState<Category[]>([])
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+    async function loadData() {
+      try {
+        const [cRes, rRes, colRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/rooms'),
+          fetch('/api/collections'),
+        ])
+        if (isMounted) {
+          if (cRes.ok) setCategories(await cRes.json())
+          if (rRes.ok) setRooms(await rRes.json())
+          if (colRes.ok) setCollections(await colRes.json())
+        }
+      } catch (err) {
+        console.error('Failed to load mobile drawer taxonomy:', err)
+      }
+    }
+    if (isOpen) {
+      loadData()
+    }
+    return () => {
+      isMounted = false
+    }
+  }, [isOpen])
+
   return (
     <Drawer isOpen={isOpen} onClose={onClose} position="left" title="Navigation" width="max-w-xs">
       <div className="flex flex-col space-y-6 pt-2 pb-8">
@@ -26,100 +55,86 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
             <span>All Furniture</span>
             <ArrowRight className="w-4 h-4 text-muted" />
           </Link>
-          <div className="py-2 flex items-center justify-between border-b border-border/40 select-none">
-            <div className="flex flex-col items-start">
-              <span className="text-sm uppercase tracking-widest font-medium text-foreground">
-                Rooms
-              </span>
-              <ComingSoonBadge className="mt-1 !text-[8px] !px-1.5 !py-0.5" />
-            </div>
-          </div>
-          <div className="py-2 flex items-center justify-between border-b border-border/40 select-none">
-            <div className="flex flex-col items-start">
-              <span className="text-sm uppercase tracking-widest font-medium text-foreground">
-                Collections
-              </span>
-              <ComingSoonBadge className="mt-1 !text-[8px] !px-1.5 !py-0.5" />
-            </div>
-          </div>
+          <Link
+            to="/rooms"
+            onClick={onClose}
+            className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
+          >
+            <span>Rooms</span>
+            <ArrowRight className="w-4 h-4 text-muted" />
+          </Link>
+          <Link
+            to="/collections"
+            onClick={onClose}
+            className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
+          >
+            <span>Collections</span>
+            <ArrowRight className="w-4 h-4 text-muted" />
+          </Link>
         </div>
 
         {/* Categories Section */}
-        <div className="border-t border-border pt-4">
-          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3">
-            Shop by Category
-          </p>
-          <div className="grid grid-cols-1 gap-2">
-            {mockCategories.map((cat) => (
-              <Link
-                key={cat.id}
-                to={`/shop/${cat.slug}`}
-                onClick={onClose}
-                className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
-              >
-                <span>{cat.name}</span>
-              </Link>
-            ))}
+        {categories.length > 0 && (
+          <div className="border-t border-border pt-4">
+            <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3">
+              Shop by Category
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {categories.map((cat) => (
+                <Link
+                  key={cat.id}
+                  to={`/shop/${cat.slug}`}
+                  onClick={onClose}
+                  className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
+                >
+                  <span>{cat.name}</span>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Rooms Section */}
-        <div className="border-t border-border pt-4">
-          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3 flex items-center justify-between">
-            <span>Inspiration by Room</span>
-            <ComingSoonBadge />
-          </p>
-          <div className="grid grid-cols-1 gap-2">
-            {mockRooms.map((room) => (
-              <div
-                key={room.id}
-                className="text-xs text-muted/70 py-1 flex items-center justify-between select-none"
-              >
-                <span>{room.name}</span>
-                <span className="text-[9px] text-zinc-400 uppercase tracking-wider">Soon</span>
-              </div>
-            ))}
+        {rooms.length > 0 && (
+          <div className="border-t border-border pt-4">
+            <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3">
+              Shop by Room
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {rooms.map((room) => (
+                <Link
+                  key={room.id}
+                  to={`/rooms/${room.slug}`}
+                  onClick={onClose}
+                  className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
+                >
+                  <span>{room.name}</span>
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-border/50">
-            <Link
-              to="/rooms"
-              onClick={onClose}
-              className="text-[11px] text-muted hover:text-foreground flex items-center justify-between"
-            >
-              <span>Explore Room Preview</span>
-              <span className="text-[9px] uppercase tracking-wider">Coming Soon &rarr;</span>
-            </Link>
-          </div>
-        </div>
+        )}
 
         {/* Collections Section */}
-        <div className="border-t border-border pt-4">
-          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3 flex items-center justify-between">
-            <span>Featured Collections</span>
-            <ComingSoonBadge />
-          </p>
-          <div className="grid grid-cols-1 gap-2">
-            {mockCollections.map((col) => (
-              <div
-                key={col.id}
-                className="text-xs text-muted/70 py-1 flex items-center justify-between select-none"
-              >
-                <span>{col.name}</span>
-                <span className="text-[9px] text-zinc-400 uppercase tracking-wider">Soon</span>
-              </div>
-            ))}
+        {collections.length > 0 && (
+          <div className="border-t border-border pt-4">
+            <p className="text-[10px] uppercase tracking-widest font-semibold text-muted mb-3">
+              Collections
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {collections.map((col) => (
+                <Link
+                  key={col.id}
+                  to={`/collections/${col.slug}`}
+                  onClick={onClose}
+                  className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
+                >
+                  <span>{col.name}</span>
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-border/50">
-            <Link
-              to="/collections"
-              onClick={onClose}
-              className="text-[11px] text-muted hover:text-foreground flex items-center justify-between"
-            >
-              <span>Explore Collections Preview</span>
-              <span className="text-[9px] uppercase tracking-wider">Coming Soon &rarr;</span>
-            </Link>
-          </div>
-        </div>
+        )}
 
         {/* Account & Wishlist */}
         <div className="border-t border-border pt-4 flex flex-col space-y-3">

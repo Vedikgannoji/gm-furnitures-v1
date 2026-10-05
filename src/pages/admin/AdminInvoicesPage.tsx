@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { useSettings } from '@/context/SettingsContext'
 
 /**
  * Invoices are derived from real orders in the database.
  * An invoice is generated for every order that has been placed.
- * The GSTIN and business details come from server-side configuration.
+ * The GSTIN and business details come dynamically from Store Settings in PostgreSQL.
  */
 interface InvoiceRecord {
   id: string
@@ -26,17 +27,18 @@ interface InvoiceRecord {
   items?: any[]
 }
 
-const STORE_GSTIN = '36AFNPV7079J1ZG'
-const STORE_NAME  = 'GM FURNITURE ATELIER'
-const STORE_ADDR  = 'Sector 44, Institutional Area, Gurugram, Haryana 122003, India'
-
 export const AdminInvoicesPage: React.FC = () => {
   const { token } = useAuth()
+  const { settings } = useSettings()
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [previewInvoice, setPreviewInvoice] = useState<InvoiceRecord | null>(null)
+
+  const storeGstin = settings.gstin || '36AFNPV7079J1ZG'
+  const storeName = settings.storeName || 'GM FURNITURE'
+  const storeAddr = settings.registeredAddress || 'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India'
 
   const fetchInvoices = useCallback(async () => {
     try {
@@ -99,7 +101,7 @@ export const AdminInvoicesPage: React.FC = () => {
             GST Tax Invoices Register
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Invoices generated from real customer orders. GSTIN: {STORE_GSTIN}.
+            Invoices generated from real customer orders. GSTIN: {storeGstin}.
           </p>
         </div>
         <button
@@ -220,9 +222,9 @@ export const AdminInvoicesPage: React.FC = () => {
           <div className="p-6 bg-white text-zinc-900 border border-zinc-200 text-xs space-y-6">
             <div className="flex justify-between items-start pb-4 border-b border-zinc-200">
               <div>
-                <h2 className="text-base font-bold tracking-widest uppercase text-black">{STORE_NAME}</h2>
-                <p className="text-[11px] text-zinc-500 mt-1">{STORE_ADDR}</p>
-                <p className="text-[11px] font-mono text-zinc-500">GSTIN: {STORE_GSTIN}</p>
+                <h2 className="text-base font-bold tracking-widest uppercase text-black">{storeName}</h2>
+                <p className="text-[11px] text-zinc-500 mt-1">{storeAddr}</p>
+                <p className="text-[11px] font-mono text-zinc-500">GSTIN: {storeGstin}</p>
               </div>
               <div className="text-right">
                 <span className="text-xs font-mono font-bold block text-black">{previewInvoice.invoiceNumber}</span>

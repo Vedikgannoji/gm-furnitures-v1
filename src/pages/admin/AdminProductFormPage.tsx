@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Plus, Trash2, Image, Layers, Check, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Trash2, Image, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { mockCategories, mockCollections, mockRooms } from '@/data/mockData'
+import { Category, Room, Collection } from '@/types'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 
@@ -22,21 +22,29 @@ export const AdminProductFormPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [imageInputError, setImageInputError] = useState<string | null>(null)
 
+  // Dynamic taxonomy lists from PostgreSQL
+  const [categories, setCategories] = useState<Category[]>([])
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [isLoadingTaxonomy, setIsLoadingTaxonomy] = useState(true)
+
   // Form state
   const [form, setForm] = useState({
     name: '',
     slug: '',
     sku: `GM-${Math.floor(100 + Math.random() * 900)}`,
-    category: 'sofas',
-    collection: 'minimalist-line',
-    room: 'living-room',
+    category: '',
+    collection: '',
+    room: '',
+    featured: false,
+    newArrival: false,
     price: 85000,
     mrp: 98000,
     discount: 13,
     description: '',
     shortDescription: '',
-    material: 'Solid European White Oak',
-    finish: 'Natural Matte Hardwax Oil',
+    material: 'Solid Teak Wood',
+    finish: 'Natural Matte Finish',
     width: '',
     depth: '',
     height: '',
@@ -50,14 +58,62 @@ export const AdminProductFormPage: React.FC = () => {
     ],
     newImageUrl: '',
     colors: [
-      { name: 'Natural Oak', hex: '#D8C3A5' },
-      { name: 'Smoked Black', hex: '#232323' },
+      { name: 'Natural Teak', hex: '#D8C3A5' },
+      { name: 'Walnut Stain', hex: '#232323' },
     ],
     metaTitle: '',
     metaDescription: '',
   })
 
-  // Load product from SQLite when in edit mode
+  // Load dynamic taxonomy from PostgreSQL
+  useEffect(() => {
+    let isMounted = true
+    async function fetchTaxonomy() {
+      setIsLoadingTaxonomy(true)
+      try {
+        const [catRes, roomRes, colRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/rooms'),
+          fetch('/api/collections'),
+        ])
+        if (isMounted) {
+          if (catRes.ok) {
+            const catData = await catRes.json()
+            setCategories(catData)
+            if (!form.category && catData.length > 0) {
+              setForm((prev) => ({ ...prev, category: prev.category || catData[0].slug }))
+            }
+          }
+          if (roomRes.ok) {
+            const roomData = await roomRes.json()
+            setRooms(roomData)
+            if (!form.room && roomData.length > 0) {
+              setForm((prev) => ({ ...prev, room: prev.room || roomData[0].slug }))
+            }
+          }
+          if (colRes.ok) {
+            const colData = await colRes.json()
+            setCollections(colData)
+            if (!form.collection && colData.length > 0) {
+              setForm((prev) => ({ ...prev, collection: prev.collection || colData[0].slug }))
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load categories/rooms/collections:', err)
+      } finally {
+        if (isMounted) {
+          setIsLoadingTaxonomy(false)
+        }
+      }
+    }
+    fetchTaxonomy()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  // Load product from PostgreSQL when in edit mode
   useEffect(() => {
     if (!isEdit || !id) return
 
@@ -79,15 +135,16 @@ export const AdminProductFormPage: React.FC = () => {
 
         const p = await res.json()
         if (isMounted) {
-          // Detect whether the stored dimensions were marked unspecified
           const dimsUnspecified = Boolean(p.dimensions?.unspecified)
           setForm({
             name: p.name || '',
             slug: p.slug || '',
             sku: p.sku || '',
-            category: p.category || 'sofas',
-            collection: p.collection || 'minimalist-line',
-            room: p.room || 'living-room',
+            category: p.category || '',
+            collection: p.collection || '',
+            room: p.room || '',
+            featured: Boolean(p.featured),
+            newArrival: Boolean(p.newArrival),
             price: p.price || 0,
             mrp: p.mrp || 0,
             discount: p.discount || 0,
@@ -129,7 +186,13 @@ export const AdminProductFormPage: React.FC = () => {
   }, [id, isEdit, token])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+    const { name, value, type } = e.target
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked
+      setForm((prev) => ({ ...prev, [name]: checked }))
+      return
+    }
+
     setForm((prev) => {
       const updated = {
         ...prev,
@@ -160,21 +223,18 @@ export const AdminProductFormPage: React.FC = () => {
       return
     }
 
-    // Normalise: add https:// if the user omitted a scheme
     let normalised = raw
     if (!/^https?:\/\//i.test(raw)) {
       normalised = `https://${raw}`
     }
 
-    // Basic URL structure check
     try {
       new URL(normalised)
     } catch {
-      setImageInputError('That doesn\'t look like a valid URL. Please include the full address (e.g. https://…).')
+      setImageInputError("That doesn't look like a valid URL. Please include the full address (e.g. https://…).")
       return
     }
 
-    // Prevent duplicates
     if (form.images.includes(normalised)) {
       setImageInputError('This image URL is already in the gallery.')
       return
@@ -188,7 +248,6 @@ export const AdminProductFormPage: React.FC = () => {
     showToast('Image Added', 'Image URL added to the gallery.', 'info')
   }
 
-  // Allow submitting the image input with Enter without triggering the main form save
   const handleImageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -207,7 +266,6 @@ export const AdminProductFormPage: React.FC = () => {
     e.preventDefault()
     setErrorMessage(null)
 
-    // Validation (Phase 9)
     if (!form.name.trim()) {
       setErrorMessage('Product name is required.')
       setActiveTab('basic')
@@ -284,6 +342,8 @@ export const AdminProductFormPage: React.FC = () => {
       category: form.category,
       collection: form.collection,
       room: form.room,
+      featured: Boolean(form.featured),
+      newArrival: Boolean(form.newArrival),
       price: Number(form.price),
       mrp: Number(form.mrp),
       discount: Number(form.discount),
@@ -323,18 +383,18 @@ export const AdminProductFormPage: React.FC = () => {
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to save product in SQLite database.')
+        throw new Error(data.error || 'Failed to save product in database.')
       }
 
       showToast(
-        isEdit ? 'Product Specifications Updated' : 'Product Registered in SQLite',
-        `"${payload.name}" successfully saved.`,
+        isEdit ? 'Product Updated' : 'Product Created',
+        `"${payload.name}" successfully saved in database.`,
         'success'
       )
       navigate('/admin/products')
     } catch (err: any) {
       console.error('Save product error:', err)
-      setErrorMessage(err.message || 'Database mutation failed. Please verify input data.')
+      setErrorMessage(err.message || 'Database operation failed. Please verify input data.')
     } finally {
       setIsSaving(false)
     }
@@ -370,17 +430,17 @@ export const AdminProductFormPage: React.FC = () => {
     { id: 'basic', label: '1. Basic Info' },
     { id: 'pricing', label: '2. Pricing' },
     { id: 'media', label: '3. Media Gallery' },
-    { id: 'specs', label: '4. Specs & Footprint' },
+    { id: 'specs', label: '4. Dimensions & Material' },
     { id: 'variants', label: '5. Finishes' },
-    { id: 'inventory', label: '6. Stock Controls' },
+    { id: 'inventory', label: '6. Stock & Visibility' },
     { id: 'seo', label: '7. SEO' },
   ] as const
 
-  if (isLoadingProduct) {
+  if (isLoadingProduct || isLoadingTaxonomy) {
     return (
       <div className="p-16 text-center">
-        <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <span className="text-xs text-muted">Retrieving product record from database...</span>
+        <Loader2 className="w-6 h-6 animate-spin text-muted mx-auto mb-3" />
+        <span className="text-xs text-muted">Loading product and taxonomy options...</span>
       </div>
     )
   }
@@ -398,10 +458,10 @@ export const AdminProductFormPage: React.FC = () => {
             <span>Back to Products</span>
           </Link>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            {isEdit ? `Edit "${form.name || 'Product'}"` : 'Register New Furniture Piece'}
+            {isEdit ? `Edit "${form.name || 'Product'}"` : 'Add New Product'}
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Configure joinery parameters, finishes, price points, and database inventory.
+            Configure product details, category, room, collection, prices, and stock.
           </p>
         </div>
 
@@ -415,7 +475,7 @@ export const AdminProductFormPage: React.FC = () => {
               className="text-rose-600 hover:bg-rose-50 border-rose-200 flex items-center gap-1.5"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Piece</span>
+              <span>Delete Product</span>
             </Button>
           )}
 
@@ -434,7 +494,7 @@ export const AdminProductFormPage: React.FC = () => {
             className="flex items-center gap-1.5"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>Save Specifications</span>
+            <span>Save Product</span>
           </Button>
         </div>
       </div>
@@ -471,7 +531,7 @@ export const AdminProductFormPage: React.FC = () => {
         {activeTab === 'basic' && (
           <div className="space-y-4 text-xs">
             <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-2 border-b border-border">
-              Basic Piece Information
+              Basic Product Information
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -485,7 +545,7 @@ export const AdminProductFormPage: React.FC = () => {
                   required
                   value={form.name}
                   onChange={handleChange}
-                  placeholder="e.g. Atelier Solid Walnut Dining Table"
+                  placeholder="e.g. Solid Teak 6-Seater Dining Table"
                   className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
                 />
               </div>
@@ -500,34 +560,42 @@ export const AdminProductFormPage: React.FC = () => {
                   required
                   value={form.sku}
                   onChange={handleChange}
-                  placeholder="GM-DIN-004"
+                  placeholder="GM-DIN-001"
                   className="w-full h-10 bg-surface border border-border px-3 text-xs font-mono focus:border-foreground focus:outline-none"
                 />
               </div>
             </div>
 
+            {/* DYNAMIC CATEGORY, COLLECTION, ROOM SELECTORS FROM POSTGRESQL */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Category *
+                  Category * (from database)
                 </label>
                 <select
                   name="category"
                   value={form.category}
                   onChange={handleChange}
+                  required
                   className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none cursor-pointer"
                 >
-                  {mockCategories.map((c) => (
+                  <option value="">-- Select Category --</option>
+                  {categories.map((c) => (
                     <option key={c.id} value={c.slug}>
                       {c.name}
                     </option>
                   ))}
                 </select>
+                {categories.length === 0 && (
+                  <p className="text-[10px] text-amber-600 mt-1">
+                    No categories found. Please add one under Categories.
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Collection
+                  Collection (from database)
                 </label>
                 <select
                   name="collection"
@@ -535,7 +603,8 @@ export const AdminProductFormPage: React.FC = () => {
                   onChange={handleChange}
                   className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none cursor-pointer"
                 >
-                  {mockCollections.map((c) => (
+                  <option value="">-- None / Select Collection --</option>
+                  {collections.map((c) => (
                     <option key={c.id} value={c.slug}>
                       {c.name}
                     </option>
@@ -545,7 +614,7 @@ export const AdminProductFormPage: React.FC = () => {
 
               <div>
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Target Room
+                  Room (from database)
                 </label>
                 <select
                   name="room"
@@ -553,12 +622,45 @@ export const AdminProductFormPage: React.FC = () => {
                   onChange={handleChange}
                   className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none cursor-pointer"
                 >
-                  {mockRooms.map((r) => (
+                  <option value="">-- None / Select Room --</option>
+                  {rooms.map((r) => (
                     <option key={r.id} value={r.slug}>
                       {r.name}
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            {/* PRODUCT VISIBILITY FLAGS */}
+            <div className="p-4 bg-surface border border-border rounded space-y-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground block">
+                Product Display Flags
+              </span>
+              <div className="flex flex-wrap gap-6">
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    name="featured"
+                    checked={form.featured}
+                    onChange={handleChange}
+                    className="w-4 h-4 accent-foreground"
+                  />
+                  <span className="text-xs text-foreground font-medium">Featured Product</span>
+                  <span className="text-[10px] text-muted">(Appears in storefront Featured sections)</span>
+                </label>
+
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    name="newArrival"
+                    checked={form.newArrival}
+                    onChange={handleChange}
+                    className="w-4 h-4 accent-foreground"
+                  />
+                  <span className="text-xs text-foreground font-medium">New Arrival</span>
+                  <span className="text-[10px] text-muted">(Badged as New Arrival on catalog)</span>
+                </label>
               </div>
             </div>
 
@@ -573,21 +675,21 @@ export const AdminProductFormPage: React.FC = () => {
                   required
                   value={form.slug}
                   onChange={handleChange}
-                  placeholder="atelier-solid-walnut-dining-table"
+                  placeholder="solid-teak-6-seater-dining-table"
                   className="w-full h-10 bg-surface border border-border px-3 text-xs font-mono focus:border-foreground focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Short Subtitle Description
+                  Short Description
                 </label>
                 <input
                   type="text"
                   name="shortDescription"
                   value={form.shortDescription}
                   onChange={handleChange}
-                  placeholder="Solid American black walnut 8-seater dining table."
+                  placeholder="Solid teak wood dining table with natural oil finish."
                   className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
                 />
               </div>
@@ -595,7 +697,7 @@ export const AdminProductFormPage: React.FC = () => {
 
             <div>
               <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                Full Architectural Description *
+                Full Product Description *
               </label>
               <textarea
                 name="description"
@@ -603,7 +705,7 @@ export const AdminProductFormPage: React.FC = () => {
                 rows={5}
                 value={form.description}
                 onChange={handleChange}
-                placeholder="Comprehensive material narrative and functional notes..."
+                placeholder="Comprehensive material details, craft techniques, and specifications..."
                 className="w-full bg-surface border border-border p-3 text-xs focus:border-foreground focus:outline-none leading-relaxed"
               />
             </div>
@@ -620,7 +722,7 @@ export const AdminProductFormPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  Selling Price (INR) *
+                  Selling Price (₹) *
                 </label>
                 <input
                   type="number"
@@ -634,7 +736,7 @@ export const AdminProductFormPage: React.FC = () => {
 
               <div>
                 <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
-                  MRP / Original Price (INR) *
+                  MRP / Original Price (₹) *
                 </label>
                 <input
                   type="number"
@@ -666,7 +768,7 @@ export const AdminProductFormPage: React.FC = () => {
         {activeTab === 'media' && (
           <div className="space-y-4 text-xs">
             <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-2 border-b border-border">
-              Product Images Gallery (Saved to images_json)
+              Product Images Gallery
             </h3>
 
             {/* URL input row */}
@@ -700,7 +802,7 @@ export const AdminProductFormPage: React.FC = () => {
                 </p>
               )}
               <p className="text-[10px] text-muted">
-                Tip: Press <kbd className="px-1 py-0.5 bg-surface border border-border rounded text-[9px]">Enter</kbd> or click Add Image. URLs without a scheme (https://) are accepted.
+                Tip: Press <kbd className="px-1 py-0.5 bg-surface border border-border rounded text-[9px]">Enter</kbd> or click Add Image.
               </p>
             </div>
 
@@ -729,7 +831,6 @@ export const AdminProductFormPage: React.FC = () => {
                         }
                       }}
                     />
-                    {/* Remove button — always visible, not hover-only, so it works on touch devices */}
                     <div className="absolute top-1.5 right-1.5">
                       <button
                         type="button"
@@ -758,7 +859,6 @@ export const AdminProductFormPage: React.FC = () => {
               Dimensions & Specifications
             </h3>
 
-            {/* Dimensions unspecified toggle */}
             <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -768,7 +868,6 @@ export const AdminProductFormPage: React.FC = () => {
                   setForm((prev) => ({
                     ...prev,
                     dimensionsUnspecified: checked,
-                    // Clear values when marking unspecified so stale data isn't visible
                     ...(checked ? { width: '', depth: '', height: '', weight: '' } : {}),
                   }))
                 }}
@@ -821,7 +920,7 @@ export const AdminProductFormPage: React.FC = () => {
                   required
                   value={form.material}
                   onChange={handleChange}
-                  placeholder="American Black Walnut"
+                  placeholder="Solid Teak Wood"
                   className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
                 />
               </div>
@@ -836,7 +935,7 @@ export const AdminProductFormPage: React.FC = () => {
                   required
                   value={form.finish}
                   onChange={handleChange}
-                  placeholder="Hand-Rubbed Natural Hardwax Oil"
+                  placeholder="Natural Matte Finish"
                   className="w-full h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
                 />
               </div>
@@ -915,7 +1014,7 @@ export const AdminProductFormPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 6: INVENTORY */}
+        {/* TAB 6: INVENTORY & VISIBILITY */}
         {activeTab === 'inventory' && (
           <div className="space-y-4 text-xs">
             <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-2 border-b border-border">
@@ -1025,11 +1124,11 @@ export const AdminProductFormPage: React.FC = () => {
         isOpen={showDeleteModal}
         onClose={() => !isDeleting && setShowDeleteModal(false)}
         title="Confirm Product Deletion"
-        description="Are you sure you wish to delete this product permanently from the SQLite database?"
+        description="Are you sure you wish to delete this product permanently from the database?"
       >
         <div className="space-y-4 pt-2">
           <p className="text-xs text-muted">
-            You are about to remove <span className="font-semibold text-foreground">{form.name}</span> ({form.sku}) permanently from the database. This action cannot be undone.
+            You are about to remove <span className="font-semibold text-foreground">{form.name}</span> ({form.sku}) permanently from the PostgreSQL database. This action cannot be undone.
           </p>
           <div className="flex justify-end gap-3 pt-3 border-t border-border">
             <Button

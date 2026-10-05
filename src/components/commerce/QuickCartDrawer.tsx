@@ -4,7 +4,7 @@ import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
 import { useCart } from '@/context/CartContext'
 import { formatCurrency } from '@/lib/utils'
-import { Trash2, ShoppingBag, ArrowRight, Truck } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { EmptyState } from './EmptyState'
 
 export const QuickCartDrawer: React.FC = () => {
@@ -17,10 +17,6 @@ export const QuickCartDrawer: React.FC = () => {
     subtotal,
     cartCount,
   } = useCart()
-
-  const freeShippingThreshold = 50000
-  const progressToFreeShipping = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100))
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal)
 
   return (
     <Drawer
@@ -41,28 +37,6 @@ export const QuickCartDrawer: React.FC = () => {
         />
       ) : (
         <div className="flex flex-col h-full justify-between">
-          {/* Free Shipping Meter */}
-          <div className="bg-surface p-3.5 border border-border/80 mb-4">
-            <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-              <Truck className="w-3.5 h-3.5 text-muted" />
-              {remainingForFreeShipping > 0 ? (
-                <span>
-                  Add <span className="font-semibold">{formatCurrency(remainingForFreeShipping)}</span> for complimentary delivery & assembly
-                </span>
-              ) : (
-                <span className="text-emerald-700 font-medium">
-                  Complimentary delivery & assembly unlocked
-                </span>
-              )}
-            </div>
-            <div className="mt-2 h-1 w-full bg-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-foreground transition-all duration-300"
-                style={{ width: `${progressToFreeShipping}%` }}
-              />
-            </div>
-          </div>
-
           {/* Items List */}
           <div className="divide-y divide-border flex-1 overflow-y-auto pr-1">
             {items.map((item) => (
@@ -145,13 +119,13 @@ export const QuickCartDrawer: React.FC = () => {
           {/* Drawer Footer */}
           <div className="pt-4 mt-auto border-t border-border">
             <div className="flex justify-between items-center text-xs mb-1">
-              <span className="text-muted">Estimated Subtotal</span>
+              <span className="text-muted">Products Subtotal</span>
               <span className="font-semibold text-foreground text-sm">
                 {formatCurrency(subtotal)}
               </span>
             </div>
             <p className="text-[11px] text-muted mb-4">
-              Taxes & assembly calculated at checkout.
+              Assembly charge, convenience fee & GST calculated at checkout.
             </p>
 
             <div className="flex flex-col gap-2">
@@ -171,7 +145,7 @@ export const QuickCartDrawer: React.FC = () => {
                 className="w-full"
               >
                 <Button variant="secondary" size="md" className="w-full">
-                  View Full Cart
+                  View Full Bag
                 </Button>
               </Link>
             </div>

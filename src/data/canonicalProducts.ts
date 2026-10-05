@@ -36,7 +36,7 @@ export const CANONICAL_PRODUCTS: Product[] = [
     },
     material: 'FSC-Certified American Black Walnut',
     finish: 'Natural Matte Hardwax Oil',
-    leadTime: '2-3 Weeks White-Glove Installation',
+    leadTime: '2-3 Weeks Delivery & Assembly',
     warranty: '10-Year Framework Structural Warranty',
     specifications: [
       { label: 'Timber Origin', value: 'Sustainably Managed Appalachian Hardwoods' },
@@ -88,7 +88,7 @@ export const CANONICAL_PRODUCTS: Product[] = [
     },
     material: 'Honed Carrara Marble & Cast Fluted Concrete',
     finish: 'Penetrating Matte Nano-Sealant',
-    leadTime: '2-3 Weeks White-Glove Installation',
+    leadTime: '2-3 Weeks Delivery & Assembly',
     warranty: '10-Year Framework Structural Warranty',
     specifications: [
       { label: 'Stone Origin', value: 'Carrara Region, Tuscany, Italy' },
@@ -140,7 +140,7 @@ export const CANONICAL_PRODUCTS: Product[] = [
     },
     material: 'Solid European White Oak',
     finish: 'White-Pigmented Matte Hardwax Oil',
-    leadTime: '2-3 Weeks White-Glove Installation',
+    leadTime: '2-3 Weeks Delivery & Assembly',
     warranty: '10-Year Framework Structural Warranty',
     specifications: [
       { label: 'Timber Origin', value: 'FSC-Certified French White Oak' },
@@ -191,7 +191,7 @@ export const CANONICAL_PRODUCTS: Product[] = [
     },
     material: 'Smoked European Oak & Italian Roman Travertine',
     finish: 'Zero-VOC Natural Matte Finish',
-    leadTime: '3-4 Weeks White-Glove Installation',
+    leadTime: '3-4 Weeks Delivery & Assembly',
     warranty: '10-Year Framework Structural Warranty',
     specifications: [
       { label: 'Stone Origin', value: 'Tivoli, Italy' },

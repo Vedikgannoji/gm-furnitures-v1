@@ -2,10 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, Award, Shield, Truck, Globe } from 'lucide-react'
 import { ProductCard } from '@/components/commerce/ProductCard'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
-import { mockCategories, mockRooms, mockCollections } from '@/data/mockData'
+import { Category, Room, Collection } from '@/types'
 import { useProducts } from '@/hooks/useProducts'
-import { isRoomAvailable } from '@/utils/availability'
 
 const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -25,7 +23,6 @@ const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 )
 
-// Explicit Data Model for Credibility Metrics
 interface MetricConfig {
   value: number
   format: (current: number) => string
@@ -52,7 +49,6 @@ function useCredibilityMetrics(duration: number = 1800) {
   const hasTriggeredRef = useRef(false)
 
   useEffect(() => {
-    // Check user preference for reduced motion
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setProjectsDisplay(METRICS_DATA.projects.finalFormatted)
       setFollowersDisplay(METRICS_DATA.followers.finalFormatted)
@@ -76,7 +72,6 @@ function useCredibilityMetrics(duration: number = 1800) {
             const elapsed = currentTime - startTime
             const progress = Math.min(elapsed / duration, 1)
 
-            // Quartic ease-out curve for natural, premium deceleration
             const easeProgress = 1 - Math.pow(1 - progress, 4)
 
             const currentProjects = easeProgress * METRICS_DATA.projects.value
@@ -113,36 +108,60 @@ export const HomePage: React.FC = () => {
   const featuredProducts = apiFeatured.slice(0, 4)
   const newArrivals = apiNewArrivals.slice(0, 4)
 
-  const signatureCollection = mockCollections.find((c) => c.slug === 'nordic-atelier') || mockCollections[1]
-  const minimalistCollection = mockCollections.find((c) => c.slug === 'minimalist-line') || mockCollections[0]
+  const [categories, setCategories] = useState<Category[]>([])
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
 
-  // Metric animation state
+  useEffect(() => {
+    let isMounted = true
+    async function loadTaxonomy() {
+      try {
+        const [catRes, roomRes, colRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/rooms'),
+          fetch('/api/collections'),
+        ])
+        if (isMounted) {
+          if (catRes.ok) setCategories(await catRes.json())
+          if (roomRes.ok) setRooms(await roomRes.json())
+          if (colRes.ok) setCollections(await colRes.json())
+        }
+      } catch (err) {
+        console.error('Failed to load homepage taxonomy:', err)
+      }
+    }
+    loadTaxonomy()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const signatureCollection = collections[0]
+  const secondaryCollection = collections[1]
+
   const { projectsDisplay, followersDisplay, sectionRef: metricsRef } = useCredibilityMetrics(1800)
 
   return (
     <div className="flex flex-col space-y-8 sm:space-y-10 lg:space-y-12 pb-14 sm:pb-16">
-      {/* 1. HERO SECTION (Full-Width Background Image + Overlayed Content) */}
+      {/* 1. HERO SECTION */}
       <section className="relative min-h-[540px] sm:min-h-[580px] lg:h-[80vh] w-full flex items-center overflow-hidden border-b border-border">
-        {/* Full-bleed Hero Background Image */}
         <div className="absolute inset-0 z-0">
           <img
             src="/hero.png"
-            alt="GM Furniture Architectural Interior"
+            alt="GM Furniture Modern Interior"
             className="w-full h-full object-cover object-center sm:object-[center_35%]"
             loading="eager"
           />
-          {/* Subtle gradient overlay ensuring typography readability without heavily darkening the image */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/30 sm:bg-gradient-to-r sm:from-black/75 sm:via-black/40 sm:to-transparent" />
         </div>
 
-        {/* Content Container Overlayed on Background */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-28 w-full relative z-10">
           <div className="max-w-xl lg:max-w-2xl">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-white leading-[1.1] text-balance">
               Furniture for considered spaces.
             </h1>
             <p className="mt-4 sm:mt-5 text-sm sm:text-base text-zinc-200 font-normal leading-relaxed max-w-lg drop-shadow-sm">
-              Benchcrafted from sustainable solid hardwoods, natural stone, and Belgian textiles. Form stripped to pure necessity.
+              Handcrafted solid wood furniture and architectural interiors by GM Group. Designed for modern living spaces across India.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -164,17 +183,17 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. RESTORED TRUST / SERVICE ASSURANCE STRIP (Compact & Premium) */}
+      {/* 2. TRUST / SERVICE ASSURANCE STRIP */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-6 sm:-mt-8 relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border bg-white border border-border shadow-sm">
           <div className="p-5 sm:p-6 flex items-start gap-3.5">
             <Award className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Architectural Integrity
+                Solid Hardwood Craft
               </h4>
               <p className="text-xs text-muted mt-1 leading-relaxed">
-                Traditional mortise-and-tenon joinery and zero-VOC organic hardwax finishes.
+                Traditional mortise-and-tenon joinery and organic natural matte finishes.
               </p>
             </div>
           </div>
@@ -186,7 +205,7 @@ export const HomePage: React.FC = () => {
                 Delivery & Assembly
               </h4>
               <p className="text-xs text-muted mt-1 leading-relaxed">
-                Complimentary room placement, full assembly, and packaging removal across India.
+                Direct doorstep delivery with expert assembly service across India.
               </p>
             </div>
           </div>
@@ -198,17 +217,16 @@ export const HomePage: React.FC = () => {
                 10-Year Framework Warranty
               </h4>
               <p className="text-xs text-muted mt-1 leading-relaxed">
-                Engineered to endure generations of daily living and age with timeless grace.
+                Engineered to endure generations of daily living and age with timeless beauty.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION (Tightened & Compact) */}
+      {/* 3. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-2 sm:-mt-4">
         <div className="bg-white border border-border p-6 sm:p-10 lg:p-12 flex flex-col items-center text-center">
-          {/* Brand Logo */}
           <div className="mb-4 flex items-center justify-center">
             <img
               src="/logo.png"
@@ -225,7 +243,6 @@ export const HomePage: React.FC = () => {
             FROM THE HOUSE OF GM GROUP OF INTERIORS AND CONSTRUCTIONS
           </h2>
 
-          {/* Animated Metrics with Viewport Detection */}
           <div
             ref={metricsRef}
             className="mt-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10 w-full max-w-2xl border-y border-border"
@@ -235,7 +252,7 @@ export const HomePage: React.FC = () => {
                 {projectsDisplay}
               </span>
               <span className="text-xs uppercase tracking-widest text-muted mt-1.5">
-                projects so far in interiors and constructions
+                projects completed in interiors and constructions
               </span>
             </div>
 
@@ -249,7 +266,6 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* CTAs: Official Instagram & Official Website */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <a
               href="https://www.instagram.com/gm_interiors9/"
@@ -275,371 +291,314 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. FEATURED PIECES — ACTIVE */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
-          <div>
-            <span className="editorial-badge">Featured Furniture</span>
-            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-              Featured Pieces
-            </h2>
+      {/* 4. FEATURED PIECES */}
+      {featuredProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
+            <div>
+              <span className="editorial-badge">Featured Furniture</span>
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
+                Featured Pieces
+              </h2>
+            </div>
+            <Link
+              to="/shop"
+              className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
+            >
+              <span>Explore Entire Catalog</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            to="/shop"
-            className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
-          >
-            <span>Explore Entire Catalog</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
-
-      {/* 5. SHOP BY CATEGORY — DINING ACTIVE, OTHERS COMING SOON */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
-          <div>
-            <span className="editorial-badge">Categories</span>
-            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-              Shop by Category
-            </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
-          <Link
-            to="/shop"
-            className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
-          >
-            <span>View All Categories</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        </section>
+      )}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {mockCategories.map((category) => {
-            const isAvailable = category.slug === 'dining'
+      {/* 5. SHOP BY CATEGORY */}
+      {categories.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
+            <div>
+              <span className="editorial-badge">Categories</span>
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
+                Shop by Category
+              </h2>
+            </div>
+            <Link
+              to="/shop"
+              className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
+            >
+              <span>View All Categories</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
 
-            if (isAvailable) {
-              return (
-                <Link
-                  key={category.id}
-                  to="/shop"
-                  className="group flex flex-col items-start text-left cursor-pointer"
-                >
-                  <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                  <div className="mt-2.5">
-                    <h3 className="text-xs font-medium text-foreground uppercase tracking-wider group-hover:underline">
-                      {category.name}
-                    </h3>
-                    <span className="text-[11px] text-muted">{category.itemCount} items</span>
-                  </div>
-                </Link>
-              )
-            }
-
-            return (
-              <div
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            {categories.map((category) => (
+              <Link
                 key={category.id}
-                className="group flex flex-col items-start text-left cursor-default select-none"
+                to={`/shop/${category.slug}`}
+                className="group flex flex-col items-start text-left cursor-pointer"
               >
                 <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
                   <img
                     src={category.image}
                     alt={category.name}
-                    className="h-full w-full object-cover object-center grayscale contrast-90 opacity-90 transition-none"
+                    className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center p-2">
-                    <ComingSoonBadge label="COMING SOON" />
-                  </div>
                 </div>
                 <div className="mt-2.5">
-                  <h3 className="text-xs font-medium text-muted uppercase tracking-wider">
+                  <h3 className="text-xs font-medium text-foreground uppercase tracking-wider group-hover:underline">
                     {category.name}
                   </h3>
-                  <span className="text-[11px] font-medium tracking-wider text-muted/70 uppercase">
-                    COMING SOON
+                  <span className="text-[11px] text-muted">
+                    {category.itemCount || 0} products
                   </span>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* 6. SHOP BY ROOM — CONTINUOUS AUTO-SCROLLING CAROUSEL */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
-          <div>
-            <span className="editorial-badge">Room Inspiration</span>
-            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-              Shop by Room
-            </h2>
+              </Link>
+            ))}
           </div>
-          <Link
-            to="/rooms"
-            className="text-xs uppercase tracking-widest font-medium text-foreground hover:opacity-75 transition-opacity flex items-center gap-1 mt-2 sm:mt-0"
-          >
-            <span>View All Rooms</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        </section>
+      )}
 
-        {/* Seamless Infinite Marquee Carousel */}
-        <div className="overflow-hidden w-full relative">
-          <div className="flex w-max hover:[animation-play-state:paused]">
-            {/* Primary Track */}
-            <div className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none">
-              {mockRooms.map((room) => {
-                const isAvailable = isRoomAvailable(room)
-                const cardInner = (
-                  <>
-                    <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
-                      <img
-                        src={room.image}
-                        alt={room.name}
-                        className={`w-full h-full object-cover ${
-                          isAvailable
-                            ? 'transition-transform duration-700 ease-out group-hover:scale-102'
-                            : 'opacity-85 brightness-105'
-                        }`}
-                      />
-                      {!isAvailable && (
-                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2 sm:py-2.5 px-4 text-center z-10">
-                          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-white uppercase">
-                            COMING SOON
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
-                      <div>
-                        <span className="editorial-badge text-muted">{room.tagline}</span>
-                        <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
-                        <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
-                          {room.description}
-                        </p>
-                      </div>
-                      {isAvailable && (
-                        <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
-                          <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
-                            ROOM PREVIEW
-                          </span>
-                          <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )
-
-                if (isAvailable) {
-                  return (
-                    <Link
-                      key={`track1-${room.id}`}
-                      to={`/rooms/${room.slug}`}
-                      className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50 cursor-pointer"
-                    >
-                      {cardInner}
-                    </Link>
-                  )
-                }
-
-                return (
-                  <div
-                    key={`track1-${room.id}`}
-                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden select-none cursor-default"
-                  >
-                    {cardInner}
-                  </div>
-                )
-              })}
+      {/* 6. SHOP BY ROOM */}
+      {rooms.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
+            <div>
+              <span className="editorial-badge">Room Inspiration</span>
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
+                Shop by Room
+              </h2>
             </div>
-
-            {/* Duplicate Track (Seamless Loop) */}
-            <div
-              className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none"
-              aria-hidden="true"
+            <Link
+              to="/rooms"
+              className="text-xs uppercase tracking-widest font-medium text-foreground hover:opacity-75 transition-opacity flex items-center gap-1 mt-2 sm:mt-0"
             >
-              {mockRooms.map((room) => {
-                const isAvailable = isRoomAvailable(room)
-                const cardInner = (
-                  <>
+              <span>View All Rooms</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="overflow-hidden w-full relative">
+            <div className="flex w-max hover:[animation-play-state:paused]">
+              <div className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none">
+                {rooms.map((room) => (
+                  <Link
+                    key={`track1-${room.id}`}
+                    to={`/rooms/${room.slug}`}
+                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground cursor-pointer"
+                  >
                     <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
                       <img
                         src={room.image}
                         alt={room.name}
-                        className={`w-full h-full object-cover ${
-                          isAvailable
-                            ? 'transition-transform duration-700 ease-out group-hover:scale-102'
-                            : 'opacity-85 brightness-105'
-                        }`}
+                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                       />
-                      {!isAvailable && (
-                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-black py-2 sm:py-2.5 px-4 text-center z-10">
-                          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-white uppercase">
-                            COMING SOON
-                          </span>
-                        </div>
-                      )}
                     </div>
                     <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
                       <div>
-                        <span className="editorial-badge text-muted">{room.tagline}</span>
+                        {room.tagline && (
+                          <span className="editorial-badge text-muted">{room.tagline}</span>
+                        )}
                         <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
                         <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
                           {room.description}
                         </p>
                       </div>
-                      {isAvailable && (
-                        <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
-                          <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
-                            ROOM PREVIEW
-                          </span>
-                          <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
-                        </div>
-                      )}
+                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                          VIEW ROOM
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                      </div>
                     </div>
-                  </>
-                )
+                  </Link>
+                ))}
+              </div>
 
-                if (isAvailable) {
-                  return (
-                    <Link
-                      key={`track2-${room.id}`}
-                      to={`/rooms/${room.slug}`}
-                      className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground/50 cursor-pointer"
-                    >
-                      {cardInner}
-                    </Link>
-                  )
-                }
-
-                return (
-                  <div
+              <div
+                className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none"
+                aria-hidden="true"
+              >
+                {rooms.map((room) => (
+                  <Link
                     key={`track2-${room.id}`}
-                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden select-none cursor-default"
+                    to={`/rooms/${room.slug}`}
+                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground cursor-pointer"
                   >
-                    {cardInner}
-                  </div>
-                )
-              })}
+                    <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                      <img
+                        src={room.image}
+                        alt={room.name}
+                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+                      <div>
+                        {room.tagline && (
+                          <span className="editorial-badge text-muted">{room.tagline}</span>
+                        )}
+                        <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
+                        <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
+                          {room.description}
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                          VIEW ROOM
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* 7. SIGNATURE COLLECTION — COMING SOON (Clean, compact, no badge on image) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
-          <div>
-            <span className="editorial-badge">Atelier Series</span>
-            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-              Signature Collection
-            </h2>
-          </div>
-          <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            <ComingSoonBadge label="COMING SOON" />
-          </div>
-        </div>
-
-        <div className="relative border border-border bg-background overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 select-none">
-            <div className="p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
-              <span className="editorial-badge">Capsule Collection</span>
-              <h3 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
+      {/* 7. FEATURED COLLECTION 1 */}
+      {signatureCollection && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
+            <div>
+              <span className="editorial-badge">Featured Line</span>
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
                 {signatureCollection.name}
-              </h3>
-              <p className="text-sm font-medium text-muted mt-2">
-                "{signatureCollection.tagline}"
-              </p>
-              <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed max-w-md">
-                {signatureCollection.description}
-              </p>
+              </h2>
             </div>
-
-            <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface relative">
-              <img
-                src={signatureCollection.image}
-                alt={signatureCollection.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <Link
+              to={`/collections/${signatureCollection.slug}`}
+              className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
+            >
+              <span>Explore Collection</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-        </div>
-      </section>
 
-      {/* 8. THE MINIMALIST LINE — COMING SOON (Clean, compact, no badge on image) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
-          <div>
-            <span className="editorial-badge">Essentialist Design</span>
-            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-              The Minimalist Line
-            </h2>
-          </div>
-          <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            <ComingSoonBadge label="COMING SOON" />
-          </div>
-        </div>
-
-        <div className="relative border border-border bg-background overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 select-none">
-            <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface order-2 lg:order-1 relative">
-              <img
-                src={minimalistCollection.image}
-                alt={minimalistCollection.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            <div className="p-6 sm:p-10 lg:p-12 flex flex-col justify-center order-1 lg:order-2">
-              <span className="editorial-badge">Architectural Reductionism</span>
-              <h3 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
-                {minimalistCollection.name}
-              </h3>
-              <p className="text-sm font-medium text-muted mt-2">
-                "{minimalistCollection.tagline}"
-              </p>
-              <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed max-w-md">
-                {minimalistCollection.description}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 9. NEW ARRIVALS — ACTIVE */}
-      <section id="new-arrivals" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full scroll-mt-24">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
-          <div>
-            <span className="editorial-badge">Spring Atelier Studio</span>
-            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-              New Arrivals
-            </h2>
-          </div>
           <Link
-            to="/shop"
-            className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
+            to={`/collections/${signatureCollection.slug}`}
+            className="block relative border border-border bg-background overflow-hidden group hover:border-foreground transition-colors"
           >
-            <span>View All</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              <div className="p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
+                <span className="editorial-badge">Design Collection</span>
+                <h3 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
+                  {signatureCollection.name}
+                </h3>
+                {signatureCollection.tagline && (
+                  <p className="text-sm font-medium text-muted mt-2">
+                    "{signatureCollection.tagline}"
+                  </p>
+                )}
+                <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed max-w-md">
+                  {signatureCollection.description}
+                </p>
+                <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
+                  <span>View Collection Pieces</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-          {newArrivals.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+              <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface relative">
+                <img
+                  src={signatureCollection.image}
+                  alt={signatureCollection.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+              </div>
+            </div>
+          </Link>
+        </section>
+      )}
+
+      {/* 8. FEATURED COLLECTION 2 */}
+      {secondaryCollection && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
+            <div>
+              <span className="editorial-badge">Essentialist Design</span>
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
+                {secondaryCollection.name}
+              </h2>
+            </div>
+            <Link
+              to={`/collections/${secondaryCollection.slug}`}
+              className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
+            >
+              <span>Explore Collection</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <Link
+            to={`/collections/${secondaryCollection.slug}`}
+            className="block relative border border-border bg-background overflow-hidden group hover:border-foreground transition-colors"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface order-2 lg:order-1 relative">
+                <img
+                  src={secondaryCollection.image}
+                  alt={secondaryCollection.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+              </div>
+
+              <div className="p-6 sm:p-10 lg:p-12 flex flex-col justify-center order-1 lg:order-2">
+                <span className="editorial-badge">Clean Proportions</span>
+                <h3 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
+                  {secondaryCollection.name}
+                </h3>
+                {secondaryCollection.tagline && (
+                  <p className="text-sm font-medium text-muted mt-2">
+                    "{secondaryCollection.tagline}"
+                  </p>
+                )}
+                <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed max-w-md">
+                  {secondaryCollection.description}
+                </p>
+                <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
+                  <span>View Collection Pieces</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </Link>
+        </section>
+      )}
+
+      {/* 9. NEW ARRIVALS */}
+      {newArrivals.length > 0 && (
+        <section id="new-arrivals" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full scroll-mt-24">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
+            <div>
+              <span className="editorial-badge">Fresh Releases</span>
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
+                New Arrivals
+              </h2>
+            </div>
+            <Link
+              to="/shop"
+              className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+            {newArrivals.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

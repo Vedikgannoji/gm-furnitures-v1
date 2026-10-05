@@ -196,7 +196,7 @@ export const mockOrders: Order[] = [
     timeline: [
       { status: 'Order Placed', date: '18 Mar 2026, 10:24 AM', description: 'Order confirmed and verified via Card', completed: true },
       { status: 'In Production & QC', date: '19 Mar 2026, 02:15 PM', description: 'Passed comprehensive 14-point joinery QC inspect', completed: true },
-      { status: 'Dispatched (White Glove)', date: '21 Mar 2026, 09:00 AM', description: 'Consignment handed over to Specialized Freight', completed: true },
+      { status: 'Dispatched', date: '21 Mar 2026, 09:00 AM', description: 'Consignment handed over to Delivery Logistics', completed: true },
       { status: 'Delivered & Assembled', date: '22 Mar 2026, 04:30 PM', description: 'Installed and signed off at Gurugram residence', completed: true, current: true },
     ],
   },
@@ -346,7 +346,7 @@ export const mockOrders: Order[] = [
     timeline: [
       { status: 'Order Placed', date: '22 Mar 2026, 11:05 AM', description: 'Amex payment authorized and cleared', completed: true, current: true },
       { status: 'Processing', date: 'Expected 23 Mar 2026', description: 'Preparation for dispatch', completed: false },
-      { status: 'Dispatched', date: 'Expected 25 Mar 2026', description: 'White glove delivery vehicle', completed: false },
+      { status: 'Dispatched', date: 'Expected 25 Mar 2026', description: 'Delivery vehicle en route', completed: false },
       { status: 'Delivered', date: 'Expected 27 Mar 2026', description: 'Assembly at destination', completed: false },
     ],
   },
@@ -543,7 +543,7 @@ export const mockInvoices: Invoice[] = [
 ]
 
 export const mockStoreSettings: StoreSettings = {
-  storeName: 'GM Furniture Atelier',
+  storeName: 'GM Furniture',
   brandTagline: 'Considered Living for Modern Spaces',
   supportEmail: 'support@gmfurniture.in',
   supportPhone: '+91 (011) 4920-8000',
@@ -551,12 +551,9 @@ export const mockStoreSettings: StoreSettings = {
   gstin: '36AFNPV7079J1ZG',
   pan: 'AAACG1234F',
   currency: 'INR (₹)',
-  freeShippingThreshold: 50000,
-  standardShippingFee: 2500,
-  whiteGloveAssemblyFee: 4500,
-  orderNotificationEmail: 'orders@gmfurniture.in',
-  enableLowStockAlerts: true,
-  lowStockThreshold: 3,
+  assemblyCharge: 3000,
+  convenienceFeePercent: 0,
+  gstPercent: 18,
 }
 
 export const mockAnalyticsData = {
