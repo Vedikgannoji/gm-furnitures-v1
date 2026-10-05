@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { OAuth2Client } from 'google-auth-library'
-import { db } from './db'
+import { queryOne } from './db'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -49,15 +49,6 @@ export function verifyToken(token: string): AuthUser | null {
   }
 }
 
-export function verifyAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  verifyAuth(req, res, () => {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied: Admin privileges required.' })
-    }
-    next()
-  })
-}
-
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10)
   return bcrypt.hash(password, salt)
@@ -98,30 +89,55 @@ export async function verifyGoogleToken(credential: string): Promise<{
 /**
  * Strict authentication middleware:
  * Ensures the request comes from an authenticated user.
- * Attaches req.user strictly from verified server-side JWT session.
+ * Attaches req.user strictly from verified server-side JWT session and PostgreSQL database.
  */
-export function verifyAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required. Please sign in.' })
+export async function verifyAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Authentication required. Please sign in.' })
+      return
+    }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = verifyToken(token)
+
+    if (!decoded) {
+      res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' })
+      return
+    }
+
+    // Verify user still exists in database
+    const user = await queryOne<AuthUser>(
+      'SELECT id, name, email, provider, role, avatar_url FROM users WHERE id = $1',
+      [decoded.id]
+    )
+
+    if (!user) {
+      res.status(401).json({ error: 'User account no longer exists.' })
+      return
+    }
+
+    req.user = user
+    next()
+  } catch (err: any) {
+    console.error('verifyAuth middleware error:', err)
+    res.status(500).json({ error: 'Authentication check failed.' })
   }
+}
 
-  const token = authHeader.split(' ')[1]
-  const decoded = verifyToken(token)
-
-  if (!decoded) {
-    return res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' })
-  }
-
-  // Verify user still exists in database
-  const user = db.prepare('SELECT id, name, email, provider, role, avatar_url FROM users WHERE id = ?').get(decoded.id) as AuthUser | undefined
-
-  if (!user) {
-    return res.status(401).json({ error: 'User account no longer exists.' })
-  }
-
-  req.user = user
-  next()
+/**
+ * Admin role verification middleware:
+ * Strict server-side verification that user is authenticated and has role = 'admin'.
+ */
+export async function verifyAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  await verifyAuth(req, res, () => {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Access denied: Admin privileges required.' })
+      return
+    }
+    next()
+  })
 }
 
 /**
@@ -129,17 +145,24 @@ export function verifyAuth(req: AuthenticatedRequest, res: Response, next: NextF
  * If a valid token is present, populates req.user.
  * Does not block if no token or expired token.
  */
-export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1]
-    const decoded = verifyToken(token)
-    if (decoded) {
-      const user = db.prepare('SELECT id, name, email, provider, role, avatar_url FROM users WHERE id = ?').get(decoded.id) as AuthUser | undefined
-      if (user) {
-        req.user = user
+export async function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1]
+      const decoded = verifyToken(token)
+      if (decoded) {
+        const user = await queryOne<AuthUser>(
+          'SELECT id, name, email, provider, role, avatar_url FROM users WHERE id = $1',
+          [decoded.id]
+        )
+        if (user) {
+          req.user = user
+        }
       }
     }
+  } catch {
+    // Ignore optional auth failures
   }
   next()
 }

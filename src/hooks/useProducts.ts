@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Product } from '@/types'
-import { CANONICAL_PRODUCTS } from '@/data/canonicalProducts'
 import { API_BASE } from '@/lib/api'
 
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>(CANONICAL_PRODUCTS)
+  const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -16,13 +15,18 @@ export function useProducts() {
       try {
         const res = await fetch(`${API_BASE}/api/products`)
         if (res.ok) {
-          const data: Product[] = await res.json()
-          if (isMounted && Array.isArray(data) && data.length > 0) {
+          const data = await res.json()
+          if (isMounted && Array.isArray(data)) {
             setProducts(data)
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}))
+          if (isMounted) {
+            setError(errData.error || `HTTP error ${res.status}`)
           }
         }
       } catch (err: any) {
-        console.warn('API products fetch fallback to canonical products:', err)
+        console.error('API products fetch error:', err)
         if (isMounted) {
           setError(err.message)
         }

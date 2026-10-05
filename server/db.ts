@@ -1,395 +1,320 @@
-import { DatabaseSync } from 'node:sqlite'
-import fs from 'node:fs'
-import path from 'node:path'
-import crypto from 'node:crypto'
+import pg from 'pg'
 import bcrypt from 'bcryptjs'
+import crypto from 'node:crypto'
 import dotenv from 'dotenv'
+import { CANONICAL_PRODUCTS } from '../src/data/canonicalProducts'
 
 dotenv.config()
 
-const dbPath = process.env.DATABASE_PATH || 'server/data/gm_furniture.db'
-const resolvedPath = path.resolve(process.cwd(), dbPath)
-const dbDir = path.dirname(resolvedPath)
+const { Pool } = pg
 
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true })
+let pool: pg.Pool | null = null
+
+export function getPool(): pg.Pool {
+  if (!pool) {
+    const connectionString =
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.POSTGRES_PRISMA_URL ||
+      ''
+
+    const isLocalhost =
+      connectionString.includes('localhost') ||
+      connectionString.includes('127.0.0.1')
+
+    pool = new Pool({
+      connectionString: connectionString || undefined,
+      ssl: connectionString && !isLocalhost ? { rejectUnauthorized: false } : false,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    })
+
+    pool.on('error', (err) => {
+      console.error('[PostgreSQL Pool Error]', err)
+    })
+  }
+  return pool
 }
 
-export const db = new DatabaseSync(resolvedPath)
+/**
+ * Execute a query returning an array of typed rows
+ */
+export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  const p = getPool()
+  const result = await p.query(text, params)
+  return result.rows as T[]
+}
 
-// Initialize PRAGMA
-db.exec('PRAGMA foreign_keys = ON;')
+/**
+ * Execute a query returning a single row or null
+ */
+export async function queryOne<T = any>(text: string, params: any[] = []): Promise<T | null> {
+  const rows = await query<T>(text, params)
+  return rows.length > 0 ? rows[0] : null
+}
 
-// Initialize Schema
-export function initDatabase() {
-  db.exec(`
+/**
+ * Execute a mutation query (INSERT, UPDATE, DELETE)
+ */
+export async function execute(text: string, params: any[] = []): Promise<{ rowCount: number }> {
+  const p = getPool()
+  const result = await p.query(text, params)
+  return { rowCount: result.rowCount || 0 }
+}
+
+let initPromise: Promise<void> | null = null
+
+export function ensureDatabaseInitialized(): Promise<void> {
+  if (!initPromise) {
+    initPromise = initDatabase().catch((err) => {
+      console.error('[Database] Initialization failed:', err)
+      initPromise = null // Allow retry on next request if initialization failed
+      throw err
+    })
+  }
+  return initPromise
+}
+
+export async function initDatabase(): Promise<void> {
+  const connectionString =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL
+
+  if (!connectionString) {
+    console.warn('[Database] WARNING: DATABASE_URL is not set. Database initialization skipped.')
+    return
+  }
+
+  // 1. Create tables
+  await query(`
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT,
-      provider TEXT NOT NULL DEFAULT 'local',
-      provider_id TEXT,
+      id VARCHAR(64) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255),
+      provider VARCHAR(50) NOT NULL DEFAULT 'local',
+      provider_id VARCHAR(255),
       avatar_url TEXT,
-      role TEXT NOT NULL DEFAULT 'customer',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      role VARCHAR(50) NOT NULL DEFAULT 'customer',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS products (
-      id TEXT PRIMARY KEY,
-      slug TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL,
-      sku TEXT UNIQUE NOT NULL,
-      category TEXT NOT NULL,
-      collection TEXT,
-      room TEXT,
+      id VARCHAR(64) PRIMARY KEY,
+      slug VARCHAR(255) UNIQUE NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      sku VARCHAR(100) UNIQUE NOT NULL,
+      category VARCHAR(100) NOT NULL,
+      collection VARCHAR(100),
+      room VARCHAR(100),
       price INTEGER NOT NULL,
       mrp INTEGER NOT NULL,
       discount INTEGER NOT NULL DEFAULT 0,
       description TEXT NOT NULL,
       short_description TEXT NOT NULL,
-      images_json TEXT NOT NULL,
-      colors_json TEXT NOT NULL,
-      dimensions_json TEXT NOT NULL,
-      material TEXT NOT NULL,
-      finish TEXT NOT NULL,
-      lead_time TEXT NOT NULL,
-      warranty TEXT NOT NULL,
-      specifications_json TEXT NOT NULL,
-      care_instructions_json TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'published',
+      images_json TEXT NOT NULL DEFAULT '[]',
+      colors_json TEXT NOT NULL DEFAULT '[]',
+      dimensions_json TEXT NOT NULL DEFAULT '{}',
+      material VARCHAR(255) NOT NULL,
+      finish VARCHAR(255) NOT NULL,
+      lead_time VARCHAR(255) NOT NULL,
+      warranty VARCHAR(255) NOT NULL,
+      specifications_json TEXT NOT NULL DEFAULT '[]',
+      care_instructions_json TEXT NOT NULL DEFAULT '[]',
+      status VARCHAR(50) NOT NULL DEFAULT 'published',
       featured INTEGER NOT NULL DEFAULT 0,
       new_arrival INTEGER NOT NULL DEFAULT 0,
       rating REAL NOT NULL DEFAULT 5.0,
       review_count INTEGER NOT NULL DEFAULT 0,
       stock INTEGER NOT NULL DEFAULT 10,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS cart_items (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      id VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id VARCHAR(64) NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       quantity INTEGER NOT NULL DEFAULT 1,
-      selected_color TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
+      selected_color VARCHAR(100) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE(user_id, product_id, selected_color)
     );
 
     CREATE TABLE IF NOT EXISTS wishlist_items (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-      created_at TEXT NOT NULL,
+      id VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id VARCHAR(64) NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE(user_id, product_id)
     );
 
     CREATE TABLE IF NOT EXISTS addresses (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      full_name TEXT NOT NULL,
-      phone TEXT NOT NULL,
+      id VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      full_name VARCHAR(255) NOT NULL,
+      phone VARCHAR(50) NOT NULL,
       address_line TEXT NOT NULL,
-      city TEXT NOT NULL,
-      state TEXT NOT NULL,
-      pincode TEXT NOT NULL,
+      city VARCHAR(100) NOT NULL,
+      state VARCHAR(100) NOT NULL,
+      pincode VARCHAR(20) NOT NULL,
       is_default INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS orders (
-      id TEXT PRIMARY KEY,
-      order_number TEXT UNIQUE NOT NULL,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id VARCHAR(64) PRIMARY KEY,
+      order_number VARCHAR(100) UNIQUE NOT NULL,
+      user_id VARCHAR(64) REFERENCES users(id) ON DELETE SET NULL,
       subtotal INTEGER NOT NULL,
       discount INTEGER NOT NULL DEFAULT 0,
       total INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'confirmed',
+      status VARCHAR(50) NOT NULL DEFAULT 'confirmed',
+      payment_status VARCHAR(50) NOT NULL DEFAULT 'pending',
+      payment_method VARCHAR(50) NOT NULL DEFAULT 'cod',
+      payment_id VARCHAR(255),
       delivery_address_json TEXT NOT NULL,
       items_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS order_items (
+      id VARCHAR(64) PRIMARY KEY,
+      order_id VARCHAR(64) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      product_id VARCHAR(64) REFERENCES products(id) ON DELETE SET NULL,
+      name VARCHAR(255) NOT NULL,
+      sku VARCHAR(100) NOT NULL,
+      price INTEGER NOT NULL,
+      quantity INTEGER NOT NULL,
+      selected_color VARCHAR(100),
+      images_json TEXT,
+      specifications_json TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `)
 
-  // Migrate role column if not present in existing table
-  try {
-    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer';")
-  } catch {}
-
-  seedAdminUser()
-  // NOTE: seedProducts() intentionally removed.
-  // Products are entered manually through Admin → Products.
-  // Do NOT re-add automatic product seeding.
-}
-
-function seedProducts() {
-  const countRow = db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number }
-  if (countRow && countRow.count >= 4) {
-    return
-  }
-
-  // Clear any existing legacy products to ensure only the 4 canonical products exist
-  db.exec('DELETE FROM products;')
-
-  const insertProduct = db.prepare(`
-    INSERT INTO products (
-      id, slug, name, sku, category, collection, room,
-      price, mrp, discount, description, short_description,
-      images_json, colors_json, dimensions_json,
-      material, finish, lead_time, warranty,
-      specifications_json, care_instructions_json,
-      status, featured, new_arrival, rating, review_count, stock,
-      created_at, updated_at
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?,
-      ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?,
-      ?, ?, ?, ?, ?, ?,
-      ?, ?
-    )
+  // 2. Create indexes for performance
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
+    CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+    CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+    CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+    CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
+    CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+    CREATE INDEX IF NOT EXISTS idx_cart_user_id ON cart_items(user_id);
+    CREATE INDEX IF NOT EXISTS idx_wishlist_user_id ON wishlist_items(user_id);
+    CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);
   `)
 
-  const now = new Date().toISOString()
+  // 3. Seed admin user
+  await seedAdminUser()
 
-  // 1. Atelier Solid Walnut Dining Table
-  insertProduct.run(
-    'gm-prod-04',
-    'atelier-solid-walnut-dining-table',
-    'Atelier Solid Walnut Dining Table',
-    'GM-DIN-004',
-    'dining',
-    'considered-classics',
-    'dining-room',
-    195000,
-    230000,
-    15,
-    'An expansive centerpiece benchcrafted from wide-plank American black walnut. The chamfered perimeter and tapered trestle base offer generous legroom for eight to ten guests.',
-    'Solid American black walnut 8-seater dining table.',
-    JSON.stringify([
-      'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1544457070-4cd773b4d71e?auto=format&fit=crop&w=1200&q=80',
-    ]),
-    JSON.stringify([
-      { name: 'Natural American Walnut', hex: '#533B2B' },
-      { name: 'Ebonized Dark Walnut', hex: '#222222' },
-    ]),
-    JSON.stringify({
-      width: '240 cm',
-      depth: '100 cm',
-      height: '75 cm',
-      weight: '78 kg',
-    }),
-    'FSC-Certified American Black Walnut',
-    'Natural Matte Hardwax Oil',
-    '2-3 Weeks White-Glove Installation',
-    '10-Year Framework Structural Warranty',
-    JSON.stringify([
-      { label: 'Timber Origin', value: 'Sustainably Managed Appalachian Hardwoods' },
-      { label: 'Joinery Type', value: 'Mortise & Tenon with Through-Dowels' },
-      { label: 'Seating Capacity', value: '8-10 Guests' },
-      { label: 'Finish System', value: 'Zero-VOC Food-Safe Plant Wax' },
-    ]),
-    JSON.stringify([
-      'Wipe down with a damp lint-free cotton cloth.',
-      'Avoid placing hot pans directly without trivets.',
-      'Re-apply natural hardwax oil annually to maintain rich patina.',
-    ]),
-    'published',
-    1, // featured
-    0, // newArrival
-    4.9,
-    18,
-    8,
-    now,
-    now
-  )
-
-  // 2. Column Round Carrara Marble Dining Table
-  insertProduct.run(
-    'gm-prod-14',
-    'column-marble-dining-table',
-    'Column Round Carrara Marble Dining Table',
-    'GM-DIN-014',
-    'dining',
-    'architectural-series',
-    'dining-room',
-    188000,
-    220000,
-    15,
-    'A majestic 140cm diameter round dining table highlighting a seamless honed Italian Carrara marble disc anchored atop a monolithic cast architectural ribbed concrete base.',
-    '140cm round Carrara marble tabletop on ribbed fluted pedestal.',
-    JSON.stringify([
-      'https://images.unsplash.com/photo-1544457070-4cd773b4d71e?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
-    ]),
-    JSON.stringify([
-      { name: 'White Carrara Marble', hex: '#EDEAE6' },
-      { name: 'Arabescato Dark Marble', hex: '#63625F' },
-    ]),
-    JSON.stringify({
-      width: '140 cm',
-      depth: '140 cm',
-      height: '75 cm',
-      weight: '115 kg',
-    }),
-    'Honed Carrara Marble & Cast Fluted Concrete',
-    'Penetrating Matte Nano-Sealant',
-    '2-3 Weeks White-Glove Installation',
-    '10-Year Framework Structural Warranty',
-    JSON.stringify([
-      { label: 'Stone Origin', value: 'Carrara Region, Tuscany, Italy' },
-      { label: 'Base Construction', value: 'Steel-Reinforced Cast Architectural Concrete' },
-      { label: 'Seating Capacity', value: '4-6 Guests' },
-      { label: 'Stone Thickness', value: '25mm Solid Honed Slab' },
-    ]),
-    JSON.stringify([
-      'Clean spills immediately to prevent marble etching.',
-      'Use pH-neutral stone cleaner only.',
-      'Do not use acidic cleaners or abrasive scouring pads.',
-    ]),
-    'published',
-    1, // featured
-    1, // newArrival
-    5.0,
-    14,
-    5,
-    now,
-    now
-  )
-
-  // 3. Nordic Atelier Solid White Oak Dining Table
-  insertProduct.run(
-    'gm-prod-22',
-    'nordic-oak-dining-table',
-    'Nordic Atelier Solid White Oak Dining Table',
-    'GM-DIN-022',
-    'dining',
-    'nordic-atelier',
-    'dining-room',
-    172000,
-    205000,
-    16,
-    'Minimalist Nordic dining table sculpted from European white oak with soft radius pillowed edges and concealed mortise-and-tenon structural framing.',
-    'Solid European white oak 6-8 seater architectural dining table.',
-    JSON.stringify([
-      'https://images.unsplash.com/photo-1577140917170-285929fb55b7?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
-    ]),
-    JSON.stringify([
-      { name: 'White-Pigmented Oak', hex: '#E2D7C5' },
-      { name: 'Smoked Grey Oak', hex: '#686055' },
-    ]),
-    JSON.stringify({
-      width: '210 cm',
-      depth: '95 cm',
-      height: '75 cm',
-      weight: '64 kg',
-    }),
-    'Solid European White Oak',
-    'White-Pigmented Matte Hardwax Oil',
-    '2-3 Weeks White-Glove Installation',
-    '10-Year Framework Structural Warranty',
-    JSON.stringify([
-      { label: 'Timber Origin', value: 'FSC-Certified French White Oak' },
-      { label: 'Edge Profile', value: 'Soft Bullnose Radius' },
-      { label: 'Seating Capacity', value: '6-8 Guests' },
-      { label: 'Eco Certification', value: 'FSC 100% Verified Chain of Custody' },
-    ]),
-    JSON.stringify([
-      'Dust with dry microfiber cloth.',
-      'Protect surface from prolonged moisture exposure.',
-    ]),
-    'published',
-    1, // featured
-    0, // newArrival
-    4.9,
-    11,
-    7,
-    now,
-    now
-  )
-
-  // 4. Monolith Smoked Oak & Travertine Dining Table
-  insertProduct.run(
-    'gm-prod-23',
-    'monolith-travertine-dining-table',
-    'Monolith Smoked Oak & Travertine Dining Table',
-    'GM-DIN-023',
-    'dining',
-    'architectural-series',
-    'dining-room',
-    215000,
-    250000,
-    14,
-    'A commanding monumental dining table featuring an uncurated Roman travertine slab inset into a deep smoked oak perimeter with twin monolithic pillar legs.',
-    'Smoked oak and honed Roman travertine stone dining table.',
-    JSON.stringify([
-      'https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1544457070-4cd773b4d71e?auto=format&fit=crop&w=1200&q=80',
-    ]),
-    JSON.stringify([
-      { name: 'Smoked Oak & Travertine', hex: '#3B332B' },
-      { name: 'Bleached Oak & Travertine', hex: '#C7B9A5' },
-    ]),
-    JSON.stringify({
-      width: '260 cm',
-      depth: '105 cm',
-      height: '76 cm',
-      weight: '130 kg',
-    }),
-    'Smoked European Oak & Italian Roman Travertine',
-    'Zero-VOC Natural Matte Finish',
-    '3-4 Weeks White-Glove Installation',
-    '10-Year Framework Structural Warranty',
-    JSON.stringify([
-      { label: 'Stone Origin', value: 'Tivoli, Italy' },
-      { label: 'Timber Finish', value: 'Fumed Smoked Oak' },
-      { label: 'Seating Capacity', value: '10-12 Guests' },
-      { label: 'Pedestal Construction', value: 'Dual Hollow-Core Weighted Monoliths' },
-    ]),
-    JSON.stringify([
-      'Wipe down with stone-safe natural cleansers.',
-      'Periodically apply breathable stone impregnator.',
-    ]),
-    'published',
-    0, // featured
-    1, // newArrival
-    5.0,
-    9,
-    4,
-    now,
-    now
-  )
+  // 4. Seed initial products if table is empty
+  await seedInitialProducts()
 }
 
-export function seedAdminUser() {
+export async function seedAdminUser(): Promise<void> {
   const adminEmail = (process.env.ADMIN_EMAIL || 'vedikgannoji5126@gmail.com').trim().toLowerCase()
   const adminPassword = process.env.ADMIN_PASSWORD || 'Vedik@2006'
   const hash = bcrypt.hashSync(adminPassword, 10)
-  const now = new Date().toISOString()
+  const now = new Date()
 
-  const existing = db.prepare('SELECT id, email, role FROM users WHERE email = ?').get(adminEmail) as any
+  const existing = await queryOne<{ id: string; email: string; role: string }>(
+    'SELECT id, email, role FROM users WHERE email = $1',
+    [adminEmail]
+  )
 
   if (!existing) {
     const adminId = `usr_admin_${crypto.randomUUID()}`
-    db.prepare(`
-      INSERT INTO users (id, name, email, password_hash, provider, role, created_at, updated_at)
-      VALUES (?, ?, ?, ?, 'local', 'admin', ?, ?)
-    `).run(adminId, 'Administrator', adminEmail, hash, now, now)
+    await execute(
+      `INSERT INTO users (id, name, email, password_hash, provider, role, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, 'local', 'admin', $5, $6)`,
+      [adminId, 'Administrator', adminEmail, hash, now, now]
+    )
     console.log(`[Database] Initialized designated admin user: ${adminEmail}`)
   } else {
-    db.prepare(`
-      UPDATE users
-      SET role = 'admin', password_hash = ?, updated_at = ?
-      WHERE email = ?
-    `).run(hash, now, adminEmail)
+    await execute(
+      `UPDATE users
+       SET role = 'admin', password_hash = $1, updated_at = $2
+       WHERE email = $3`,
+      [hash, now, adminEmail]
+    )
     console.log(`[Database] Ensured admin privileges for: ${adminEmail}`)
   }
 }
 
+export async function seedInitialProducts(): Promise<void> {
+  const row = await queryOne<{ count: string | number }>(
+    'SELECT COUNT(*) as count FROM products'
+  )
+  const count = Number(row?.count || 0)
+
+  // Only seed if table is completely empty to preserve manual admin edits/creations
+  if (count > 0) {
+    return
+  }
+
+  console.log('[Database] Seeding initial canonical architectural dining table products...')
+
+  for (const p of CANONICAL_PRODUCTS) {
+    const now = new Date()
+    await execute(
+      `INSERT INTO products (
+        id, slug, name, sku, category, collection, room,
+        price, mrp, discount, description, short_description,
+        images_json, colors_json, dimensions_json,
+        material, finish, lead_time, warranty,
+        specifications_json, care_instructions_json,
+        status, featured, new_arrival, rating, review_count, stock,
+        created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11, $12,
+        $13, $14, $15,
+        $16, $17, $18, $19,
+        $20, $21,
+        $22, $23, $24, $25, $26, $27,
+        $28, $29
+      ) ON CONFLICT (id) DO NOTHING`,
+      [
+        p.id,
+        p.slug,
+        p.name,
+        p.sku,
+        p.category,
+        p.collection || null,
+        p.room || null,
+        Math.round(p.price),
+        Math.round(p.mrp),
+        p.discount || 0,
+        p.description,
+        p.shortDescription || p.description.slice(0, 150),
+        JSON.stringify(p.images || []),
+        JSON.stringify(p.colors || []),
+        JSON.stringify(p.dimensions || {}),
+        p.material,
+        p.finish,
+        p.leadTime || '2-3 Weeks White-Glove Installation',
+        p.warranty || '10-Year Framework Structural Warranty',
+        JSON.stringify(p.specifications || []),
+        JSON.stringify(p.careInstructions || []),
+        p.status || 'published',
+        p.featured ? 1 : 0,
+        p.newArrival ? 1 : 0,
+        p.rating || 5.0,
+        p.reviewCount || 0,
+        p.stock !== undefined ? p.stock : 10,
+        now,
+        now,
+      ]
+    )
+  }
+
+  console.log(`[Database] Successfully seeded ${CANONICAL_PRODUCTS.length} canonical products.`)
+}

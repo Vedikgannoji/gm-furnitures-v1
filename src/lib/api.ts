@@ -1,31 +1,25 @@
 /**
  * API base URL helper.
  *
- * In development: Vite's proxy forwards /api → http://localhost:3001,
- *   so an empty string (relative URL) works fine.
- *
- * In production: the Express server runs on a separate host
- *   (e.g. Railway / Render). Set VITE_API_URL to that origin in your
- *   Vercel project environment variables, e.g.:
- *
- *     VITE_API_URL = https://gm-furniture-api.railway.app
- *
- *   Leave it empty (or unset) for local development.
+ * Architecture:
+ * - Unified Vercel deployment: Frontend and Backend API run under the same
+ *   Vercel project domain (https://gmfurniture.vercel.app).
+ * - Same-origin relative URLs (/api/...) are used by default.
+ * - If VITE_API_URL is provided, it can override the base path.
  */
 export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 /**
  * Wrapper around fetch that:
  *  1. Prepends the correct API base URL.
- *  2. Always reads the response body safely — if the server returns
- *     non-JSON (e.g. an HTML error page), it throws a clear message
- *     instead of "Unexpected token '<'".
+ *  2. Safely handles JSON responses.
+ *  3. Throws descriptive error messages if the server returns an error.
  */
 export async function apiFetch(
   path: string,
   init?: RequestInit
 ): Promise<{ ok: boolean; status: number; data: any }> {
-  const url = `${API_BASE}${path}`
+  const url = `${API_BASE}${path.startsWith('/') ? path : '/' + path}`
 
   let res: Response
   try {
@@ -46,8 +40,7 @@ export async function apiFetch(
     if (!res.ok) {
       if (res.status === 404 || res.status === 405) {
         throw new Error(
-          `API endpoint not found (${res.status}). The backend may not be deployed yet — ` +
-          `set VITE_API_URL in Vercel to your Railway/Render backend URL.`
+          `API endpoint not found (${res.status}). Please verify the requested route exists.`
         )
       }
       throw new Error(
