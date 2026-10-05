@@ -157,18 +157,18 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 // Database initialization middleware
 // Ensures schema and admin seeding on warm start
 app.use(async (_req: Request, res: Response, next: NextFunction) => {
+  if (!hasDatabaseUrl()) {
+    res.status(503).json({
+      error:
+        'Database not configured. Please set DATABASE_URL (Neon PostgreSQL) in your Vercel project environment variables.',
+    })
+    return
+  }
   try {
     await ensureDatabaseInitialized()
     next()
   } catch (err: any) {
     console.error('[Database Middleware Error]', err)
-    if (!hasDatabaseUrl()) {
-      res.status(503).json({
-        error:
-          'Database not configured. Please set DATABASE_URL (Neon PostgreSQL) in your Vercel project environment variables.',
-      })
-      return
-    }
     res.status(500).json({
       error: 'Database connection failed. Please verify Neon PostgreSQL connection string.',
     })

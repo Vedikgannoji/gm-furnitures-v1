@@ -712,17 +712,17 @@ app.get("/api/health", async (_req, res) => {
   });
 });
 app.use(async (_req, res, next) => {
+  if (!hasDatabaseUrl()) {
+    res.status(503).json({
+      error: "Database not configured. Please set DATABASE_URL (Neon PostgreSQL) in your Vercel project environment variables."
+    });
+    return;
+  }
   try {
     await ensureDatabaseInitialized();
     next();
   } catch (err) {
     console.error("[Database Middleware Error]", err);
-    if (!hasDatabaseUrl()) {
-      res.status(503).json({
-        error: "Database not configured. Please set DATABASE_URL (Neon PostgreSQL) in your Vercel project environment variables."
-      });
-      return;
-    }
     res.status(500).json({
       error: "Database connection failed. Please verify Neon PostgreSQL connection string."
     });
