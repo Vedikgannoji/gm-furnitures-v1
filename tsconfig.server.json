@@ -9,10 +9,8 @@
     "skipLibCheck": true,
     "strict": false,
     "noEmit": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["server/**/*.ts", "api/**/*.ts", "scripts/**/*.ts"]
