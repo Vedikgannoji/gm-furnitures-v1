@@ -24,6 +24,11 @@ app.use(express.json())
 // Initialize DB schema & seed products
 initDatabase()
 
+// Health check (used by Railway / deployment platforms)
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
 // ==========================================
 // 1. AUTHENTICATION ENDPOINTS
 // ==========================================
