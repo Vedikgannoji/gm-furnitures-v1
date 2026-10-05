@@ -5,18 +5,19 @@ import { EmptyState } from '@/components/commerce/EmptyState'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
 import { ComingSoonBadge } from '@/components/ui/ComingSoon'
-import { mockProducts } from '@/data/mockData'
+import { useProducts } from '@/hooks/useProducts'
 import { isProductAvailableForPurchase } from '@/utils/availability'
 
 export const ShopPage: React.FC = () => {
+  const { products } = useProducts()
   const [maxPrice, setMaxPrice] = useState<number>(300000)
   const [sortBy, setSortBy] = useState<string>('featured')
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false)
 
   // Launch Availability Rule: Dining Tables Only
   const availableDiningTables = useMemo(() => {
-    return mockProducts.filter(isProductAvailableForPurchase)
-  }, [])
+    return products.filter(isProductAvailableForPurchase)
+  }, [products])
 
   // Filter products strictly based on active dining tables
   const filteredProducts = useMemo(() => {

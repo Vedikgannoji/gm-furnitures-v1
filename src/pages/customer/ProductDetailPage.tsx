@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button'
 import { Accordion } from '@/components/ui/Accordion'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
-import { mockProducts } from '@/data/mockData'
+import { useProducts } from '@/hooks/useProducts'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useCart } from '@/context/CartContext'
 import { useWishlist } from '@/context/WishlistContext'
@@ -29,8 +29,9 @@ export const ProductDetailPage: React.FC = () => {
   const { addToCart, setIsCartDrawerOpen } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
   const { showToast } = useToast()
+  const { products } = useProducts()
 
-  const product = mockProducts.find((p) => p.slug === slug)
+  const product = products.find((p) => p.slug === slug)
 
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0)
   const [selectedColor, setSelectedColor] = useState<string>(
@@ -70,7 +71,7 @@ export const ProductDetailPage: React.FC = () => {
     showToast('Link Copied', 'Product URL copied to your clipboard.', 'info')
   }
 
-  const relatedProducts = mockProducts
+  const relatedProducts = products
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4)
 

@@ -1,15 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Search, X } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
-import { mockProducts } from '@/data/mockData'
+import { useProducts } from '@/hooks/useProducts'
 
 export const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialQuery = searchParams.get('q') || ''
   const [query, setQuery] = useState(initialQuery)
+  const { products } = useProducts()
 
   useEffect(() => {
     setQuery(searchParams.get('q') || '')
@@ -26,18 +27,20 @@ export const SearchPage: React.FC = () => {
 
   const searchResults = useMemo(() => {
     const trimmed = query.trim().toLowerCase()
-    if (!trimmed) return mockProducts
+    if (!trimmed) return products
 
-    return mockProducts.filter((product) => {
+    return products.filter((product) => {
       const matchName = product.name.toLowerCase().includes(trimmed)
       const matchCat = product.category.toLowerCase().includes(trimmed)
       const matchMaterial = product.material.toLowerCase().includes(trimmed)
       const matchSku = product.sku.toLowerCase().includes(trimmed)
       const matchRoom = product.room.toLowerCase().includes(trimmed)
-      const matchTags = product.tags.some((t) => t.toLowerCase().includes(trimmed))
+      const matchTags = Array.isArray(product.tags)
+        ? product.tags.some((t) => t.toLowerCase().includes(trimmed))
+        : false
       return matchName || matchCat || matchMaterial || matchSku || matchRoom || matchTags
     })
-  }, [query])
+  }, [query, products])
 
   const popularSearches = ['Modular Sofa', 'Travertine', 'Solid Oak', 'Dining Table', 'Platform Bed', 'Walnut']
 
@@ -96,7 +99,7 @@ export const SearchPage: React.FC = () => {
             </>
           ) : (
             <>
-              Displaying all <span className="font-semibold text-foreground">{mockProducts.length}</span> pieces
+              Displaying all <span className="font-semibold text-foreground">{products.length}</span> pieces
             </>
           )}
         </span>

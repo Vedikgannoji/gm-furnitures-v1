@@ -4,13 +4,14 @@ import { CANONICAL_PRODUCTS } from '@/data/canonicalProducts'
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>(CANONICAL_PRODUCTS)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
 
     async function loadProducts() {
+      setIsLoading(true)
       try {
         const res = await fetch('/api/products')
         if (res.ok) {

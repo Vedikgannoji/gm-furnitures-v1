@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, Award, Shield, Truck, Globe } from 'lucide-react'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { ComingSoonBadge } from '@/components/ui/ComingSoon'
-import { mockProducts, mockCategories, mockRooms, mockCollections } from '@/data/mockData'
+import { mockCategories, mockRooms, mockCollections } from '@/data/mockData'
+import { useProducts } from '@/hooks/useProducts'
 import { isRoomAvailable } from '@/utils/availability'
 
 const InstagramIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -108,8 +109,9 @@ function useCredibilityMetrics(duration: number = 1800) {
 }
 
 export const HomePage: React.FC = () => {
-  const featuredProducts = mockProducts.filter((p) => p.featured).slice(0, 4)
-  const newArrivals = mockProducts.filter((p) => p.newArrival).slice(0, 4)
+  const { featuredProducts: apiFeatured, newArrivals: apiNewArrivals } = useProducts()
+  const featuredProducts = apiFeatured.slice(0, 4)
+  const newArrivals = apiNewArrivals.slice(0, 4)
 
   const signatureCollection = mockCollections.find((c) => c.slug === 'nordic-atelier') || mockCollections[1]
   const minimalistCollection = mockCollections.find((c) => c.slug === 'minimalist-line') || mockCollections[0]

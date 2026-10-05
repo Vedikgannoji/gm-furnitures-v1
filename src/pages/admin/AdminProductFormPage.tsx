@@ -20,6 +20,7 @@ export const AdminProductFormPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [imageInputError, setImageInputError] = useState<string | null>(null)
 
   // Form state
   const [form, setForm] = useState({
@@ -147,13 +148,47 @@ export const AdminProductFormPage: React.FC = () => {
   }
 
   const handleAddImage = () => {
-    if (form.newImageUrl.trim()) {
-      setForm((prev) => ({
-        ...prev,
-        images: [...prev.images, prev.newImageUrl.trim()],
-        newImageUrl: '',
-      }))
-      showToast('Image Appended', 'Image URL added to gallery preview.', 'info')
+    setImageInputError(null)
+    const raw = form.newImageUrl.trim()
+
+    if (!raw) {
+      setImageInputError('Please paste an image URL before clicking Add Image.')
+      return
+    }
+
+    // Normalise: add https:// if the user omitted a scheme
+    let normalised = raw
+    if (!/^https?:\/\//i.test(raw)) {
+      normalised = `https://${raw}`
+    }
+
+    // Basic URL structure check
+    try {
+      new URL(normalised)
+    } catch {
+      setImageInputError('That doesn\'t look like a valid URL. Please include the full address (e.g. https://…).')
+      return
+    }
+
+    // Prevent duplicates
+    if (form.images.includes(normalised)) {
+      setImageInputError('This image URL is already in the gallery.')
+      return
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      images: [...prev.images, normalised],
+      newImageUrl: '',
+    }))
+    showToast('Image Added', 'Image URL added to the gallery.', 'info')
+  }
+
+  // Allow submitting the image input with Enter without triggering the main form save
+  const handleImageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddImage()
     }
   }
 
@@ -625,41 +660,85 @@ export const AdminProductFormPage: React.FC = () => {
               Product Images Gallery (Saved to images_json)
             </h3>
 
-            <div className="flex gap-2">
-              <input
-                type="url"
-                name="newImageUrl"
-                value={form.newImageUrl}
-                onChange={handleChange}
-                placeholder="Paste high-resolution image URL (e.g. Unsplash or CDN)..."
-                className="flex-1 h-10 bg-surface border border-border px-3 text-xs focus:border-foreground focus:outline-none"
-              />
-              <Button type="button" variant="outline" size="sm" onClick={handleAddImage}>
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Add Image
-              </Button>
+            {/* URL input row */}
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="newImageUrl"
+                  value={form.newImageUrl}
+                  onChange={(e) => {
+                    handleChange(e)
+                    setImageInputError(null)
+                  }}
+                  onKeyDown={handleImageInputKeyDown}
+                  placeholder="Paste high-resolution image URL (https://…)"
+                  className={`flex-1 h-10 bg-surface border px-3 text-xs focus:outline-none transition-colors ${
+                    imageInputError ? 'border-red-400 focus:border-red-500' : 'border-border focus:border-foreground'
+                  }`}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={handleAddImage}>
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Add Image
+                </Button>
+              </div>
+              {imageInputError && (
+                <p className="text-[11px] text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {imageInputError}
+                </p>
+              )}
+              <p className="text-[10px] text-muted">
+                Tip: Press <kbd className="px-1 py-0.5 bg-surface border border-border rounded text-[9px]">Enter</kbd> or click Add Image. URLs without a scheme (https://) are accepted.
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
-              {form.images.map((imgUrl, idx) => (
-                <div key={idx} className="relative group border border-border aspect-[3/4] bg-surface overflow-hidden">
-                  <img src={imgUrl} alt={`Product ${idx}`} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(idx)}
-                      className="p-1.5 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors"
-                      title="Remove image"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            {form.images.length === 0 ? (
+              <div className="border border-dashed border-border rounded p-10 text-center text-muted">
+                <Image className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-[11px]">No images yet. Paste a URL above and click Add Image.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                {form.images.map((imgUrl, idx) => (
+                  <div key={idx} className="relative border border-border aspect-[3/4] bg-surface overflow-hidden group">
+                    <img
+                      src={imgUrl}
+                      alt={`Product image ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.currentTarget
+                        target.style.display = 'none'
+                        const parent = target.parentElement
+                        if (parent && !parent.querySelector('.img-error-msg')) {
+                          const msg = document.createElement('div')
+                          msg.className = 'img-error-msg absolute inset-0 flex flex-col items-center justify-center bg-surface text-muted text-[10px] text-center p-2 gap-1'
+                          msg.innerHTML = '<span class="text-lg">🖼️</span><span>Image unavailable</span>'
+                          parent.appendChild(msg)
+                        }
+                      }}
+                    />
+                    {/* Remove button — always visible, not hover-only, so it works on touch devices */}
+                    <div className="absolute top-1.5 right-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(idx)}
+                        className="p-1.5 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors shadow-md"
+                        title="Remove image"
+                        aria-label={`Remove image ${idx + 1}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1.5 py-0.5 text-center">
+                      {idx === 0 ? 'Primary' : `#${idx + 1}`}
+                    </span>
                   </div>
-                  <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5">
-                    {idx === 0 ? 'Primary' : `#${idx + 1}`}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
