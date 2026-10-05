@@ -60,11 +60,11 @@ export const SearchPage: React.FC = () => {
             className="w-full h-14 bg-surface border border-border pl-12 pr-12 text-sm sm:text-base text-foreground focus:border-foreground focus:outline-none transition-colors"
             autoFocus
           />
-          <Search className="w-5 h-5 absolute left-4 top-4.5 text-muted" />
+          <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           {query && (
             <button
               onClick={() => handleQueryChange('')}
-              className="absolute right-4 top-4.5 text-muted hover:text-foreground p-1"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-foreground p-1"
               aria-label="Clear search query"
             >
               <X className="w-4 h-4" />
