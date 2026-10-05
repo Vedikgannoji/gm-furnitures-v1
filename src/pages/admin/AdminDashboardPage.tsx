@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/utils'
+import { API_BASE } from '@/lib/api'
 
 interface AdminStats {
   totalProducts: number

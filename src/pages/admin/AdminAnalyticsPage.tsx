@@ -149,7 +149,7 @@ export const AdminAnalyticsPage: React.FC = () => {
                 {data && data.totalOrders > 0 ? formatCurrency(data.avgOrderValue) : '—'}
               </p>
               <span className="text-xs text-muted mt-1 inline-block">
-                {data?.totalOrders > 0 ? 'From real completed orders' : 'No orders yet'}
+                {(data?.totalOrders ?? 0) > 0 ? 'From real completed orders' : 'No orders yet'}
               </span>
             </div>
 
@@ -167,7 +167,7 @@ export const AdminAnalyticsPage: React.FC = () => {
                 {data && data.totalOrders > 0 ? `${data.repeatRatio}%` : '—'}
               </p>
               <span className="text-xs text-muted mt-1 inline-block">
-                {data?.totalOrders > 0 ? 'Customers with 2+ orders' : 'Insufficient data'}
+                {(data?.totalOrders ?? 0) > 0 ? 'Customers with 2+ orders' : 'Insufficient data'}
               </span>
             </div>
           </div>
