@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { CartItem, Product } from '@/types'
 import { useToast } from './ToastContext'
 import { useAuth } from './AuthContext'
+import { API_BASE } from '@/lib/api'
 
 interface CartContextType {
   items: CartItem[]
@@ -35,7 +36,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchDBCart = useCallback(async (authToken: string) => {
     setIsLoadingCart(true)
     try {
-      const res = await fetch('/api/cart', {
+      const res = await fetch(`${API_BASE}/api/cart`, {
         headers: { Authorization: `Bearer ${authToken}` },
       })
       if (res.ok) {
@@ -88,7 +89,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // If authenticated, persist to database
     if (isAuthenticated && token) {
       try {
-        await fetch('/api/cart', {
+        await fetch(`${API_BASE}/api/cart`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -121,7 +122,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isAuthenticated && token && toRemove?.id) {
       try {
-        await fetch(`/api/cart/${toRemove.id}`, {
+        await fetch(`${API_BASE}/api/cart/${toRemove.id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -155,7 +156,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isAuthenticated && token && targetItem?.id) {
       try {
-        await fetch(`/api/cart/${targetItem.id}`, {
+        await fetch(`${API_BASE}/api/cart/${targetItem.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Product } from '@/types'
 import { CANONICAL_PRODUCTS } from '@/data/canonicalProducts'
+import { API_BASE } from '@/lib/api'
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>(CANONICAL_PRODUCTS)
@@ -13,7 +14,7 @@ export function useProducts() {
     async function loadProducts() {
       setIsLoading(true)
       try {
-        const res = await fetch('/api/products')
+        const res = await fetch(`${API_BASE}/api/products`)
         if (res.ok) {
           const data: Product[] = await res.json()
           if (isMounted && Array.isArray(data) && data.length > 0) {

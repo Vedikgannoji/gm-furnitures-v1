@@ -7,6 +7,7 @@ import { Product } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { API_BASE } from '@/lib/api'
 
 export const AdminProductsPage: React.FC = () => {
   const { showToast } = useToast()
@@ -24,7 +25,7 @@ export const AdminProductsPage: React.FC = () => {
     try {
       setIsLoading(true)
       setError(null)
-      const res = await fetch('/api/admin/products', {
+      const res = await fetch(`${API_BASE}/api/admin/products`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -73,7 +74,7 @@ export const AdminProductsPage: React.FC = () => {
     if (!deleteModalProduct) return
     try {
       setIsDeleting(true)
-      const res = await fetch(`/api/admin/products/${deleteModalProduct.id}`, {
+      const res = await fetch(`${API_BASE}/api/admin/products/${deleteModalProduct.id}`, {
         method: 'DELETE',
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),

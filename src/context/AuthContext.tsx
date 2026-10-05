@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 
 export interface UserProfile {
   id: string
@@ -46,20 +47,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-          },
+        const { ok, data } = await apiFetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${storedToken}` },
         })
 
-        if (response.ok) {
-          const data = await response.json()
+        if (ok) {
           if (isMounted) {
             setUser(data.user)
             setToken(storedToken)
           }
         } else {
-          // Token invalid or expired
           localStorage.removeItem(TOKEN_KEY)
           if (isMounted) {
             setUser(null)
@@ -68,33 +65,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         console.error('Session verification error:', err)
-        // Keep offline or clear if network failure
       } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+        if (isMounted) setIsLoading(false)
       }
     }
 
     checkAuth()
 
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [])
 
   const login = async (email: string, password: string): Promise<UserProfile> => {
-    const res = await fetch('/api/auth/login', {
+    const { ok, data } = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     })
-
-    const data = await res.json()
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to sign in.')
-    }
-
+    if (!ok) throw new Error(data.error || 'Failed to sign in.')
     localStorage.setItem(TOKEN_KEY, data.token)
     setToken(data.token)
     setUser(data.user)
@@ -102,17 +89,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const register = async (name: string, email: string, password: string): Promise<UserProfile> => {
-    const res = await fetch('/api/auth/register', {
+    const { ok, data } = await apiFetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
     })
-
-    const data = await res.json()
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to create account.')
-    }
-
+    if (!ok) throw new Error(data.error || 'Failed to create account.')
     localStorage.setItem(TOKEN_KEY, data.token)
     setToken(data.token)
     setUser(data.user)
@@ -120,17 +102,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const loginWithGoogle = async (credential: string): Promise<UserProfile> => {
-    const res = await fetch('/api/auth/google', {
+    const { ok, data } = await apiFetch('/api/auth/google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credential }),
     })
-
-    const data = await res.json()
-    if (!res.ok) {
-      throw new Error(data.error || 'Google authentication failed.')
-    }
-
+    if (!ok) throw new Error(data.error || 'Google authentication failed.')
     localStorage.setItem(TOKEN_KEY, data.token)
     setToken(data.token)
     setUser(data.user)

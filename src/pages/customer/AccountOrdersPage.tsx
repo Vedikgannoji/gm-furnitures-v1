@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Package, ArrowRight, ShieldCheck } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { API_BASE } from '@/lib/api'
 
 interface OrderItem {
   product: {
@@ -42,7 +43,7 @@ export const AccountOrdersPage: React.FC = () => {
     if (!token) return
     setIsLoading(true)
     try {
-      const res = await fetch('/api/orders', {
+      const res = await fetch(`${API_BASE}/api/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {

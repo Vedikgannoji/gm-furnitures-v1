@@ -4,6 +4,7 @@ import { ShoppingBag, Heart, MapPin, ArrowRight, ShieldCheck } from 'lucide-reac
 import { formatCurrency } from '@/lib/utils'
 import { useWishlist } from '@/context/WishlistContext'
 import { useAuth } from '@/context/AuthContext'
+import { API_BASE } from '@/lib/api'
 
 export const AccountDashboardPage: React.FC = () => {
   const { token, user } = useAuth()
@@ -22,8 +23,8 @@ export const AccountDashboardPage: React.FC = () => {
       setIsLoading(true)
       try {
         const [ordersRes, addressesRes] = await Promise.all([
-          fetch('/api/orders', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/addresses', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/orders`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/addresses`, { headers: { Authorization: `Bearer ${token}` } }),
         ])
 
         if (ordersRes.ok && isMounted) {

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { API_BASE } from '@/lib/api'
 
 interface StoredAddress {
   id: string
@@ -36,7 +37,7 @@ export const AccountAddressesPage: React.FC = () => {
     if (!token) return
     setIsLoading(true)
     try {
-      const res = await fetch('/api/addresses', {
+      const res = await fetch(`${API_BASE}/api/addresses`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -76,7 +77,7 @@ export const AccountAddressesPage: React.FC = () => {
     setIsSubmitting(true)
 
     try {
-      const res = await fetch('/api/addresses', {
+      const res = await fetch(`${API_BASE}/api/addresses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -40,7 +40,7 @@ export const AdminDashboardPage: React.FC = () => {
   const fetchStats = async () => {
     try {
       setIsLoading(true)
-      const res = await fetch('/api/admin/stats', {
+      const res = await fetch(`${API_BASE}/api/admin/stats`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },

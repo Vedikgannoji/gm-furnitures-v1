@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useToast } from './ToastContext'
 import { useAuth } from './AuthContext'
 import { Product } from '@/types'
+import { API_BASE } from '@/lib/api'
 
 interface WishlistContextType {
   wishlistIds: string[]
@@ -26,7 +27,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const fetchDBWishlist = useCallback(async (authToken: string) => {
     setIsLoadingWishlist(true)
     try {
-      const res = await fetch('/api/wishlist', {
+      const res = await fetch(`${API_BASE}/api/wishlist`, {
         headers: { Authorization: `Bearer ${authToken}` },
       })
       if (res.ok) {
@@ -81,12 +82,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (isAuthenticated && token) {
       try {
         if (exists) {
-          await fetch(`/api/wishlist/${productId}`, {
+          await fetch(`${API_BASE}/api/wishlist/${productId}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` },
           })
         } else {
-          await fetch('/api/wishlist', {
+          await fetch(`${API_BASE}/api/wishlist`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
