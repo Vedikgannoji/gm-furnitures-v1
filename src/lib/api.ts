@@ -26,7 +26,15 @@ export async function apiFetch(
   init?: RequestInit
 ): Promise<{ ok: boolean; status: number; data: any }> {
   const url = `${API_BASE}${path}`
-  const res = await fetch(url, init)
+
+  let res: Response
+  try {
+    res = await fetch(url, init)
+  } catch (networkError) {
+    throw new Error(
+      'Unable to reach the server. Please check your internet connection and try again.'
+    )
+  }
 
   const contentType = res.headers.get('content-type') || ''
   let data: any
@@ -34,13 +42,16 @@ export async function apiFetch(
   if (contentType.includes('application/json')) {
     data = await res.json()
   } else {
-    // Server returned non-JSON (HTML error page, plain text, etc.)
     const text = await res.text()
     if (!res.ok) {
+      // Distinguish common deployment problems with specific messages
+      if (res.status === 404 || res.status === 405) {
+        throw new Error(
+          'The server is currently unavailable. Please try again in a moment.'
+        )
+      }
       throw new Error(
-        `API error ${res.status}: server returned an unexpected response. ` +
-        `Check that VITE_API_URL points to the correct backend URL. ` +
-        `(Received: ${text.slice(0, 120)})`
+        `Server error (${res.status}). Please try again or contact support.`
       )
     }
     data = { message: text }
