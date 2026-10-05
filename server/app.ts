@@ -7,6 +7,8 @@ import {
   queryOne,
   execute,
   ensureDatabaseInitialized,
+  testDatabaseConnection,
+  hasDatabaseUrl,
 } from './db'
 import {
   hashPassword,
@@ -21,6 +23,9 @@ import {
 dotenv.config()
 
 const app = express()
+
+// Trust proxy for Vercel deployment
+app.set('trust proxy', true)
 
 // Allow Vercel frontend origin plus localhost for development
 const allowedOrigins = [
@@ -48,34 +53,20 @@ app.use(
 app.use(express.json())
 
 // URL normalization middleware for Vercel Serverless Function compatibility.
-// If Vercel rewrites stripped the "/api" prefix (e.g. /products instead of /api/products),
-// this ensures Express routes registered under /api/... always match.
+// If Vercel rewrote the request to /api/index.js, extract original request path
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  if (!req.url.startsWith('/api')) {
+  const originalPath = (req.headers['x-matched-path'] || req.headers['x-forwarded-uri']) as string | undefined
+
+  if (
+    originalPath &&
+    originalPath.startsWith('/api') &&
+    (req.url === '/api' || req.url === '/api/' || req.url.startsWith('/api/index'))
+  ) {
+    req.url = originalPath
+  } else if (!req.url.startsWith('/api')) {
     req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url)
   }
   next()
-})
-
-// Database initialization middleware
-// Ensures schema and admin seeding on warm start
-app.use(async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    await ensureDatabaseInitialized()
-    next()
-  } catch (err: any) {
-    console.error('[Database Middleware Error]', err)
-    if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
-      res.status(503).json({
-        error:
-          'Database not configured. Please set DATABASE_URL (Neon PostgreSQL) in your Vercel project environment variables.',
-      })
-      return
-    }
-    res.status(500).json({
-      error: 'Database connection failed. Please verify Neon PostgreSQL connection string.',
-    })
-  }
 })
 
 // Helper to safely parse JSON or return fallback
@@ -127,15 +118,61 @@ function formatProductRow(row: any) {
 }
 
 // ==========================================
-// 0. HEALTH CHECK
+// 0. HEALTH CHECK & ROOT API (Available without DB)
 // ==========================================
-app.get('/api/health', (_req: Request, res: Response) => {
+app.get('/api', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
+    service: 'GM Furniture API',
+    endpoints: {
+      health: '/api/health',
+      products: '/api/products',
+      login: '/api/auth/login',
+      register: '/api/auth/register',
+    },
+  })
+})
+
+app.get('/api/health', async (_req: Request, res: Response) => {
+  const dbTest = await testDatabaseConnection()
+  res.json({
+    status: dbTest.ok ? 'ok' : 'degraded',
     environment: process.env.NODE_ENV || 'production',
-    database: process.env.DATABASE_URL || process.env.POSTGRES_URL ? 'neon_postgresql' : 'unconfigured',
+    database: {
+      configured: hasDatabaseUrl(),
+      connected: dbTest.ok,
+      error: dbTest.error || null,
+    },
+    env: {
+      DATABASE_URL: hasDatabaseUrl(),
+      JWT_SECRET: Boolean(process.env.JWT_SECRET),
+      GOOGLE_CLIENT_ID: Boolean(process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID),
+      GOOGLE_CLIENT_SECRET: Boolean(process.env.GOOGLE_CLIENT_SECRET),
+      ADMIN_EMAIL: Boolean(process.env.ADMIN_EMAIL),
+    },
     timestamp: new Date().toISOString(),
   })
+})
+
+// Database initialization middleware
+// Ensures schema and admin seeding on warm start
+app.use(async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    await ensureDatabaseInitialized()
+    next()
+  } catch (err: any) {
+    console.error('[Database Middleware Error]', err)
+    if (!hasDatabaseUrl()) {
+      res.status(503).json({
+        error:
+          'Database not configured. Please set DATABASE_URL (Neon PostgreSQL) in your Vercel project environment variables.',
+      })
+      return
+    }
+    res.status(500).json({
+      error: 'Database connection failed. Please verify Neon PostgreSQL connection string.',
+    })
+  }
 })
 
 // ==========================================

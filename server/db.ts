@@ -37,10 +37,35 @@ export function getPool(): pg.Pool {
   return pool
 }
 
+export function hasDatabaseUrl(): boolean {
+  const connectionString =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    ''
+  return connectionString.trim().length > 0
+}
+
+export async function testDatabaseConnection(): Promise<{ ok: boolean; error?: string }> {
+  if (!hasDatabaseUrl()) {
+    return { ok: false, error: 'DATABASE_URL is not set' }
+  }
+  try {
+    const p = getPool()
+    await p.query('SELECT 1')
+    return { ok: true }
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) }
+  }
+}
+
 /**
  * Execute a query returning an array of typed rows
  */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  if (!hasDatabaseUrl()) {
+    throw new Error('Database is not configured. DATABASE_URL is missing.')
+  }
   const p = getPool()
   const result = await p.query(text, params)
   return result.rows as T[]
@@ -58,6 +83,9 @@ export async function queryOne<T = any>(text: string, params: any[] = []): Promi
  * Execute a mutation query (INSERT, UPDATE, DELETE)
  */
 export async function execute(text: string, params: any[] = []): Promise<{ rowCount: number }> {
+  if (!hasDatabaseUrl()) {
+    throw new Error('Database is not configured. DATABASE_URL is missing.')
+  }
   const p = getPool()
   const result = await p.query(text, params)
   return { rowCount: result.rowCount || 0 }
