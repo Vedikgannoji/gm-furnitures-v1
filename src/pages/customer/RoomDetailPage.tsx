@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { Room, Product } from '@/types'
 import { Search, Loader2 } from 'lucide-react'
 
@@ -110,16 +111,21 @@ export const RoomDetailPage: React.FC = () => {
             </div>
           )}
 
-          <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-foreground">
-            {room.name}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-foreground">
+              {room.name}
+            </h1>
+            {products.length === 0 && <ComingSoonBadge label="COMING SOON" />}
+          </div>
 
           <p className="mt-4 text-sm sm:text-base text-muted leading-relaxed">
             {room.description}
           </p>
 
           <div className="mt-6 flex items-center gap-3 text-xs text-muted">
-            <span className="font-semibold text-foreground">{products.length} Products</span>
+            <span className="font-semibold text-foreground">
+              {products.length} {products.length === 1 ? 'Product' : 'Products'}
+            </span>
             <span>•</span>
             <span>Handcrafted Solid Wood</span>
             <span>•</span>
@@ -146,17 +152,22 @@ export const RoomDetailPage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="border border-border bg-surface p-12 text-center max-w-xl mx-auto my-6">
-            <p className="text-sm font-medium text-foreground">No pieces assigned to this room yet.</p>
-            <p className="text-xs text-muted mt-1">
-              Check back soon or explore our complete catalog.
+          <div className="border border-border bg-surface p-12 sm:p-16 text-center max-w-2xl mx-auto my-6">
+            <div className="mb-4">
+              <ComingSoonBadge label="COMING SOON" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-light text-foreground uppercase tracking-tight">
+              {room.name} Environment in Development
+            </h2>
+            <p className="mt-3 text-xs sm:text-sm text-muted leading-relaxed max-w-lg mx-auto">
+              Our atelier is designing furniture pieces curated for {room.name.toLowerCase()}. Real products will appear here once published to our catalog.
             </p>
-            <div className="mt-6">
+            <div className="mt-8">
               <Link
                 to="/shop"
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background text-xs uppercase tracking-widest font-semibold hover:bg-black/85 transition-colors"
+                className="inline-flex items-center gap-2 px-7 py-3 bg-foreground text-background text-xs uppercase tracking-widest font-semibold hover:bg-black/85 transition-colors shadow-sm"
               >
-                EXPLORE CATALOG →
+                EXPLORE AVAILABLE CATALOG →
               </Link>
             </div>
           </div>

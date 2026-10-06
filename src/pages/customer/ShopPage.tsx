@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal, X, RotateCcw, Search } from 'lucide-react'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
 import { useProducts } from '@/hooks/useProducts'
 import { Category } from '@/types'
 
 export const ShopPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { products } = useProducts()
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
@@ -15,11 +18,13 @@ export const ShopPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('featured')
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false)
 
+  const categoryQuery = searchParams.get('category')
+
   useEffect(() => {
     let isMounted = true
     async function loadCategories() {
       try {
-        const res = await fetch('/api/categories')
+        const res = await fetch('/api/categories', { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           if (isMounted) setCategories(data)
@@ -34,11 +39,31 @@ export const ShopPage: React.FC = () => {
     }
   }, [])
 
+  // Sync selectedCategory with URL query parameter
+  useEffect(() => {
+    if (categoryQuery && categories.length > 0) {
+      const match = categories.find(
+        (c) =>
+          c.slug.toLowerCase() === categoryQuery.toLowerCase() ||
+          c.name.toLowerCase() === categoryQuery.toLowerCase()
+      )
+      if (match) {
+        setSelectedCategory(match.slug)
+      }
+    }
+  }, [categoryQuery, categories])
+
   // Filter products based on selected category and price
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      if (selectedCategory !== 'all' && product.category !== selectedCategory) {
-        return false
+      if (selectedCategory !== 'all') {
+        const pCat = (product.category || '').toLowerCase().trim()
+        const sCat = selectedCategory.toLowerCase().trim()
+        const isMatch =
+          pCat === sCat ||
+          pCat === sCat.replace(/-/g, ' ') ||
+          sCat === pCat.replace(/-/g, ' ')
+        if (!isMatch) return false
       }
       if (product.price > maxPrice) {
         return false
@@ -108,7 +133,12 @@ export const ShopPage: React.FC = () => {
           </button>
 
           {categories.map((cat) => {
-            const count = products.filter((p) => p.category === cat.slug).length
+            const count = products.filter((p) => {
+              const pCat = (p.category || '').toLowerCase().trim()
+              const cSlug = cat.slug.toLowerCase().trim()
+              const cName = cat.name.toLowerCase().trim()
+              return pCat === cSlug || pCat === cName || pCat === cSlug.replace(/-/g, ' ')
+            }).length
             return (
               <button
                 key={cat.id}
@@ -240,13 +270,36 @@ export const ShopPage: React.FC = () => {
         {/* Product Grid Area */}
         <div className="lg:col-span-3">
           {sortedProducts.length === 0 ? (
-            <EmptyState
-              icon={Search}
-              title="No products matched your criteria"
-              description="Try adjusting your category selection or price range filter to view available furniture."
-              actionLabel="Reset Filters"
-              onAction={resetFilters}
-            />
+            selectedCategory !== 'all' ? (
+              <div className="border border-border bg-surface p-12 sm:p-16 text-center max-w-xl mx-auto my-6">
+                <div className="mb-4">
+                  <ComingSoonBadge label="COMING SOON" />
+                </div>
+                <h3 className="text-xl font-light uppercase tracking-tight text-foreground">
+                  {categories.find((c) => c.slug === selectedCategory)?.name || selectedCategory} Collection
+                </h3>
+                <p className="mt-3 text-xs sm:text-sm text-muted max-w-md mx-auto leading-relaxed">
+                  There are currently no published pieces in this category. Our atelier is preparing new solid wood designs for an upcoming release.
+                </p>
+                <div className="mt-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedCategory('all')}
+                  >
+                    View All Available Furniture
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <EmptyState
+                icon={Search}
+                title="No products matched your criteria"
+                description="Try adjusting your price range filter to view available furniture."
+                actionLabel="Reset Filters"
+                onAction={resetFilters}
+              />
+            )
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
               {sortedProducts.map((product) => (

@@ -4,11 +4,9 @@ import path from 'node:path'
 import dotenv from 'dotenv'
 import {
   initDatabase,
-  query,
   queryOne,
   execute,
   seedAdminUser,
-  seedInitialProducts,
 } from '../server/db'
 
 dotenv.config()
@@ -159,10 +157,9 @@ async function runMigration() {
     }
   }
 
-  // Ensure admin user and canonical products exist
-  console.log('\n3. Verifying admin user & canonical catalog products...')
+  // Ensure admin user exists
+  console.log('\n3. Verifying admin user credentials...')
   await seedAdminUser()
-  await seedInitialProducts()
 
   // Final verification counts
   const userCount = await queryOne<{ count: string | number }>('SELECT COUNT(*) as count FROM users')

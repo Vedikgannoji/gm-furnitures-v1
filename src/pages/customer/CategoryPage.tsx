@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { Category, Product } from '@/types'
 import { Search, Loader2 } from 'lucide-react'
 
@@ -116,6 +117,7 @@ export const CategoryPage: React.FC = () => {
         <div className="max-w-xl z-10">
           <div className="flex items-center gap-2 mb-2">
             <span className="editorial-badge text-muted">Furniture Category</span>
+            {products.length === 0 && <ComingSoonBadge label="COMING SOON" />}
           </div>
           <h1 className="text-3xl sm:text-5xl font-light text-foreground mt-2 tracking-tight">
             {category.name}
@@ -124,7 +126,9 @@ export const CategoryPage: React.FC = () => {
             {category.description}
           </p>
           <div className="mt-6 flex items-center gap-3 text-xs text-muted">
-            <span className="font-semibold text-foreground">{products.length} Products</span>
+            <span className="font-semibold text-foreground">
+              {products.length} {products.length === 1 ? 'Product' : 'Products'}
+            </span>
             <span>•</span>
             <span>Solid Wood Construction</span>
             <span>•</span>
@@ -144,31 +148,33 @@ export const CategoryPage: React.FC = () => {
       </div>
 
       {/* Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border mb-8">
-        <span className="text-xs text-muted">
-          Showing <span className="font-semibold text-foreground">{sortedProducts.length}</span> Products
-        </span>
+      {sortedProducts.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border mb-8">
+          <span className="text-xs text-muted">
+            Showing <span className="font-semibold text-foreground">{sortedProducts.length}</span> Products
+          </span>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <label htmlFor="cat-sort" className="text-xs text-muted uppercase tracking-wider whitespace-nowrap">
-            Sort by:
-          </label>
-          <select
-            id="cat-sort"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="h-9 px-3 bg-surface border border-border text-xs font-medium focus:border-foreground focus:outline-none cursor-pointer w-full sm:w-48"
-          >
-            <option value="featured">Featured</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-            <option value="newest">New Arrivals</option>
-            <option value="rating">Highest Rated</option>
-          </select>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label htmlFor="cat-sort" className="text-xs text-muted uppercase tracking-wider whitespace-nowrap">
+              Sort by:
+            </label>
+            <select
+              id="cat-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="h-9 px-3 bg-surface border border-border text-xs font-medium focus:border-foreground focus:outline-none cursor-pointer w-full sm:w-48"
+            >
+              <option value="featured">Featured</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="newest">New Arrivals</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Products Grid or Empty State */}
+      {/* Products Grid or Coming Soon State */}
       {sortedProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
           {sortedProducts.map((product) => (
@@ -177,18 +183,21 @@ export const CategoryPage: React.FC = () => {
         </div>
       ) : (
         <div className="border border-border bg-surface p-12 sm:p-16 text-center max-w-2xl mx-auto my-6">
+          <div className="mb-4">
+            <ComingSoonBadge label="COMING SOON" />
+          </div>
           <h2 className="text-xl sm:text-2xl font-light text-foreground uppercase tracking-tight">
-            No products found in {category.name}
+            {category.name} Collection in Development
           </h2>
-          <p className="mt-3 text-xs sm:text-sm text-muted leading-relaxed">
-            There are currently no published products in this category. Browse our full catalog to discover available designs.
+          <p className="mt-3 text-xs sm:text-sm text-muted leading-relaxed max-w-lg mx-auto">
+            Our master craftsmen are designing solid wood pieces for {category.name.toLowerCase()}. Real products will appear here once published to our catalog.
           </p>
           <div className="mt-8">
             <Link
               to="/shop"
               className="inline-flex items-center gap-2 px-7 py-3 bg-foreground text-background text-xs uppercase tracking-widest font-semibold hover:bg-black/85 transition-colors shadow-sm"
             >
-              EXPLORE CATALOG →
+              EXPLORE AVAILABLE CATALOG →
             </Link>
           </div>
         </div>

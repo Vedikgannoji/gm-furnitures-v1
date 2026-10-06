@@ -13,7 +13,9 @@ export function useProducts() {
     async function loadProducts() {
       setIsLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/products`)
+        const res = await fetch(`${API_BASE}/api/products`, {
+          cache: 'no-store',
+        })
         if (res.ok) {
           const data = await res.json()
           if (isMounted && Array.isArray(data)) {

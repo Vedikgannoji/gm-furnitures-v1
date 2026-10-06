@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, Link, useNavigate } from 'react-router-dom'
+import { NavLink, Link } from 'react-router-dom'
 import {
   LayoutDashboard,
   Package,
@@ -23,7 +23,6 @@ interface AdminSidebarProps {
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onItemClick }) => {
-  const navigate = useNavigate()
   const { logout } = useAuth()
   const { showToast } = useToast()
 
@@ -44,7 +43,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onItemClick }) => {
   const handleSignOut = () => {
     logout()
     showToast('Signed Out', 'You have signed out from the admin panel.', 'info')
-    navigate('/', { replace: true })
+    window.location.replace('/')
   }
 
   return (

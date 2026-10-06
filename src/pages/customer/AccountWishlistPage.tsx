@@ -3,21 +3,19 @@ import { Link } from 'react-router-dom'
 import { Heart, Trash2, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/commerce/EmptyState'
-import { mockProducts } from '@/data/mockData'
+import { Product } from '@/types'
 import { useWishlist } from '@/context/WishlistContext'
 import { useCart } from '@/context/CartContext'
 import { formatCurrency } from '@/lib/utils'
 
 export const AccountWishlistPage: React.FC = () => {
-  const { wishlistIds, wishlistProducts, toggleWishlist } = useWishlist()
+  const { wishlistProducts, toggleWishlist } = useWishlist()
   const { addToCart, setIsCartDrawerOpen } = useCart()
 
-  // Use real products loaded from database / API
-  const savedProducts = wishlistProducts.length > 0
-    ? wishlistProducts
-    : mockProducts.filter((p) => wishlistIds.includes(p.id))
+  // Use only real products loaded from database / API
+  const savedProducts = wishlistProducts
 
-  const handleMoveToCart = (product: typeof mockProducts[0]) => {
+  const handleMoveToCart = (product: Product) => {
     addToCart(product, 1)
     toggleWishlist(product.id)
     setIsCartDrawerOpen(true)

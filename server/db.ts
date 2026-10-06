@@ -320,8 +320,9 @@ export async function initDatabase(): Promise<void> {
   // 3. Seed admin user
   await seedAdminUser()
 
-  // 4. Seed initial products if table is empty
-  await seedInitialProducts()
+  // 4. Products table: DO NOT auto-seed demo products!
+  // Production products table must only be populated via Admin actions or explicit migrations.
+  // An empty products table is valid and will not be repopulated with demo products.
 
   // 5. Seed initial taxonomy and settings if tables are empty
   await seedInitialTaxonomyAndSettings()

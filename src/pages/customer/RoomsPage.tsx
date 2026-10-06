@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Room } from '@/types'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { Loader2, ArrowRight } from 'lucide-react'
 
 export const RoomsPage: React.FC = () => {
@@ -70,9 +71,18 @@ export const RoomsPage: React.FC = () => {
             </div>
 
             <div className="p-6 sm:p-8 flex flex-col flex-1">
-              {room.tagline && (
-                <span className="editorial-badge text-muted">{room.tagline}</span>
-              )}
+              <div className="flex items-center justify-between">
+                {room.tagline ? (
+                  <span className="editorial-badge text-muted">{room.tagline}</span>
+                ) : <span />}
+                {room.productCount === 0 ? (
+                  <ComingSoonBadge label="COMING SOON" />
+                ) : (
+                  <span className="text-[10px] uppercase tracking-wider text-muted font-mono">
+                    {room.productCount} {room.productCount === 1 ? 'Piece' : 'Pieces'}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center justify-between mt-1">
                 <h2 className="text-2xl font-light text-foreground tracking-tight">
                   {room.name}

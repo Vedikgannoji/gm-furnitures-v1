@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Plus, Minus, Search, AlertTriangle, Boxes, RefreshCw, Link as LinkIcon } from 'lucide-react'
+import { Plus, Minus, Search, Boxes, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Product } from '@/types'
-import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { API_BASE } from '@/lib/api'
 
 export const AdminInventoryPage: React.FC = () => {
   const { showToast } = useToast()
@@ -21,7 +21,8 @@ export const AdminInventoryPage: React.FC = () => {
     try {
       setIsLoading(true)
       setError(null)
-      const res = await fetch('/api/admin/products', {
+      const res = await fetch(`${API_BASE}/api/admin/products`, {
+        cache: 'no-store',
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       if (!res.ok) {
@@ -42,7 +43,7 @@ export const AdminInventoryPage: React.FC = () => {
   const handleAdjustStock = async (productId: string, delta: number) => {
     setPatchingIds((prev) => new Set(prev).add(productId))
     try {
-      const res = await fetch(`/api/admin/products/${productId}/stock`, {
+      const res = await fetch(`${API_BASE}/api/admin/products/${productId}/stock`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

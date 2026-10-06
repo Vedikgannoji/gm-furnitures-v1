@@ -71,6 +71,7 @@ export interface Room {
   image: string
   featuredProductIds: string[]
   comingSoon?: boolean
+  productCount?: number
 }
 
 export interface Collection {
