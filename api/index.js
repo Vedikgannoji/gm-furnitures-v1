@@ -180,6 +180,8 @@ async function initDatabase() {
       payment_order_id VARCHAR(255),
       payment_transaction_id VARCHAR(255),
       payment_gateway VARCHAR(50) DEFAULT 'cashfree',
+      payment_session_id VARCHAR(255),
+      paid_at TIMESTAMPTZ,
       delivery_address_json TEXT NOT NULL,
       items_json TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1590,7 +1592,7 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
       ) VALUES (
         $1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10,
         'pending', 'pending', 'cashfree', 'cashfree',
-        $11, $12, $13, $14, $14
+        $11, $12, $13, NOW(), NOW()
       )`,
       [
         internalOrderId,
@@ -1613,7 +1615,7 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
       await execute(
         `INSERT INTO order_items (
           id, order_id, product_id, name, sku, price, quantity, selected_color, images_json, specifications_json, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
         [
           orderItemId,
           internalOrderId,
@@ -1624,8 +1626,7 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
           it.quantity,
           it.selectedColor || null,
           JSON.stringify(it.images),
-          JSON.stringify(it.specifications),
-          now
+          JSON.stringify(it.specifications)
         ]
       );
     }
@@ -1689,7 +1690,16 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
       grandTotal
     });
   } catch (error) {
-    console.error("Create Cashfree order error:", error);
+    console.error("Create Cashfree order error:", {
+      message: error instanceof Error ? error.message : String(error),
+      code: error?.code,
+      detail: error?.detail,
+      hint: error?.hint,
+      where: error?.where,
+      position: error?.position,
+      routine: error?.routine,
+      stack: error instanceof Error ? error.stack : void 0
+    });
     res.status(500).json({ error: "Failed to initialize Cashfree payment order." });
   }
 });

@@ -214,6 +214,8 @@ export async function initDatabase(): Promise<void> {
       payment_order_id VARCHAR(255),
       payment_transaction_id VARCHAR(255),
       payment_gateway VARCHAR(50) DEFAULT 'cashfree',
+      payment_session_id VARCHAR(255),
+      paid_at TIMESTAMPTZ,
       delivery_address_json TEXT NOT NULL,
       items_json TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -1302,7 +1302,7 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       ) VALUES (
         $1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10,
         'pending', 'pending', 'cashfree', 'cashfree',
-        $11, $12, $13, $14, $14
+        $11, $12, $13, NOW(), NOW()
       )`,
       [
         internalOrderId,
@@ -1327,7 +1327,7 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       await execute(
         `INSERT INTO order_items (
           id, order_id, product_id, name, sku, price, quantity, selected_color, images_json, specifications_json, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
         [
           orderItemId,
           internalOrderId,
@@ -1339,7 +1339,6 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
           it.selectedColor || null,
           JSON.stringify(it.images),
           JSON.stringify(it.specifications),
-          now,
         ]
       )
     }
@@ -1413,7 +1412,16 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       grandTotal,
     })
   } catch (error: any) {
-    console.error('Create Cashfree order error:', error)
+    console.error('Create Cashfree order error:', {
+      message: error instanceof Error ? error.message : String(error),
+      code: error?.code,
+      detail: error?.detail,
+      hint: error?.hint,
+      where: error?.where,
+      position: error?.position,
+      routine: error?.routine,
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     res.status(500).json({ error: 'Failed to initialize Cashfree payment order.' })
   }
 })
