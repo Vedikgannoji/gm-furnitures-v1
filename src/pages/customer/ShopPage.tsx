@@ -151,7 +151,11 @@ export const ShopPage: React.FC = () => {
                 }`}
               >
                 <span>{cat.name}</span>
-                <span className="text-[10px] opacity-75">{count}</span>
+                {count === 0 ? (
+                  <ComingSoonBadge label="SOON" className="text-[7px] px-1 py-0" />
+                ) : (
+                  <span className="text-[10px] opacity-75">{count}</span>
+                )}
               </button>
             )
           })}

@@ -24,6 +24,29 @@ export const ComingSoonBadge: React.FC<ComingSoonBadgeProps> = ({
   )
 }
 
+export interface ComingSoonOverlayProps {
+  className?: string
+  label?: string
+}
+
+export const ComingSoonOverlay: React.FC<ComingSoonOverlayProps> = ({
+  className,
+  label = 'COMING SOON',
+}) => {
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 flex items-center justify-center p-3 z-10 pointer-events-none',
+        className
+      )}
+    >
+      <span className="bg-black text-white text-[10px] sm:text-[11px] font-bold tracking-widest uppercase px-3 py-1 shadow-md leading-none select-none">
+        {label}
+      </span>
+    </div>
+  )
+}
+
 export interface ComingSoonProps {
   variant?: 'badge' | 'header' | 'card' | 'page'
   title?: string

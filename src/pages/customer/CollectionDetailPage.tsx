@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { ProductCard } from '@/components/commerce/ProductCard'
 import { EmptyState } from '@/components/commerce/EmptyState'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
+import { ComingSoonBadge, ComingSoonOverlay } from '@/components/ui/ComingSoon'
 import { Collection, Product } from '@/types'
 import { Search, Loader2 } from 'lucide-react'
 
@@ -98,8 +98,9 @@ export const CollectionDetailPage: React.FC = () => {
             <img
               src={collection.image}
               alt={collection.name}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${products.length === 0 ? 'opacity-40 brightness-110' : ''}`}
             />
+            {products.length === 0 && <ComingSoonOverlay />}
           </div>
         )}
 

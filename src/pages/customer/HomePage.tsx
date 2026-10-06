@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, Award, Shield, Truck, Globe } from 'lucide-react'
 import { ProductCard } from '@/components/commerce/ProductCard'
+import { ComingSoonBadge, ComingSoonOverlay } from '@/components/ui/ComingSoon'
 import { Category, Room, Collection } from '@/types'
 import { useProducts } from '@/hooks/useProducts'
 
@@ -329,38 +330,69 @@ export const HomePage: React.FC = () => {
               </h2>
             </div>
             <Link
-              to="/shop"
+              to="/shop?category=Dining"
               className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
             >
-              <span>View All Categories</span>
+              <span>Explore Dining Collection</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                to={`/shop/${category.slug}`}
-                className="group flex flex-col items-start text-left cursor-pointer"
-              >
-                <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                  />
+            {categories.map((category) => {
+              const isDining = category.slug?.toLowerCase() === 'dining' || category.name?.toLowerCase() === 'dining'
+
+              if (isDining) {
+                return (
+                  <Link
+                    key={category.id}
+                    to="/shop?category=Dining"
+                    className="group flex flex-col items-start text-left cursor-pointer"
+                  >
+                    <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="mt-2.5">
+                      <h3 className="text-xs font-medium text-foreground uppercase tracking-wider group-hover:underline">
+                        {category.name}
+                      </h3>
+                      <span className="text-[11px] text-emerald-700 font-semibold uppercase tracking-wider">
+                        Available Now
+                      </span>
+                    </div>
+                  </Link>
+                )
+              }
+
+              return (
+                <div
+                  key={category.id}
+                  className="flex flex-col items-start text-left cursor-default select-none pointer-events-none"
+                >
+                  <div className="aspect-square w-full overflow-hidden bg-surface border border-border relative">
+                    <img
+                      src={category.image}
+                      alt={category.name}
+                      className="h-full w-full object-cover object-center opacity-40 brightness-110"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center p-2">
+                      <span className="bg-black text-white text-[9px] sm:text-[10px] font-bold tracking-widest uppercase px-2.5 sm:px-3 py-1 shadow-md">
+                        COMING SOON
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2.5">
+                    <h3 className="text-xs font-medium text-muted uppercase tracking-wider">
+                      {category.name}
+                    </h3>
+                  </div>
                 </div>
-                <div className="mt-2.5">
-                  <h3 className="text-xs font-medium text-foreground uppercase tracking-wider group-hover:underline">
-                    {category.name}
-                  </h3>
-                  <span className="text-[11px] text-muted">
-                    {category.itemCount || 0} products
-                  </span>
-                </div>
-              </Link>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}
@@ -376,10 +408,10 @@ export const HomePage: React.FC = () => {
               </h2>
             </div>
             <Link
-              to="/rooms"
+              to="/shop?category=Dining"
               className="text-xs uppercase tracking-widest font-medium text-foreground hover:opacity-75 transition-opacity flex items-center gap-1 mt-2 sm:mt-0"
             >
-              <span>View All Rooms</span>
+              <span>Explore Dining Room</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -387,76 +419,142 @@ export const HomePage: React.FC = () => {
           <div className="overflow-hidden w-full relative">
             <div className="flex w-max hover:[animation-play-state:paused]">
               <div className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none">
-                {rooms.map((room) => (
-                  <Link
-                    key={`track1-${room.id}`}
-                    to={`/rooms/${room.slug}`}
-                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground cursor-pointer"
-                  >
-                    <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
-                      <img
-                        src={room.image}
-                        alt={room.name}
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
-                      <div>
-                        {room.tagline && (
-                          <span className="editorial-badge text-muted">{room.tagline}</span>
-                        )}
-                        <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
-                        <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
-                          {room.description}
-                        </p>
+                {rooms.map((room) => {
+                  const isDining = room.slug?.toLowerCase().includes('dining') || room.name?.toLowerCase().includes('dining')
+
+                  if (isDining) {
+                    return (
+                      <Link
+                        key={`track1-${room.id}`}
+                        to="/shop?category=Dining"
+                        className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground cursor-pointer"
+                      >
+                        <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                          <img
+                            src={room.image}
+                            alt={room.name}
+                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                          />
+                        </div>
+                        <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+                          <div>
+                            {room.tagline && (
+                              <span className="editorial-badge text-muted">{room.tagline}</span>
+                            )}
+                            <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
+                            <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
+                              {room.description}
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                            <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                              VIEW ROOM
+                            </span>
+                            <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  }
+
+                  return (
+                    <div
+                      key={`track1-${room.id}`}
+                      className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden cursor-default select-none pointer-events-none"
+                    >
+                      <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                        <img
+                          src={room.image}
+                          alt={room.name}
+                          className="w-full h-full object-cover opacity-40 brightness-110"
+                        />
+                        <ComingSoonOverlay />
                       </div>
-                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
-                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
-                          VIEW ROOM
-                        </span>
-                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                      <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+                        <div>
+                          {room.tagline && (
+                            <span className="editorial-badge text-muted">{room.tagline}</span>
+                          )}
+                          <h3 className="text-xl font-medium text-muted mt-1">{room.name}</h3>
+                          <p className="text-xs text-muted/70 mt-2 leading-relaxed line-clamp-2">
+                            {room.description}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </Link>
-                ))}
+                  )
+                })}
               </div>
 
               <div
                 className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none"
                 aria-hidden="true"
               >
-                {rooms.map((room) => (
-                  <Link
-                    key={`track2-${room.id}`}
-                    to={`/rooms/${room.slug}`}
-                    className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground cursor-pointer"
-                  >
-                    <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
-                      <img
-                        src={room.image}
-                        alt={room.name}
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
-                      <div>
-                        {room.tagline && (
-                          <span className="editorial-badge text-muted">{room.tagline}</span>
-                        )}
-                        <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
-                        <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
-                          {room.description}
-                        </p>
+                {rooms.map((room) => {
+                  const isDining = room.slug?.toLowerCase().includes('dining') || room.name?.toLowerCase().includes('dining')
+
+                  if (isDining) {
+                    return (
+                      <Link
+                        key={`track2-${room.id}`}
+                        to="/shop?category=Dining"
+                        className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden group transition-all hover:border-foreground cursor-pointer"
+                      >
+                        <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                          <img
+                            src={room.image}
+                            alt={room.name}
+                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                          />
+                        </div>
+                        <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+                          <div>
+                            {room.tagline && (
+                              <span className="editorial-badge text-muted">{room.tagline}</span>
+                            )}
+                            <h3 className="text-xl font-medium text-foreground mt-1">{room.name}</h3>
+                            <p className="text-xs text-muted mt-2 leading-relaxed line-clamp-2">
+                              {room.description}
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
+                            <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                              VIEW ROOM
+                            </span>
+                            <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  }
+
+                  return (
+                    <div
+                      key={`track2-${room.id}`}
+                      className="w-[280px] sm:w-[340px] md:w-[380px] shrink-0 flex flex-col bg-background border border-border overflow-hidden cursor-default select-none pointer-events-none"
+                    >
+                      <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                        <img
+                          src={room.image}
+                          alt={room.name}
+                          className="w-full h-full object-cover opacity-40 brightness-110"
+                        />
+                        <ComingSoonOverlay />
                       </div>
-                      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
-                        <span className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
-                          VIEW ROOM
-                        </span>
-                        <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                      <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+                        <div>
+                          {room.tagline && (
+                            <span className="editorial-badge text-muted">{room.tagline}</span>
+                          )}
+                          <h3 className="text-xl font-medium text-muted mt-1">{room.name}</h3>
+                          <p className="text-xs text-muted/70 mt-2 leading-relaxed line-clamp-2">
+                            {room.description}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </Link>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -469,23 +567,16 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
             <div>
               <span className="editorial-badge">Featured Line</span>
-              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-                {signatureCollection.name}
-              </h2>
+              <div className="flex items-center gap-3 mt-1">
+                <h2 className="text-2xl sm:text-3xl font-light text-foreground">
+                  {signatureCollection.name}
+                </h2>
+                <ComingSoonBadge label="COMING SOON" />
+              </div>
             </div>
-            <Link
-              to={`/collections/${signatureCollection.slug}`}
-              className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
-            >
-              <span>Explore Collection</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
 
-          <Link
-            to={`/collections/${signatureCollection.slug}`}
-            className="block relative border border-border bg-background overflow-hidden group hover:border-foreground transition-colors"
-          >
+          <div className="block relative border border-border bg-background overflow-hidden cursor-default select-none">
             <div className="grid grid-cols-1 lg:grid-cols-2">
               <div className="p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
                 <span className="editorial-badge">Design Collection</span>
@@ -500,21 +591,18 @@ export const HomePage: React.FC = () => {
                 <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed max-w-md">
                   {signatureCollection.description}
                 </p>
-                <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
-                  <span>View Collection Pieces</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
               </div>
 
               <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface relative">
                 <img
                   src={signatureCollection.image}
                   alt={signatureCollection.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-cover opacity-40 brightness-110"
                 />
+                <ComingSoonOverlay />
               </div>
             </div>
-          </Link>
+          </div>
         </section>
       )}
 
@@ -524,30 +612,24 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 pb-2.5 border-b border-border">
             <div>
               <span className="editorial-badge">Essentialist Design</span>
-              <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
-                {secondaryCollection.name}
-              </h2>
+              <div className="flex items-center gap-3 mt-1">
+                <h2 className="text-2xl sm:text-3xl font-light text-foreground">
+                  {secondaryCollection.name}
+                </h2>
+                <ComingSoonBadge label="COMING SOON" />
+              </div>
             </div>
-            <Link
-              to={`/collections/${secondaryCollection.slug}`}
-              className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1 mt-2 sm:mt-0"
-            >
-              <span>Explore Collection</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
 
-          <Link
-            to={`/collections/${secondaryCollection.slug}`}
-            className="block relative border border-border bg-background overflow-hidden group hover:border-foreground transition-colors"
-          >
+          <div className="block relative border border-border bg-background overflow-hidden cursor-default select-none">
             <div className="grid grid-cols-1 lg:grid-cols-2">
               <div className="aspect-[4/3] lg:aspect-auto h-full w-full overflow-hidden bg-surface order-2 lg:order-1 relative">
                 <img
                   src={secondaryCollection.image}
                   alt={secondaryCollection.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-cover opacity-40 brightness-110"
                 />
+                <ComingSoonOverlay />
               </div>
 
               <div className="p-6 sm:p-10 lg:p-12 flex flex-col justify-center order-1 lg:order-2">
@@ -563,13 +645,9 @@ export const HomePage: React.FC = () => {
                 <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed max-w-md">
                   {secondaryCollection.description}
                 </p>
-                <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
-                  <span>View Collection Pieces</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
               </div>
             </div>
-          </Link>
+          </div>
         </section>
       )}
 

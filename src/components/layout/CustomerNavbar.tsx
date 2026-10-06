@@ -93,7 +93,7 @@ export const CustomerNavbar: React.FC = () => {
                   GM FURNITURE
                 </span>
                 <span className="text-[9px] tracking-[0.25em] uppercase text-muted font-light leading-tight">
-                  SOLID WOOD & LIVING
+                  ATELIER & LIVING
                 </span>
               </div>
             </Link>
@@ -122,26 +122,37 @@ export const CustomerNavbar: React.FC = () => {
                     Furniture Categories
                   </div>
                   <div className="grid grid-cols-1 gap-1">
-                    {categories.map((cat) => (
-                      <Link
-                        key={cat.id}
-                        to={`/shop/${cat.slug}`}
-                        className="py-1.5 px-2 hover:bg-zinc-50 text-foreground text-xs flex justify-between items-center transition-colors"
-                        onClick={() => setIsShopHovered(false)}
-                      >
-                        <span>{cat.name}</span>
-                        {cat.itemCount !== undefined && (
-                          <span className="text-[10px] text-muted font-mono">{cat.itemCount}</span>
-                        )}
-                      </Link>
-                    ))}
+                    {categories.map((cat) => {
+                      const isDining = cat.slug?.toLowerCase() === 'dining' || cat.name?.toLowerCase() === 'dining'
+                      return isDining ? (
+                        <Link
+                          key={cat.id}
+                          to="/shop?category=Dining"
+                          className="py-1.5 px-2 hover:bg-zinc-50 text-foreground text-xs flex justify-between items-center transition-colors font-medium"
+                          onClick={() => setIsShopHovered(false)}
+                        >
+                          <span>{cat.name}</span>
+                          <span className="text-[10px] text-emerald-700 font-semibold uppercase tracking-wider">Available</span>
+                        </Link>
+                      ) : (
+                        <div
+                          key={cat.id}
+                          className="py-1.5 px-2 text-zinc-400 text-xs flex justify-between items-center cursor-default select-none"
+                        >
+                          <span>{cat.name}</span>
+                          <span className="bg-black text-white text-[7.5px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+                            COMING SOON
+                          </span>
+                        </div>
+                      )
+                    })}
                     <div className="pt-2 mt-1 border-t border-border">
                       <Link
-                        to="/shop"
+                        to="/shop?category=Dining"
                         className="text-xs font-semibold text-foreground underline-offset-4 hover:underline block text-center py-1"
                         onClick={() => setIsShopHovered(false)}
                       >
-                        View Complete Catalog &rarr;
+                        Explore Dining Pieces &rarr;
                       </Link>
                     </div>
                   </div>
@@ -149,13 +160,21 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            <Link to="/rooms" className="text-foreground hover:opacity-70 transition-opacity">
-              Rooms
-            </Link>
+            {/* Rooms - Non-clickable with compact black box Coming Soon */}
+            <div className="flex items-center gap-1.5 cursor-default select-none py-4">
+              <span className="text-foreground">Rooms</span>
+              <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+                COMING SOON
+              </span>
+            </div>
 
-            <Link to="/collections" className="text-foreground hover:opacity-70 transition-opacity">
-              Collections
-            </Link>
+            {/* Collections - Non-clickable with compact black box Coming Soon */}
+            <div className="flex items-center gap-1.5 cursor-default select-none py-4">
+              <span className="text-foreground">Collections</span>
+              <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+                COMING SOON
+              </span>
+            </div>
 
             <Link to="/about" className="text-foreground hover:opacity-70 transition-opacity">
               About Us

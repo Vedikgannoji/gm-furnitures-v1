@@ -55,22 +55,18 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
             <span>All Furniture</span>
             <ArrowRight className="w-4 h-4 text-muted" />
           </Link>
-          <Link
-            to="/rooms"
-            onClick={onClose}
-            className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
-          >
+          <div className="text-sm uppercase tracking-widest font-medium text-foreground flex items-center justify-between py-1 opacity-80 cursor-default select-none">
             <span>Rooms</span>
-            <ArrowRight className="w-4 h-4 text-muted" />
-          </Link>
-          <Link
-            to="/collections"
-            onClick={onClose}
-            className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
-          >
+            <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-2 py-0.5 leading-none">
+              COMING SOON
+            </span>
+          </div>
+          <div className="text-sm uppercase tracking-widest font-medium text-foreground flex items-center justify-between py-1 opacity-80 cursor-default select-none">
             <span>Collections</span>
-            <ArrowRight className="w-4 h-4 text-muted" />
-          </Link>
+            <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-2 py-0.5 leading-none">
+              COMING SOON
+            </span>
+          </div>
         </div>
 
         {/* Categories Section */}
@@ -80,16 +76,30 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
               Shop by Category
             </p>
             <div className="grid grid-cols-1 gap-2">
-              {categories.map((cat) => (
-                <Link
-                  key={cat.id}
-                  to={`/shop/${cat.slug}`}
-                  onClick={onClose}
-                  className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
-                >
-                  <span>{cat.name}</span>
-                </Link>
-              ))}
+              {categories.map((cat) => {
+                const isDining = cat.slug?.toLowerCase() === 'dining' || cat.name?.toLowerCase() === 'dining'
+                return isDining ? (
+                  <Link
+                    key={cat.id}
+                    to="/shop?category=Dining"
+                    onClick={onClose}
+                    className="text-xs text-foreground font-medium py-1 flex items-center justify-between"
+                  >
+                    <span>{cat.name}</span>
+                    <span className="text-[9px] text-emerald-700 font-semibold uppercase tracking-wider">Available</span>
+                  </Link>
+                ) : (
+                  <div
+                    key={cat.id}
+                    className="text-xs text-zinc-400 py-1 flex items-center justify-between cursor-default select-none"
+                  >
+                    <span>{cat.name}</span>
+                    <span className="bg-black text-white text-[7.5px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+                      COMING SOON
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -101,16 +111,30 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
               Shop by Room
             </p>
             <div className="grid grid-cols-1 gap-2">
-              {rooms.map((room) => (
-                <Link
-                  key={room.id}
-                  to={`/rooms/${room.slug}`}
-                  onClick={onClose}
-                  className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
-                >
-                  <span>{room.name}</span>
-                </Link>
-              ))}
+              {rooms.map((room) => {
+                const isDining = room.slug?.toLowerCase().includes('dining') || room.name?.toLowerCase().includes('dining')
+                return isDining ? (
+                  <Link
+                    key={room.id}
+                    to="/shop?category=Dining"
+                    onClick={onClose}
+                    className="text-xs text-foreground font-medium py-1 flex items-center justify-between"
+                  >
+                    <span>{room.name}</span>
+                    <span className="text-[9px] text-emerald-700 font-semibold uppercase tracking-wider">Available</span>
+                  </Link>
+                ) : (
+                  <div
+                    key={room.id}
+                    className="text-xs text-zinc-400 py-1 flex items-center justify-between cursor-default select-none"
+                  >
+                    <span>{room.name}</span>
+                    <span className="bg-black text-white text-[7.5px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+                      COMING SOON
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -123,14 +147,15 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
             </p>
             <div className="grid grid-cols-1 gap-2">
               {collections.map((col) => (
-                <Link
+                <div
                   key={col.id}
-                  to={`/collections/${col.slug}`}
-                  onClick={onClose}
-                  className="text-xs text-foreground/80 hover:text-foreground py-1 flex items-center justify-between"
+                  className="text-xs text-zinc-400 py-1 flex items-center justify-between cursor-default select-none"
                 >
                   <span>{col.name}</span>
-                </Link>
+                  <span className="bg-black text-white text-[7.5px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+                    COMING SOON
+                  </span>
+                </div>
               ))}
             </div>
           </div>

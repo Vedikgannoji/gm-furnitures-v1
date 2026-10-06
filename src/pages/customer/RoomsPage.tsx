@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Room } from '@/types'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
+import { ComingSoonBadge, ComingSoonOverlay } from '@/components/ui/ComingSoon'
 import { Loader2, ArrowRight } from 'lucide-react'
 
 export const RoomsPage: React.FC = () => {
@@ -56,45 +56,80 @@ export const RoomsPage: React.FC = () => {
 
       {/* Rooms Showcase Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {rooms.map((room) => (
-          <Link
-            key={room.id}
-            to={`/rooms/${room.slug}`}
-            className="flex flex-col bg-background border border-border overflow-hidden group hover:border-foreground transition-colors"
-          >
-            <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
-              <img
-                src={room.image}
-                alt={room.name}
-                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-              />
-            </div>
+        {rooms.map((room) => {
+          const isDining = room.slug?.toLowerCase().includes('dining') || room.name?.toLowerCase().includes('dining')
 
-            <div className="p-6 sm:p-8 flex flex-col flex-1">
-              <div className="flex items-center justify-between">
-                {room.tagline ? (
-                  <span className="editorial-badge text-muted">{room.tagline}</span>
-                ) : <span />}
-                {room.productCount === 0 ? (
+          if (isDining) {
+            return (
+              <Link
+                key={room.id}
+                to={`/rooms/${room.slug}`}
+                className="flex flex-col bg-background border border-border overflow-hidden group hover:border-foreground transition-colors"
+              >
+                <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                  <img
+                    src={room.image}
+                    alt={room.name}
+                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  />
+                </div>
+
+                <div className="p-6 sm:p-8 flex flex-col flex-1">
+                  <div className="flex items-center justify-between">
+                    {room.tagline ? (
+                      <span className="editorial-badge text-muted">{room.tagline}</span>
+                    ) : <span />}
+                    <span className="text-[10px] uppercase tracking-wider text-muted font-mono">
+                      {room.productCount} {room.productCount === 1 ? 'Piece' : 'Pieces'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <h2 className="text-2xl font-light text-foreground tracking-tight">
+                      {room.name}
+                    </h2>
+                    <ArrowRight className="w-4 h-4 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
+                    {room.description}
+                  </p>
+                </div>
+              </Link>
+            )
+          }
+
+          return (
+            <div
+              key={room.id}
+              className="flex flex-col bg-background border border-border overflow-hidden cursor-default select-none pointer-events-none"
+            >
+              <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                <img
+                  src={room.image}
+                  alt={room.name}
+                  className="w-full h-full object-cover opacity-40 brightness-110"
+                />
+                <ComingSoonOverlay />
+              </div>
+
+              <div className="p-6 sm:p-8 flex flex-col flex-1">
+                <div className="flex items-center justify-between">
+                  {room.tagline ? (
+                    <span className="editorial-badge text-muted">{room.tagline}</span>
+                  ) : <span />}
                   <ComingSoonBadge label="COMING SOON" />
-                ) : (
-                  <span className="text-[10px] uppercase tracking-wider text-muted font-mono">
-                    {room.productCount} {room.productCount === 1 ? 'Piece' : 'Pieces'}
-                  </span>
-                )}
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <h2 className="text-2xl font-light text-muted tracking-tight">
+                    {room.name}
+                  </h2>
+                </div>
+                <p className="text-xs sm:text-sm text-muted/70 mt-3 leading-relaxed">
+                  {room.description}
+                </p>
               </div>
-              <div className="flex items-center justify-between mt-1">
-                <h2 className="text-2xl font-light text-foreground tracking-tight">
-                  {room.name}
-                </h2>
-                <ArrowRight className="w-4 h-4 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
-              </div>
-              <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
-                {room.description}
-              </p>
             </div>
-          </Link>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

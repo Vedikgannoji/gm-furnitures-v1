@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Collection } from '@/types'
-import { ComingSoonBadge } from '@/components/ui/ComingSoon'
+import { ComingSoonBadge, ComingSoonOverlay } from '@/components/ui/ComingSoon'
 import { Loader2, ArrowRight } from 'lucide-react'
 
 export const CollectionsPage: React.FC = () => {
@@ -58,11 +58,63 @@ export const CollectionsPage: React.FC = () => {
       <div className="space-y-12">
         {collections.map((col, idx) => {
           const isEven = idx % 2 === 0
+          const isAvailable = (col.productCount ?? 0) > 0
+
+          if (isAvailable) {
+            return (
+              <Link
+                key={col.id}
+                to={`/collections/${col.slug}`}
+                className="grid grid-cols-1 lg:grid-cols-12 bg-background border border-border overflow-hidden group hover:border-foreground transition-colors"
+              >
+                {/* Image side */}
+                <div
+                  className={`lg:col-span-7 aspect-[16/10] lg:aspect-auto h-full w-full overflow-hidden bg-surface relative ${
+                    isEven ? 'lg:order-1' : 'lg:order-2'
+                  }`}
+                >
+                  <img
+                    src={col.image}
+                    alt={col.name}
+                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  />
+                </div>
+
+                {/* Text side */}
+                <div
+                  className={`lg:col-span-5 p-8 sm:p-12 flex flex-col justify-between ${
+                    isEven ? 'lg:order-2' : 'lg:order-1'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="editorial-badge text-muted">Collection {idx + 1}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted font-mono">
+                        {col.productCount} {col.productCount === 1 ? 'Product' : 'Products'}
+                      </span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-2 tracking-tight flex items-center justify-between">
+                      <span>{col.name}</span>
+                      <ArrowRight className="w-5 h-5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                    </h2>
+                    {col.tagline && (
+                      <p className="text-xs font-semibold text-foreground/80 mt-1 uppercase tracking-wider">
+                        "{col.tagline}"
+                      </p>
+                    )}
+                    <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
+                      {col.description}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            )
+          }
+
           return (
-            <Link
+            <div
               key={col.id}
-              to={`/collections/${col.slug}`}
-              className="grid grid-cols-1 lg:grid-cols-12 bg-background border border-border overflow-hidden group hover:border-foreground transition-colors"
+              className="grid grid-cols-1 lg:grid-cols-12 bg-background border border-border overflow-hidden cursor-default select-none pointer-events-none"
             >
               {/* Image side */}
               <div
@@ -73,8 +125,9 @@ export const CollectionsPage: React.FC = () => {
                 <img
                   src={col.image}
                   alt={col.name}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  className="w-full h-full object-cover opacity-40 brightness-110"
                 />
+                <ComingSoonOverlay />
               </div>
 
               {/* Text side */}
@@ -86,29 +139,22 @@ export const CollectionsPage: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="editorial-badge text-muted">Collection {idx + 1}</span>
-                    {col.productCount === 0 ? (
-                      <ComingSoonBadge label="COMING SOON" />
-                    ) : (
-                      <span className="text-[10px] uppercase tracking-wider text-muted font-mono">
-                        {col.productCount} {col.productCount === 1 ? 'Product' : 'Products'}
-                      </span>
-                    )}
+                    <ComingSoonBadge label="COMING SOON" />
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-2 tracking-tight flex items-center justify-between">
-                    <span>{col.name}</span>
-                    <ArrowRight className="w-5 h-5 text-muted group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                  <h2 className="text-2xl sm:text-3xl font-light text-muted mt-2 tracking-tight">
+                    {col.name}
                   </h2>
                   {col.tagline && (
-                    <p className="text-xs font-semibold text-foreground/80 mt-1 uppercase tracking-wider">
+                    <p className="text-xs font-semibold text-muted/80 mt-1 uppercase tracking-wider">
                       "{col.tagline}"
                     </p>
                   )}
-                  <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-muted/70 mt-3 leading-relaxed">
                     {col.description}
                   </p>
                 </div>
               </div>
-            </Link>
+            </div>
           )
         })}
       </div>
