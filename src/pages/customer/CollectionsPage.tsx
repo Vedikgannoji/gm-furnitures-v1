@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Collection } from '@/types'
+import { ComingSoonBadge } from '@/components/ui/ComingSoon'
 import { Loader2, ArrowRight } from 'lucide-react'
 
 export const CollectionsPage: React.FC = () => {
@@ -85,9 +86,13 @@ export const CollectionsPage: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="editorial-badge text-muted">Collection {idx + 1}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted font-mono">
-                      {col.productCount || 0} Products
-                    </span>
+                    {col.productCount === 0 ? (
+                      <ComingSoonBadge label="COMING SOON" />
+                    ) : (
+                      <span className="text-[10px] uppercase tracking-wider text-muted font-mono">
+                        {col.productCount} {col.productCount === 1 ? 'Product' : 'Products'}
+                      </span>
+                    )}
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-2 tracking-tight flex items-center justify-between">
                     <span>{col.name}</span>

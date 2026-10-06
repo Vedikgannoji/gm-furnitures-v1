@@ -9,214 +9,6 @@ import pg from "pg";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import dotenv from "dotenv";
-
-// src/data/canonicalProducts.ts
-var CANONICAL_PRODUCTS = [
-  {
-    id: "gm-prod-04",
-    slug: "atelier-solid-walnut-dining-table",
-    name: "Atelier Solid Walnut Dining Table",
-    sku: "GM-DIN-004",
-    category: "dining",
-    collection: "considered-classics",
-    room: "dining-room",
-    price: 195e3,
-    mrp: 23e4,
-    discount: 15,
-    description: "An expansive centerpiece benchcrafted from wide-plank American black walnut. The chamfered perimeter and tapered trestle base offer generous legroom for eight to ten guests.",
-    shortDescription: "Solid American black walnut 8-seater dining table.",
-    images: [
-      "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1544457070-4cd773b4d71e?auto=format&fit=crop&w=1200&q=80"
-    ],
-    colors: [
-      { name: "Natural American Walnut", hex: "#533B2B" },
-      { name: "Ebonized Dark Walnut", hex: "#222222" }
-    ],
-    dimensions: {
-      width: "240 cm",
-      depth: "100 cm",
-      height: "75 cm",
-      weight: "78 kg"
-    },
-    material: "FSC-Certified American Black Walnut",
-    finish: "Natural Matte Hardwax Oil",
-    leadTime: "2-3 Weeks Delivery & Assembly",
-    warranty: "10-Year Framework Structural Warranty",
-    specifications: [
-      { label: "Timber Origin", value: "Sustainably Managed Appalachian Hardwoods" },
-      { label: "Joinery Type", value: "Mortise & Tenon with Through-Dowels" },
-      { label: "Seating Capacity", value: "8-10 Guests" },
-      { label: "Finish System", value: "Zero-VOC Food-Safe Plant Wax" }
-    ],
-    careInstructions: [
-      "Wipe down with a damp lint-free cotton cloth.",
-      "Avoid placing hot pans directly without trivets.",
-      "Re-apply natural hardwax oil annually to maintain rich patina."
-    ],
-    status: "published",
-    tags: ["Dining Table", "Walnut", "Solid Wood", "Dining"],
-    featured: true,
-    newArrival: false,
-    rating: 4.9,
-    reviewCount: 18,
-    stock: 8,
-    stockStatus: "in_stock"
-  },
-  {
-    id: "gm-prod-14",
-    slug: "column-marble-dining-table",
-    name: "Column Round Carrara Marble Dining Table",
-    sku: "GM-DIN-014",
-    category: "dining",
-    collection: "architectural-series",
-    room: "dining-room",
-    price: 188e3,
-    mrp: 22e4,
-    discount: 15,
-    description: "A majestic 140cm diameter round dining table highlighting a seamless honed Italian Carrara marble disc anchored atop a monolithic cast architectural ribbed concrete base.",
-    shortDescription: "140cm round Carrara marble tabletop on ribbed fluted pedestal.",
-    images: [
-      "https://images.unsplash.com/photo-1544457070-4cd773b4d71e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80"
-    ],
-    colors: [
-      { name: "White Carrara Marble", hex: "#EDEAE6" },
-      { name: "Arabescato Dark Marble", hex: "#63625F" }
-    ],
-    dimensions: {
-      width: "140 cm",
-      depth: "140 cm",
-      height: "75 cm",
-      weight: "115 kg"
-    },
-    material: "Honed Carrara Marble & Cast Fluted Concrete",
-    finish: "Penetrating Matte Nano-Sealant",
-    leadTime: "2-3 Weeks Delivery & Assembly",
-    warranty: "10-Year Framework Structural Warranty",
-    specifications: [
-      { label: "Stone Origin", value: "Carrara Region, Tuscany, Italy" },
-      { label: "Base Construction", value: "Steel-Reinforced Cast Architectural Concrete" },
-      { label: "Seating Capacity", value: "4-6 Guests" },
-      { label: "Stone Thickness", value: "25mm Solid Honed Slab" }
-    ],
-    careInstructions: [
-      "Clean spills immediately to prevent marble etching.",
-      "Use pH-neutral stone cleaner only.",
-      "Do not use acidic cleaners or abrasive scouring pads."
-    ],
-    status: "published",
-    tags: ["Dining Table", "Marble", "Round Table", "Carrara"],
-    featured: true,
-    newArrival: true,
-    rating: 5,
-    reviewCount: 14,
-    stock: 5,
-    stockStatus: "in_stock"
-  },
-  {
-    id: "gm-prod-22",
-    slug: "nordic-oak-dining-table",
-    name: "Nordic Atelier Solid White Oak Dining Table",
-    sku: "GM-DIN-022",
-    category: "dining",
-    collection: "nordic-atelier",
-    room: "dining-room",
-    price: 172e3,
-    mrp: 205e3,
-    discount: 16,
-    description: "Minimalist Nordic dining table sculpted from European white oak with soft radius pillowed edges and concealed mortise-and-tenon structural framing.",
-    shortDescription: "Solid European white oak 6-8 seater architectural dining table.",
-    images: [
-      "https://images.unsplash.com/photo-1577140917170-285929fb55b7?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80"
-    ],
-    colors: [
-      { name: "White-Pigmented Oak", hex: "#E2D7C5" },
-      { name: "Smoked Grey Oak", hex: "#686055" }
-    ],
-    dimensions: {
-      width: "210 cm",
-      depth: "95 cm",
-      height: "75 cm",
-      weight: "64 kg"
-    },
-    material: "Solid European White Oak",
-    finish: "White-Pigmented Matte Hardwax Oil",
-    leadTime: "2-3 Weeks Delivery & Assembly",
-    warranty: "10-Year Framework Structural Warranty",
-    specifications: [
-      { label: "Timber Origin", value: "FSC-Certified French White Oak" },
-      { label: "Edge Profile", value: "Soft Bullnose Radius" },
-      { label: "Seating Capacity", value: "6-8 Guests" },
-      { label: "Eco Certification", value: "FSC 100% Verified Chain of Custody" }
-    ],
-    careInstructions: [
-      "Dust with dry microfiber cloth.",
-      "Protect surface from prolonged moisture exposure."
-    ],
-    status: "published",
-    tags: ["Dining Table", "Oak", "White Oak", "Minimalist"],
-    featured: true,
-    newArrival: false,
-    rating: 4.9,
-    reviewCount: 11,
-    stock: 7,
-    stockStatus: "in_stock"
-  },
-  {
-    id: "gm-prod-23",
-    slug: "monolith-travertine-dining-table",
-    name: "Monolith Smoked Oak & Travertine Dining Table",
-    sku: "GM-DIN-023",
-    category: "dining",
-    collection: "architectural-series",
-    room: "dining-room",
-    price: 215e3,
-    mrp: 25e4,
-    discount: 14,
-    description: "A commanding monumental dining table featuring an uncurated Roman travertine slab inset into a deep smoked oak perimeter with twin monolithic pillar legs.",
-    shortDescription: "Smoked oak and honed Roman travertine stone dining table.",
-    images: [
-      "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1544457070-4cd773b4d71e?auto=format&fit=crop&w=1200&q=80"
-    ],
-    colors: [
-      { name: "Smoked Oak & Travertine", hex: "#3B332B" },
-      { name: "Bleached Oak & Travertine", hex: "#C7B9A5" }
-    ],
-    dimensions: {
-      width: "260 cm",
-      depth: "105 cm",
-      height: "76 cm",
-      weight: "130 kg"
-    },
-    material: "Smoked European Oak & Italian Roman Travertine",
-    finish: "Zero-VOC Natural Matte Finish",
-    leadTime: "3-4 Weeks Delivery & Assembly",
-    warranty: "10-Year Framework Structural Warranty",
-    specifications: [
-      { label: "Stone Origin", value: "Tivoli, Italy" },
-      { label: "Timber Finish", value: "Fumed Smoked Oak" },
-      { label: "Seating Capacity", value: "10-12 Guests" },
-      { label: "Pedestal Construction", value: "Dual Hollow-Core Weighted Monoliths" }
-    ],
-    careInstructions: [
-      "Wipe down with stone-safe natural cleansers.",
-      "Periodically apply breathable stone impregnator."
-    ],
-    status: "published",
-    tags: ["Dining Table", "Travertine", "Smoked Oak", "Monolith"],
-    featured: false,
-    newArrival: true,
-    rating: 5,
-    reviewCount: 9,
-    stock: 4,
-    stockStatus: "in_stock"
-  }
-];
-
-// server/db.ts
 dotenv.config();
 var { Pool } = pg;
 var pool = null;
@@ -487,7 +279,6 @@ async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);
   `);
   await seedAdminUser();
-  await seedInitialProducts();
   await seedInitialTaxonomyAndSettings();
 }
 async function seedAdminUser() {
@@ -516,70 +307,6 @@ async function seedAdminUser() {
     );
     console.log(`[Database] Ensured admin privileges for: ${adminEmail}`);
   }
-}
-async function seedInitialProducts() {
-  const row = await queryOne(
-    "SELECT COUNT(*) as count FROM products"
-  );
-  const count = Number(row?.count || 0);
-  if (count > 0) {
-    return;
-  }
-  console.log("[Database] Seeding initial canonical architectural dining table products...");
-  for (const p of CANONICAL_PRODUCTS) {
-    const now = /* @__PURE__ */ new Date();
-    await execute(
-      `INSERT INTO products (
-        id, slug, name, sku, category, collection, room,
-        price, mrp, discount, description, short_description,
-        images_json, colors_json, dimensions_json,
-        material, finish, lead_time, warranty,
-        specifications_json, care_instructions_json,
-        status, featured, new_arrival, rating, review_count, stock,
-        created_at, updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10, $11, $12,
-        $13, $14, $15,
-        $16, $17, $18, $19,
-        $20, $21,
-        $22, $23, $24, $25, $26, $27,
-        $28, $29
-      ) ON CONFLICT (id) DO NOTHING`,
-      [
-        p.id,
-        p.slug,
-        p.name,
-        p.sku,
-        p.category,
-        p.collection || null,
-        p.room || null,
-        Math.round(p.price),
-        Math.round(p.mrp),
-        p.discount || 0,
-        p.description,
-        p.shortDescription || p.description.slice(0, 150),
-        JSON.stringify(p.images || []),
-        JSON.stringify(p.colors || []),
-        JSON.stringify(p.dimensions || {}),
-        p.material,
-        p.finish,
-        p.leadTime || "2-3 Weeks Delivery & Assembly",
-        p.warranty || "10-Year Framework Structural Warranty",
-        JSON.stringify(p.specifications || []),
-        JSON.stringify(p.careInstructions || []),
-        p.status || "published",
-        p.featured ? 1 : 0,
-        p.newArrival ? 1 : 0,
-        p.rating || 5,
-        p.reviewCount || 0,
-        p.stock !== void 0 ? p.stock : 10,
-        now,
-        now
-      ]
-    );
-  }
-  console.log(`[Database] Successfully seeded ${CANONICAL_PRODUCTS.length} canonical products.`);
 }
 async function seedInitialTaxonomyAndSettings() {
   const catCountRow = await queryOne(
@@ -859,6 +586,12 @@ app.use((req, _res, next) => {
   }
   next();
 });
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
 function safeParseJson(value, fallback) {
   if (value === null || value === void 0) return fallback;
   if (typeof value === "object") return value;
@@ -870,29 +603,34 @@ function safeParseJson(value, fallback) {
 }
 function formatProductRow(row) {
   if (!row) return null;
+  const parsedImages = safeParseJson(row.images_json, []);
+  const parsedColors = safeParseJson(row.colors_json, []);
+  const parsedDimensions = safeParseJson(row.dimensions_json, {});
+  const parsedSpecifications = safeParseJson(row.specifications_json, []);
+  const parsedCareInstructions = safeParseJson(row.care_instructions_json, []);
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    sku: row.sku,
-    category: row.category,
-    collection: row.collection,
-    room: row.room,
-    price: Number(row.price),
-    mrp: Number(row.mrp),
+    sku: row.sku || "",
+    category: row.category || "",
+    collection: row.collection || "",
+    room: row.room || "",
+    price: Number(row.price || 0),
+    mrp: Number(row.mrp || 0),
     discount: Number(row.discount || 0),
-    description: row.description,
-    shortDescription: row.short_description,
-    images: safeParseJson(row.images_json, []),
-    colors: safeParseJson(row.colors_json, []),
-    dimensions: safeParseJson(row.dimensions_json, {}),
-    material: row.material,
-    finish: row.finish,
-    leadTime: row.lead_time,
-    warranty: row.warranty,
-    specifications: safeParseJson(row.specifications_json, []),
-    careInstructions: safeParseJson(row.care_instructions_json, []),
-    status: row.status,
+    description: row.description || "",
+    shortDescription: row.short_description || "",
+    images: Array.isArray(parsedImages) ? parsedImages : [],
+    colors: Array.isArray(parsedColors) ? parsedColors : [],
+    dimensions: parsedDimensions && typeof parsedDimensions === "object" ? parsedDimensions : {},
+    material: row.material || "",
+    finish: row.finish || "",
+    leadTime: row.lead_time || "",
+    warranty: row.warranty || "",
+    specifications: Array.isArray(parsedSpecifications) ? parsedSpecifications : [],
+    careInstructions: Array.isArray(parsedCareInstructions) ? parsedCareInstructions : [],
+    status: row.status || "published",
     featured: Boolean(row.featured),
     newArrival: Boolean(row.new_arrival),
     rating: Number(row.rating || 5),
@@ -1102,7 +840,7 @@ app.get("/api/auth/me", verifyAuth, (req, res) => {
 app.get("/api/products", async (req, res) => {
   try {
     const { featured, newArrival, category, room, collection } = req.query;
-    let sql = "SELECT * FROM products WHERE status = 'published'";
+    let sql = "SELECT * FROM products WHERE (status = 'published' OR status = 'active')";
     const params = [];
     let pIdx = 1;
     if (featured === "true" || featured === "1") {
@@ -1111,17 +849,20 @@ app.get("/api/products", async (req, res) => {
     if (newArrival === "true" || newArrival === "1") {
       sql += ` AND new_arrival = 1`;
     }
-    if (category && typeof category === "string") {
-      sql += ` AND category = $${pIdx++}`;
-      params.push(category);
+    if (category && typeof category === "string" && category.trim()) {
+      sql += ` AND (LOWER(category) = LOWER($${pIdx}) OR LOWER(category) = LOWER(REPLACE($${pIdx}, '-', ' ')))`;
+      params.push(category.trim());
+      pIdx++;
     }
-    if (room && typeof room === "string") {
-      sql += ` AND room = $${pIdx++}`;
-      params.push(room);
+    if (room && typeof room === "string" && room.trim()) {
+      sql += ` AND (LOWER(room) = LOWER($${pIdx}) OR LOWER(room) = LOWER(REPLACE($${pIdx}, '-', ' ')))`;
+      params.push(room.trim());
+      pIdx++;
     }
-    if (collection && typeof collection === "string") {
-      sql += ` AND collection = $${pIdx++}`;
-      params.push(collection);
+    if (collection && typeof collection === "string" && collection.trim()) {
+      sql += ` AND (LOWER(collection) = LOWER($${pIdx}) OR LOWER(collection) = LOWER(REPLACE($${pIdx}, '-', ' ')))`;
+      params.push(collection.trim());
+      pIdx++;
     }
     sql += " ORDER BY created_at ASC";
     const rows = await query(sql, params);
@@ -1134,9 +875,9 @@ app.get("/api/products", async (req, res) => {
 });
 app.get("/api/products/:slugOrId", async (req, res) => {
   try {
-    const slugOrId = String(req.params.slugOrId);
+    const slugOrId = String(req.params.slugOrId).trim();
     const row = await queryOne(
-      "SELECT * FROM products WHERE slug = $1 OR id = $2",
+      "SELECT * FROM products WHERE (LOWER(slug) = LOWER($1) OR id = $2) AND (status = 'published' OR status = 'active')",
       [slugOrId, slugOrId]
     );
     if (!row) {
@@ -1191,7 +932,7 @@ app.get("/api/categories", async (_req, res) => {
     const rows = await query(`
       SELECT 
         c.id, c.slug, c.name, c.description, c.image,
-        COALESCE((SELECT COUNT(*) FROM products p WHERE p.category = c.slug AND p.status = 'published'), 0) as item_count
+        COALESCE((SELECT COUNT(*) FROM products p WHERE (LOWER(p.category) = LOWER(c.slug) OR LOWER(p.category) = LOWER(c.name)) AND (p.status = 'published' OR p.status = 'active')), 0) as item_count
       FROM categories c
       ORDER BY c.created_at ASC
     `);
@@ -1210,7 +951,13 @@ app.get("/api/categories", async (_req, res) => {
 });
 app.get("/api/rooms", async (_req, res) => {
   try {
-    const rows = await query("SELECT * FROM rooms ORDER BY created_at ASC");
+    const rows = await query(`
+      SELECT 
+        r.id, r.slug, r.name, r.tagline, r.description, r.image, r.coming_soon,
+        COALESCE((SELECT COUNT(*) FROM products p WHERE (LOWER(p.room) = LOWER(r.slug) OR LOWER(p.room) = LOWER(r.name)) AND (p.status = 'published' OR p.status = 'active')), 0) as product_count
+      FROM rooms r
+      ORDER BY r.created_at ASC
+    `);
     res.json(rows.map((r) => ({
       id: r.id,
       slug: r.slug,
@@ -1218,7 +965,8 @@ app.get("/api/rooms", async (_req, res) => {
       tagline: r.tagline,
       description: r.description,
       image: r.image,
-      comingSoon: Boolean(r.coming_soon)
+      comingSoon: Boolean(r.coming_soon),
+      productCount: Number(r.product_count || 0)
     })));
   } catch (error) {
     console.error("Fetch rooms error:", error);
@@ -1227,15 +975,15 @@ app.get("/api/rooms", async (_req, res) => {
 });
 app.get("/api/rooms/:slugOrId", async (req, res) => {
   try {
-    const slugOrId = String(req.params.slugOrId);
-    const room = await queryOne("SELECT * FROM rooms WHERE slug = $1 OR id = $2", [slugOrId, slugOrId]);
+    const slugOrId = String(req.params.slugOrId).trim();
+    const room = await queryOne("SELECT * FROM rooms WHERE LOWER(slug) = LOWER($1) OR id = $2", [slugOrId, slugOrId]);
     if (!room) {
       res.status(404).json({ error: "Room not found." });
       return;
     }
     const prods = await query(
-      "SELECT * FROM products WHERE room = $1 AND status = 'published' ORDER BY created_at ASC",
-      [room.slug]
+      "SELECT * FROM products WHERE (LOWER(room) = LOWER($1) OR LOWER(room) = LOWER($2) OR LOWER(room) = LOWER(REPLACE($1, '-', ' '))) AND (status = 'published' OR status = 'active') ORDER BY created_at ASC",
+      [room.slug, room.name]
     );
     res.json({
       room: {
@@ -1245,7 +993,8 @@ app.get("/api/rooms/:slugOrId", async (req, res) => {
         tagline: room.tagline,
         description: room.description,
         image: room.image,
-        comingSoon: Boolean(room.coming_soon)
+        comingSoon: Boolean(room.coming_soon),
+        productCount: prods.length
       },
       products: prods.map(formatProductRow)
     });
@@ -1259,7 +1008,7 @@ app.get("/api/collections", async (_req, res) => {
     const rows = await query(`
       SELECT 
         c.id, c.slug, c.name, c.tagline, c.description, c.image,
-        COALESCE((SELECT COUNT(*) FROM products p WHERE p.collection = c.slug AND p.status = 'published'), 0) as product_count
+        COALESCE((SELECT COUNT(*) FROM products p WHERE (LOWER(p.collection) = LOWER(c.slug) OR LOWER(p.collection) = LOWER(c.name)) AND (p.status = 'published' OR p.status = 'active')), 0) as product_count
       FROM collections c
       ORDER BY c.created_at ASC
     `);
@@ -1279,15 +1028,15 @@ app.get("/api/collections", async (_req, res) => {
 });
 app.get("/api/collections/:slugOrId", async (req, res) => {
   try {
-    const slugOrId = String(req.params.slugOrId);
-    const col = await queryOne("SELECT * FROM collections WHERE slug = $1 OR id = $2", [slugOrId, slugOrId]);
+    const slugOrId = String(req.params.slugOrId).trim();
+    const col = await queryOne("SELECT * FROM collections WHERE LOWER(slug) = LOWER($1) OR id = $2", [slugOrId, slugOrId]);
     if (!col) {
       res.status(404).json({ error: "Collection not found." });
       return;
     }
     const prods = await query(
-      "SELECT * FROM products WHERE collection = $1 AND status = 'published' ORDER BY created_at ASC",
-      [col.slug]
+      "SELECT * FROM products WHERE (LOWER(collection) = LOWER($1) OR LOWER(collection) = LOWER($2) OR LOWER(collection) = LOWER(REPLACE($1, '-', ' '))) AND (status = 'published' OR status = 'active') ORDER BY created_at ASC",
+      [col.slug, col.name]
     );
     res.json({
       collection: {
@@ -1296,7 +1045,8 @@ app.get("/api/collections/:slugOrId", async (req, res) => {
         name: col.name,
         tagline: col.tagline,
         description: col.description,
-        image: col.image
+        image: col.image,
+        productCount: prods.length
       },
       products: prods.map(formatProductRow)
     });
@@ -1582,6 +1332,36 @@ app.get("/api/orders", verifyAuth, async (req, res) => {
   } catch (error) {
     console.error("Fetch orders error:", error);
     res.status(500).json({ error: "Failed to fetch orders." });
+  }
+});
+app.get("/api/orders/:id", verifyAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const id = String(req.params.id).trim();
+    const r = await queryOne(
+      "SELECT * FROM orders WHERE (id = $1 OR order_number = $1) AND user_id = $2",
+      [id, userId]
+    );
+    if (!r) {
+      res.status(404).json({ error: "Order not found." });
+      return;
+    }
+    res.json({
+      id: r.id,
+      orderNumber: r.order_number,
+      subtotal: Number(r.subtotal),
+      discount: Number(r.discount || 0),
+      total: Number(r.total),
+      status: r.status,
+      paymentStatus: r.payment_status || "pending",
+      paymentMethod: r.payment_method || "cod",
+      deliveryAddress: safeParseJson(r.delivery_address_json, {}),
+      items: safeParseJson(r.items_json, []),
+      createdAt: r.created_at
+    });
+  } catch (error) {
+    console.error("Fetch order detail error:", error);
+    res.status(500).json({ error: "Failed to fetch order detail." });
   }
 });
 app.post("/api/orders", verifyAuth, async (req, res) => {

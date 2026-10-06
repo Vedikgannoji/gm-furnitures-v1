@@ -87,16 +87,10 @@ export const AdminProductFormPage: React.FC = () => {
           if (roomRes.ok) {
             const roomData = await roomRes.json()
             setRooms(roomData)
-            if (!form.room && roomData.length > 0) {
-              setForm((prev) => ({ ...prev, room: prev.room || roomData[0].slug }))
-            }
           }
           if (colRes.ok) {
             const colData = await colRes.json()
             setCollections(colData)
-            if (!form.collection && colData.length > 0) {
-              setForm((prev) => ({ ...prev, collection: prev.collection || colData[0].slug }))
-            }
           }
         }
       } catch (err) {

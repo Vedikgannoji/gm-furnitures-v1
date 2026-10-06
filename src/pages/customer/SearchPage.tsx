@@ -30,15 +30,16 @@ export const SearchPage: React.FC = () => {
     if (!trimmed) return products
 
     return products.filter((product) => {
-      const matchName = product.name.toLowerCase().includes(trimmed)
-      const matchCat = product.category.toLowerCase().includes(trimmed)
-      const matchMaterial = product.material.toLowerCase().includes(trimmed)
-      const matchSku = product.sku.toLowerCase().includes(trimmed)
-      const matchRoom = product.room.toLowerCase().includes(trimmed)
+      const matchName = (product.name || '').toLowerCase().includes(trimmed)
+      const matchCat = (product.category || '').toLowerCase().includes(trimmed)
+      const matchMaterial = (product.material || '').toLowerCase().includes(trimmed)
+      const matchSku = (product.sku || '').toLowerCase().includes(trimmed)
+      const matchRoom = (product.room || '').toLowerCase().includes(trimmed)
+      const matchCol = (product.collection || '').toLowerCase().includes(trimmed)
       const matchTags = Array.isArray(product.tags)
-        ? product.tags.some((t) => t.toLowerCase().includes(trimmed))
+        ? product.tags.some((t) => (t || '').toLowerCase().includes(trimmed))
         : false
-      return matchName || matchCat || matchMaterial || matchSku || matchRoom || matchTags
+      return matchName || matchCat || matchMaterial || matchSku || matchRoom || matchCol || matchTags
     })
   }, [query, products])
 

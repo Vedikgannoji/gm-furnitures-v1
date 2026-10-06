@@ -18,8 +18,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className }) 
   const [isHovered, setIsHovered] = useState(false)
   const isSaved = isInWishlist(product.id)
 
-  const primaryImage = product.images[0]
-  const secondaryImage = product.images[1] || product.images[0]
+  const validImages = Array.isArray(product.images) && product.images.length > 0
+    ? product.images.filter((img) => typeof img === 'string' && img.trim())
+    : []
+  const primaryImage = validImages[0] || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80'
+  const secondaryImage = validImages[1] || primaryImage
 
   return (
     <div
@@ -90,7 +93,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className }) 
       {/* Details */}
       <div className="pt-3.5 flex flex-col flex-1">
         <div className="flex items-center justify-between text-[11px] text-muted tracking-wider uppercase mb-1">
-          <span>{product.category}</span>
+          <span>{product.category || 'Collection'}</span>
           {product.colors && product.colors.length > 1 && (
             <span className="text-[10px] text-muted/80">
               {product.colors.length} Finishes
@@ -105,21 +108,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className }) 
           {product.name}
         </Link>
 
-        <p className="text-xs text-muted/90 mt-0.5 line-clamp-1">
-          {product.material}
-        </p>
+        {product.material && (
+          <p className="text-xs text-muted/90 mt-0.5 line-clamp-1">
+            {product.material}
+          </p>
+        )}
 
         {/* Pricing */}
         <div className="mt-2.5 flex items-baseline gap-2">
           <span className="text-sm font-semibold text-foreground">
-            {formatCurrency(product.price)}
+            {formatCurrency(product.price || 0)}
           </span>
-          {product.mrp > product.price && (
+          {Number(product.mrp) > Number(product.price) && (
             <span className="text-xs text-muted line-through">
               {formatCurrency(product.mrp)}
             </span>
           )}
-          {product.discount && (
+          {Boolean(product.discount) && (
             <span className="text-[10px] font-medium text-emerald-700 tracking-wide">
               {product.discount}% OFF
             </span>

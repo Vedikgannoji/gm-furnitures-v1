@@ -35,9 +35,10 @@ export const ProductDetailPage: React.FC = () => {
 
   const product = products.find((p) => p.slug === slug)
 
+  const colors = product && Array.isArray(product.colors) ? product.colors : []
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0)
   const [selectedColor, setSelectedColor] = useState<string>(
-    product?.colors[0]?.name || 'Standard'
+    colors[0]?.name || 'Standard'
   )
   const [quantity, setQuantity] = useState<number>(1)
   const [isZoomOpen, setIsZoomOpen] = useState<boolean>(false)
@@ -56,8 +57,15 @@ export const ProductDetailPage: React.FC = () => {
     )
   }
 
+  const validImages = Array.isArray(product.images) && product.images.length > 0
+    ? product.images.filter((img) => typeof img === 'string' && img.trim())
+    : []
+  const images = validImages.length > 0
+    ? validImages
+    : ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80']
+  const activeImage = images[selectedImageIndex] || images[0]
+
   const isSaved = isInWishlist(product.id)
-  const activeImage = product.images[selectedImageIndex] || product.images[0]
 
   const handleAddToCart = () => {
     addToCart(product, quantity, selectedColor)
@@ -75,8 +83,11 @@ export const ProductDetailPage: React.FC = () => {
   }
 
   const relatedProducts = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
+    .filter((p) => p && p.id !== product.id && (!product.category || (p.category || '').toLowerCase() === (product.category || '').toLowerCase()))
     .slice(0, 4)
+
+  const specifications = Array.isArray(product.specifications) ? product.specifications : []
+  const careInstructions = Array.isArray(product.careInstructions) ? product.careInstructions : []
 
   const accordionItems = [
     {
@@ -84,20 +95,24 @@ export const ProductDetailPage: React.FC = () => {
       title: 'Product Specifications',
       content: (
         <div className="divide-y divide-border/60 text-xs">
-          {product.specifications.map((spec, i) => (
+          {specifications.map((spec, i) => (
             <div key={i} className="py-2 flex justify-between">
-              <span className="text-muted font-medium">{spec.label}</span>
-              <span className="text-foreground font-normal text-right">{spec.value}</span>
+              <span className="text-muted font-medium">{spec?.label || ''}</span>
+              <span className="text-foreground font-normal text-right">{spec?.value || ''}</span>
             </div>
           ))}
-          <div className="py-2 flex justify-between">
-            <span className="text-muted font-medium">SKU</span>
-            <span className="text-foreground font-mono">{product.sku}</span>
-          </div>
-          <div className="py-2 flex justify-between">
-            <span className="text-muted font-medium">Finish</span>
-            <span className="text-foreground">{product.finish || 'Natural Matte Hardwax'}</span>
-          </div>
+          {product.sku && (
+            <div className="py-2 flex justify-between">
+              <span className="text-muted font-medium">SKU</span>
+              <span className="text-foreground font-mono">{product.sku}</span>
+            </div>
+          )}
+          {product.finish && (
+            <div className="py-2 flex justify-between">
+              <span className="text-muted font-medium">Finish</span>
+              <span className="text-foreground">{product.finish}</span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -106,7 +121,7 @@ export const ProductDetailPage: React.FC = () => {
       title: 'Dimensions & Sizing',
       content: (
         <div className="space-y-2 text-xs">
-          {product.dimensions?.unspecified ? (
+          {!product.dimensions || product.dimensions?.unspecified ? (
             <div className="bg-surface p-3 border border-border text-xs text-muted italic">
               Dimensions not specified for this piece. Please contact us for detailed measurements.
             </div>
@@ -138,7 +153,7 @@ export const ProductDetailPage: React.FC = () => {
               </div>
             </div>
           )}
-          {!product.dimensions?.unspecified && product.dimensions?.seatHeight && (
+          {product.dimensions && !product.dimensions?.unspecified && product.dimensions?.seatHeight && (
             <p className="text-xs text-muted pt-1">
               Seat Height from floor: <span className="font-medium text-foreground">{product.dimensions.seatHeight}</span>
             </p>
@@ -151,12 +166,16 @@ export const ProductDetailPage: React.FC = () => {
       title: 'Materiality & Preservation Care',
       content: (
         <div className="space-y-3 text-xs leading-relaxed">
-          <p className="text-foreground font-medium">{product.material}</p>
-          <ul className="list-disc pl-4 space-y-1.5 text-muted">
-            {product.careInstructions.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
+          {product.material && <p className="text-foreground font-medium">{product.material}</p>}
+          {careInstructions.length > 0 ? (
+            <ul className="list-disc pl-4 space-y-1.5 text-muted">
+              {careInstructions.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted">Dust regularly with a soft, clean, lint-free cotton cloth.</p>
+          )}
         </div>
       ),
     },
@@ -169,14 +188,14 @@ export const ProductDetailPage: React.FC = () => {
             <Truck className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-foreground">Complimentary Home Delivery & Assembly</p>
-              <p className="mt-0.5">{product.leadTime}. Delivered by a professional team who unpack, position, assemble, and remove all packaging materials.</p>
+              <p className="mt-0.5">{product.leadTime || 'Handcrafted to order. Typically delivered within 2-4 weeks'}. Delivered by a professional team who unpack, position, assemble, and remove all packaging materials.</p>
             </div>
           </div>
           <div className="flex items-start gap-2.5 pt-2 border-t border-border">
             <ShieldCheck className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-foreground">10-Year Framework Warranty</p>
-              <p className="mt-0.5">{product.warranty}. Covers joinery defects, structural timber failure, and frame integrity.</p>
+              <p className="mt-0.5">{product.warranty || 'Comprehensive 10-Year framework warranty'}. Covers joinery defects, structural timber failure, and frame integrity.</p>
             </div>
           </div>
         </div>
@@ -190,8 +209,10 @@ export const ProductDetailPage: React.FC = () => {
       <Breadcrumbs
         items={[
           { label: 'Shop', href: '/shop' },
-          { label: product.category, href: `/shop/${product.category}` },
-          { label: product.name },
+          ...(product.category
+            ? [{ label: product.category, href: `/shop?category=${encodeURIComponent(product.category)}` }]
+            : []),
+          { label: product.name || 'Product' },
         ]}
         className="mb-3 sm:mb-4"
       />
@@ -201,9 +222,9 @@ export const ProductDetailPage: React.FC = () => {
         {/* LEFT COLUMN: Gallery */}
         <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4">
           {/* Thumbnails list */}
-          {product.images.length > 1 && (
+          {images.length > 1 && (
             <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-y-auto shrink-0 sm:w-20">
-              {product.images.map((img, idx) => (
+              {images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
@@ -277,8 +298,12 @@ export const ProductDetailPage: React.FC = () => {
           {/* Header & Meta */}
           <div>
             <div className="flex items-center justify-between text-xs text-muted uppercase tracking-widest mb-1.5">
-              <span>{product.collection.replace('-', ' ')}</span>
-              <span className="font-mono text-[11px]">{product.sku}</span>
+              <span>
+                {typeof product.collection === 'string' && product.collection.trim()
+                  ? product.collection.replace(/-/g, ' ')
+                  : (product.category || 'GM Collection')}
+              </span>
+              <span className="font-mono text-[11px]">{product.sku || ''}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-foreground leading-tight">
               {product.name}
@@ -288,25 +313,25 @@ export const ProductDetailPage: React.FC = () => {
             <div className="mt-2.5 flex items-center gap-2 text-xs">
               <div className="flex items-center text-foreground">
                 <Star className="w-3.5 h-3.5 fill-foreground stroke-foreground mr-1" />
-                <span className="font-semibold">{product.rating}</span>
+                <span className="font-semibold">{product.rating ?? 5.0}</span>
               </div>
               <span className="text-muted">•</span>
               <span className="text-muted underline cursor-pointer hover:text-foreground">
-                {product.reviewCount} customer reviews
+                {product.reviewCount ?? 0} customer reviews
               </span>
             </div>
 
             {/* Pricing */}
             <div className="mt-4 flex items-baseline gap-3 pb-5 border-b border-border">
               <span className="text-2xl font-semibold text-foreground">
-                {formatCurrency(product.price)}
+                {formatCurrency(product.price || 0)}
               </span>
-              {product.mrp > product.price && (
+              {Number(product.mrp) > Number(product.price) && (
                 <span className="text-sm text-muted line-through">
                   {formatCurrency(product.mrp)}
                 </span>
               )}
-              {product.discount && (
+              {Boolean(product.discount) && (
                 <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
                   Save {product.discount}%
                 </span>
@@ -315,9 +340,11 @@ export const ProductDetailPage: React.FC = () => {
           </div>
 
           {/* Description */}
-          <p className="text-xs sm:text-sm text-muted leading-relaxed">
-            {product.description}
-          </p>
+          {product.description && (
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              {product.description}
+            </p>
+          )}
 
           {/* Finish / Color Swatches */}
           {product.colors && product.colors.length > 0 && (
@@ -448,7 +475,7 @@ export const ProductDetailPage: React.FC = () => {
               </h2>
             </div>
             <Link
-              to={`/shop/${product.category}`}
+              to={product.category ? `/shop?category=${encodeURIComponent(product.category)}` : '/shop'}
               className="text-xs uppercase tracking-widest font-medium text-foreground hover:text-muted transition-colors flex items-center gap-1"
             >
               <span>View Category</span>

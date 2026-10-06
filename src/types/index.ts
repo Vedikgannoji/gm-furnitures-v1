@@ -25,18 +25,18 @@ export interface Product {
   name: string
   sku: string
   category: string
-  collection: string
-  room: string
+  collection?: string | null
+  room?: string | null
   price: number
   mrp: number
   discount?: number
   description: string
-  shortDescription?: string
+  shortDescription?: string | null
   images: string[]
   colors: ColorOption[]
-  dimensions: ProductDimensions
+  dimensions?: ProductDimensions | null
   material: string
-  finish?: string
+  finish?: string | null
   stock: number
   threshold?: number
   stockStatus: StockStatus
@@ -45,11 +45,11 @@ export interface Product {
   newArrival?: boolean
   rating: number
   reviewCount: number
-  tags: string[]
-  specifications: SpecificationItem[]
-  careInstructions: string[]
-  leadTime: string
-  warranty: string
+  tags?: string[]
+  specifications?: SpecificationItem[]
+  careInstructions?: string[]
+  leadTime?: string | null
+  warranty?: string | null
   status?: 'published' | 'draft' | 'archived'
 }
 
@@ -71,6 +71,7 @@ export interface Room {
   image: string
   featuredProductIds: string[]
   comingSoon?: boolean
+  productCount?: number
 }
 
 export interface Collection {

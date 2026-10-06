@@ -69,6 +69,14 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next()
 })
 
+// Fresh Data & Cache Control: Never cache API responses
+app.use('/api', (_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
+  next()
+})
+
 // Helper to safely parse JSON or return fallback
 function safeParseJson(value: any, fallback: any) {
   if (value === null || value === undefined) return fallback
@@ -83,29 +91,35 @@ function safeParseJson(value: any, fallback: any) {
 // Format raw PostgreSQL row into canonical Product object
 function formatProductRow(row: any) {
   if (!row) return null
+  const parsedImages = safeParseJson(row.images_json, [])
+  const parsedColors = safeParseJson(row.colors_json, [])
+  const parsedDimensions = safeParseJson(row.dimensions_json, {})
+  const parsedSpecifications = safeParseJson(row.specifications_json, [])
+  const parsedCareInstructions = safeParseJson(row.care_instructions_json, [])
+
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    sku: row.sku,
-    category: row.category,
-    collection: row.collection,
-    room: row.room,
-    price: Number(row.price),
-    mrp: Number(row.mrp),
+    sku: row.sku || '',
+    category: row.category || '',
+    collection: row.collection || '',
+    room: row.room || '',
+    price: Number(row.price || 0),
+    mrp: Number(row.mrp || 0),
     discount: Number(row.discount || 0),
-    description: row.description,
-    shortDescription: row.short_description,
-    images: safeParseJson(row.images_json, []),
-    colors: safeParseJson(row.colors_json, []),
-    dimensions: safeParseJson(row.dimensions_json, {}),
-    material: row.material,
-    finish: row.finish,
-    leadTime: row.lead_time,
-    warranty: row.warranty,
-    specifications: safeParseJson(row.specifications_json, []),
-    careInstructions: safeParseJson(row.care_instructions_json, []),
-    status: row.status,
+    description: row.description || '',
+    shortDescription: row.short_description || '',
+    images: Array.isArray(parsedImages) ? parsedImages : [],
+    colors: Array.isArray(parsedColors) ? parsedColors : [],
+    dimensions: parsedDimensions && typeof parsedDimensions === 'object' ? parsedDimensions : {},
+    material: row.material || '',
+    finish: row.finish || '',
+    leadTime: row.lead_time || '',
+    warranty: row.warranty || '',
+    specifications: Array.isArray(parsedSpecifications) ? parsedSpecifications : [],
+    careInstructions: Array.isArray(parsedCareInstructions) ? parsedCareInstructions : [],
+    status: row.status || 'published',
     featured: Boolean(row.featured),
     newArrival: Boolean(row.new_arrival),
     rating: Number(row.rating || 5.0),
@@ -367,7 +381,7 @@ app.get('/api/auth/me', verifyAuth, (req: AuthenticatedRequest, res: Response) =
 app.get('/api/products', async (req: Request, res: Response) => {
   try {
     const { featured, newArrival, category, room, collection } = req.query
-    let sql = "SELECT * FROM products WHERE status = 'published'"
+    let sql = "SELECT * FROM products WHERE (status = 'published' OR status = 'active')"
     const params: any[] = []
     let pIdx = 1
 
@@ -379,19 +393,22 @@ app.get('/api/products', async (req: Request, res: Response) => {
       sql += ` AND new_arrival = 1`
     }
 
-    if (category && typeof category === 'string') {
-      sql += ` AND category = $${pIdx++}`
-      params.push(category)
+    if (category && typeof category === 'string' && category.trim()) {
+      sql += ` AND (LOWER(category) = LOWER($${pIdx}) OR LOWER(category) = LOWER(REPLACE($${pIdx}, '-', ' ')))`
+      params.push(category.trim())
+      pIdx++
     }
 
-    if (room && typeof room === 'string') {
-      sql += ` AND room = $${pIdx++}`
-      params.push(room)
+    if (room && typeof room === 'string' && room.trim()) {
+      sql += ` AND (LOWER(room) = LOWER($${pIdx}) OR LOWER(room) = LOWER(REPLACE($${pIdx}, '-', ' ')))`
+      params.push(room.trim())
+      pIdx++
     }
 
-    if (collection && typeof collection === 'string') {
-      sql += ` AND collection = $${pIdx++}`
-      params.push(collection)
+    if (collection && typeof collection === 'string' && collection.trim()) {
+      sql += ` AND (LOWER(collection) = LOWER($${pIdx}) OR LOWER(collection) = LOWER(REPLACE($${pIdx}, '-', ' ')))`
+      params.push(collection.trim())
+      pIdx++
     }
 
     sql += ' ORDER BY created_at ASC'
@@ -408,9 +425,9 @@ app.get('/api/products', async (req: Request, res: Response) => {
 // Get single product by slug or id
 app.get('/api/products/:slugOrId', async (req: Request, res: Response) => {
   try {
-    const slugOrId = String(req.params.slugOrId)
+    const slugOrId = String(req.params.slugOrId).trim()
     const row = await queryOne(
-      'SELECT * FROM products WHERE slug = $1 OR id = $2',
+      "SELECT * FROM products WHERE (LOWER(slug) = LOWER($1) OR id = $2) AND (status = 'published' OR status = 'active')",
       [slugOrId, slugOrId]
     )
 
@@ -476,7 +493,7 @@ app.get('/api/categories', async (_req: Request, res: Response) => {
     const rows = await query(`
       SELECT 
         c.id, c.slug, c.name, c.description, c.image,
-        COALESCE((SELECT COUNT(*) FROM products p WHERE p.category = c.slug AND p.status = 'published'), 0) as item_count
+        COALESCE((SELECT COUNT(*) FROM products p WHERE (LOWER(p.category) = LOWER(c.slug) OR LOWER(p.category) = LOWER(c.name)) AND (p.status = 'published' OR p.status = 'active')), 0) as item_count
       FROM categories c
       ORDER BY c.created_at ASC
     `)
@@ -494,10 +511,16 @@ app.get('/api/categories', async (_req: Request, res: Response) => {
   }
 })
 
-// GET /api/rooms - All rooms
+// GET /api/rooms - All rooms with dynamic product count
 app.get('/api/rooms', async (_req: Request, res: Response) => {
   try {
-    const rows = await query('SELECT * FROM rooms ORDER BY created_at ASC')
+    const rows = await query(`
+      SELECT 
+        r.id, r.slug, r.name, r.tagline, r.description, r.image, r.coming_soon,
+        COALESCE((SELECT COUNT(*) FROM products p WHERE (LOWER(p.room) = LOWER(r.slug) OR LOWER(p.room) = LOWER(r.name)) AND (p.status = 'published' OR p.status = 'active')), 0) as product_count
+      FROM rooms r
+      ORDER BY r.created_at ASC
+    `)
     res.json(rows.map((r) => ({
       id: r.id,
       slug: r.slug,
@@ -506,6 +529,7 @@ app.get('/api/rooms', async (_req: Request, res: Response) => {
       description: r.description,
       image: r.image,
       comingSoon: Boolean(r.coming_soon),
+      productCount: Number(r.product_count || 0),
     })))
   } catch (error: any) {
     console.error('Fetch rooms error:', error)
@@ -516,16 +540,16 @@ app.get('/api/rooms', async (_req: Request, res: Response) => {
 // GET /api/rooms/:slugOrId - Room details and associated products
 app.get('/api/rooms/:slugOrId', async (req: Request, res: Response) => {
   try {
-    const slugOrId = String(req.params.slugOrId)
-    const room = await queryOne('SELECT * FROM rooms WHERE slug = $1 OR id = $2', [slugOrId, slugOrId])
+    const slugOrId = String(req.params.slugOrId).trim()
+    const room = await queryOne('SELECT * FROM rooms WHERE LOWER(slug) = LOWER($1) OR id = $2', [slugOrId, slugOrId])
     if (!room) {
       res.status(404).json({ error: 'Room not found.' })
       return
     }
 
     const prods = await query(
-      "SELECT * FROM products WHERE room = $1 AND status = 'published' ORDER BY created_at ASC",
-      [room.slug]
+      "SELECT * FROM products WHERE (LOWER(room) = LOWER($1) OR LOWER(room) = LOWER($2) OR LOWER(room) = LOWER(REPLACE($1, '-', ' '))) AND (status = 'published' OR status = 'active') ORDER BY created_at ASC",
+      [room.slug, room.name]
     )
 
     res.json({
@@ -537,6 +561,7 @@ app.get('/api/rooms/:slugOrId', async (req: Request, res: Response) => {
         description: room.description,
         image: room.image,
         comingSoon: Boolean(room.coming_soon),
+        productCount: prods.length,
       },
       products: prods.map(formatProductRow),
     })
@@ -552,7 +577,7 @@ app.get('/api/collections', async (_req: Request, res: Response) => {
     const rows = await query(`
       SELECT 
         c.id, c.slug, c.name, c.tagline, c.description, c.image,
-        COALESCE((SELECT COUNT(*) FROM products p WHERE p.collection = c.slug AND p.status = 'published'), 0) as product_count
+        COALESCE((SELECT COUNT(*) FROM products p WHERE (LOWER(p.collection) = LOWER(c.slug) OR LOWER(p.collection) = LOWER(c.name)) AND (p.status = 'published' OR p.status = 'active')), 0) as product_count
       FROM collections c
       ORDER BY c.created_at ASC
     `)
@@ -574,16 +599,16 @@ app.get('/api/collections', async (_req: Request, res: Response) => {
 // GET /api/collections/:slugOrId - Collection details and associated products
 app.get('/api/collections/:slugOrId', async (req: Request, res: Response) => {
   try {
-    const slugOrId = String(req.params.slugOrId)
-    const col = await queryOne('SELECT * FROM collections WHERE slug = $1 OR id = $2', [slugOrId, slugOrId])
+    const slugOrId = String(req.params.slugOrId).trim()
+    const col = await queryOne('SELECT * FROM collections WHERE LOWER(slug) = LOWER($1) OR id = $2', [slugOrId, slugOrId])
     if (!col) {
       res.status(404).json({ error: 'Collection not found.' })
       return
     }
 
     const prods = await query(
-      "SELECT * FROM products WHERE collection = $1 AND status = 'published' ORDER BY created_at ASC",
-      [col.slug]
+      "SELECT * FROM products WHERE (LOWER(collection) = LOWER($1) OR LOWER(collection) = LOWER($2) OR LOWER(collection) = LOWER(REPLACE($1, '-', ' '))) AND (status = 'published' OR status = 'active') ORDER BY created_at ASC",
+      [col.slug, col.name]
     )
 
     res.json({
@@ -594,6 +619,7 @@ app.get('/api/collections/:slugOrId', async (req: Request, res: Response) => {
         tagline: col.tagline,
         description: col.description,
         image: col.image,
+        productCount: prods.length,
       },
       products: prods.map(formatProductRow),
     })
@@ -946,6 +972,40 @@ app.get('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Respon
   } catch (error: any) {
     console.error('Fetch orders error:', error)
     res.status(500).json({ error: 'Failed to fetch orders.' })
+  }
+})
+
+// Get single order detail
+app.get('/api/orders/:id', verifyAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id
+    const id = String(req.params.id).trim()
+    const r = await queryOne(
+      'SELECT * FROM orders WHERE (id = $1 OR order_number = $1) AND user_id = $2',
+      [id, userId]
+    )
+
+    if (!r) {
+      res.status(404).json({ error: 'Order not found.' })
+      return
+    }
+
+    res.json({
+      id: r.id,
+      orderNumber: r.order_number,
+      subtotal: Number(r.subtotal),
+      discount: Number(r.discount || 0),
+      total: Number(r.total),
+      status: r.status,
+      paymentStatus: r.payment_status || 'pending',
+      paymentMethod: r.payment_method || 'cod',
+      deliveryAddress: safeParseJson(r.delivery_address_json, {}),
+      items: safeParseJson(r.items_json, []),
+      createdAt: r.created_at,
+    })
+  } catch (error: any) {
+    console.error('Fetch order detail error:', error)
+    res.status(500).json({ error: 'Failed to fetch order detail.' })
   }
 })
 

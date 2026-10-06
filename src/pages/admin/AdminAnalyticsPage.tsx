@@ -11,7 +11,7 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts'
-import { TrendingUp, Users, ShoppingBag, BarChart2, RefreshCw, AlertCircle } from 'lucide-react'
+import { BarChart2, RefreshCw, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 

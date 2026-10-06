@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { Lock, Mail, User, AlertCircle, Shield } from 'lucide-react'
+import { Lock, Mail, User, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'

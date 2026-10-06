@@ -26,6 +26,7 @@ export const AdminProductsPage: React.FC = () => {
       setIsLoading(true)
       setError(null)
       const res = await fetch(`${API_BASE}/api/admin/products`, {
+        cache: 'no-store',
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },

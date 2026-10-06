@@ -6,6 +6,7 @@ import { CustomerLayout } from '@/components/layout/CustomerLayout'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { AccountLayout } from '@/pages/customer/AccountLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { StorefrontErrorBoundary } from '@/components/layout/StorefrontErrorBoundary'
 
 // Customer Pages
 import { HomePage } from '@/pages/customer/HomePage'
@@ -66,11 +67,12 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <CustomerLayout />,
+    errorElement: <StorefrontErrorBoundary />,
     children: [
       { index: true, element: <HomePage /> },
       { path: 'shop', element: <ShopPage /> },
       { path: 'shop/:category', element: <CategoryPage /> },
-      { path: 'products/:slug', element: <ProductDetailPage /> },
+      { path: 'products/:slug', element: <ProductDetailPage />, errorElement: <StorefrontErrorBoundary /> },
       { path: 'rooms', element: <RoomsPage /> },
       { path: 'rooms/:slug', element: <RoomDetailPage /> },
       { path: 'collections', element: <CollectionsPage /> },
