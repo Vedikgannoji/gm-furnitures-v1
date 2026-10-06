@@ -20,6 +20,7 @@ import { CollectionDetailPage } from '@/pages/customer/CollectionDetailPage'
 import { SearchPage } from '@/pages/customer/SearchPage'
 import { CartPage } from '@/pages/customer/CartPage'
 import { CheckoutPage } from '@/pages/customer/CheckoutPage'
+import { PaymentReturnPage } from '@/pages/customer/PaymentReturnPage'
 import { AuthPage } from '@/pages/customer/AuthPage'
 import { AccountDashboardPage } from '@/pages/customer/AccountDashboardPage'
 import { AccountOrdersPage } from '@/pages/customer/AccountOrdersPage'
@@ -101,6 +102,10 @@ export const router = createBrowserRouter([
             <CheckoutPage />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: 'checkout/payment-return',
+        element: <PaymentReturnPage />,
       },
       { path: 'auth', element: <AuthPage /> },
       { path: 'login', element: <AuthPage /> },

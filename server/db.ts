@@ -286,14 +286,22 @@ export async function initDatabase(): Promise<void> {
 
   // 1b. Schema migrations for existing tables (seamless upgrade)
   await query(`
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge NUMERIC(12, 2) NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee NUMERIC(12, 2) NOT NULL DEFAULT 0;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee_percent REAL NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst NUMERIC(12, 2) NOT NULL DEFAULT 0;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_percent REAL NOT NULL DEFAULT 18;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255);
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255);
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+    ALTER TABLE orders ALTER COLUMN subtotal TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN total TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN assembly_charge TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN convenience_fee TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN gst TYPE NUMERIC(12, 2);
+    CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id);
   `).catch((err) => {
     console.warn('[Database] Note on orders table schema migration:', err.message)
   })

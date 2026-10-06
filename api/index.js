@@ -250,14 +250,22 @@ async function initDatabase() {
     );
   `);
   await query(`
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge NUMERIC(12, 2) NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee NUMERIC(12, 2) NOT NULL DEFAULT 0;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee_percent REAL NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst NUMERIC(12, 2) NOT NULL DEFAULT 0;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_percent REAL NOT NULL DEFAULT 18;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255);
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255);
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+    ALTER TABLE orders ALTER COLUMN subtotal TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN total TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN assembly_charge TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN convenience_fee TYPE NUMERIC(12, 2);
+    ALTER TABLE orders ALTER COLUMN gst TYPE NUMERIC(12, 2);
+    CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id);
   `).catch((err) => {
     console.warn("[Database] Note on orders table schema migration:", err.message);
   });
@@ -576,7 +584,13 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf.toString();
+    }
+  })
+);
 app.use((req, _res, next) => {
   const originalPath = req.headers["x-matched-path"] || req.headers["x-forwarded-uri"];
   if (originalPath && originalPath.startsWith("/api") && (req.url === "/api" || req.url === "/api/" || req.url.startsWith("/api/index"))) {
@@ -1484,6 +1498,426 @@ app.post("/api/orders/verify-payment", verifyAuth, async (req, res) => {
   } catch (error) {
     console.error("Payment verification error:", error);
     res.status(500).json({ error: "Payment verification failed." });
+  }
+});
+function getCashfreeConfig() {
+  const env = (process.env.CASHFREE_ENVIRONMENT || "sandbox").toLowerCase().trim();
+  const isProduction = env === "production";
+  const baseUrl = isProduction ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
+  const clientId = (process.env.CASHFREE_CLIENT_ID || "").trim();
+  const clientSecret = (process.env.CASHFREE_CLIENT_SECRET || "").trim();
+  const apiVersion = "2023-08-01";
+  return { env, isProduction, baseUrl, clientId, clientSecret, apiVersion };
+}
+app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { items, deliveryAddress } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: "Your cart must contain at least one item." });
+      return;
+    }
+    if (!deliveryAddress || !deliveryAddress.fullName || !deliveryAddress.phone || !deliveryAddress.addressLine || !deliveryAddress.pincode) {
+      res.status(400).json({ error: "A complete delivery address with phone number is required." });
+      return;
+    }
+    const phoneDigits = String(deliveryAddress.phone || "").replace(/\D/g, "");
+    const cleanPhone = phoneDigits.length > 10 && phoneDigits.startsWith("91") ? phoneDigits.slice(2) : phoneDigits;
+    if (cleanPhone.length !== 10) {
+      res.status(400).json({ error: "Please provide a valid 10-digit Indian mobile number." });
+      return;
+    }
+    const verifiedItems = [];
+    for (const it of items) {
+      const prodId = it.product?.id || it.productId;
+      if (!prodId) {
+        res.status(400).json({ error: "Invalid product item in cart." });
+        return;
+      }
+      const prod = await queryOne(
+        "SELECT id, name, sku, price, stock, status, images_json, specifications_json FROM products WHERE id = $1",
+        [prodId]
+      );
+      if (!prod) {
+        res.status(400).json({ error: `Product is no longer available in the catalog.` });
+        return;
+      }
+      if (prod.status !== "published") {
+        res.status(400).json({ error: `Product "${prod.name}" is not currently available for purchase.` });
+        return;
+      }
+      const requestedQty = Math.max(1, Math.round(Number(it.quantity || 1)));
+      if (Number(prod.stock || 0) < requestedQty) {
+        res.status(400).json({
+          error: `Product "${prod.name}" has insufficient stock (${prod.stock} available).`
+        });
+        return;
+      }
+      const images = typeof prod.images_json === "string" ? JSON.parse(prod.images_json) : prod.images_json || [];
+      const specs = typeof prod.specifications_json === "string" ? JSON.parse(prod.specifications_json) : prod.specifications_json || [];
+      verifiedItems.push({
+        productId: prod.id,
+        name: prod.name,
+        sku: prod.sku,
+        price: Number(prod.price),
+        quantity: requestedQty,
+        selectedColor: it.selectedColor || void 0,
+        images,
+        specifications: specs
+      });
+    }
+    const settingsRow = await queryOne("SELECT * FROM store_settings WHERE id = $1", ["default"]);
+    const assemblyCharge = verifiedItems.length > 0 ? Number(settingsRow?.assembly_charge ?? 3e3) : 0;
+    const convenienceFeePercent = Number(settingsRow?.convenience_fee_percent ?? 0);
+    const gstPercent = Number(settingsRow?.gst_percent ?? 18);
+    const subtotal = verifiedItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
+    const convenienceFee = Math.round(subtotal * (convenienceFeePercent / 100) * 100) / 100;
+    const gst = Math.round(convenienceFee * (gstPercent / 100) * 100) / 100;
+    const grandTotal = Math.round((subtotal + assemblyCharge + convenienceFee + gst) * 100) / 100;
+    const internalOrderId = `ord_${crypto2.randomUUID()}`;
+    const orderNumber = `GM-${(/* @__PURE__ */ new Date()).getFullYear()}-${Math.floor(1e5 + Math.random() * 9e5)}`;
+    const dateStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, "");
+    const shortId = crypto2.randomUUID().replace(/-/g, "").slice(0, 8);
+    const cfOrderId = `GMF_${dateStr}_${shortId}`;
+    const now = /* @__PURE__ */ new Date();
+    await execute(
+      `INSERT INTO orders (
+        id, order_number, user_id, subtotal, discount, assembly_charge, convenience_fee,
+        convenience_fee_percent, gst, gst_percent, total,
+        status, payment_status, payment_method, payment_gateway,
+        payment_order_id, delivery_address_json, items_json,
+        created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10,
+        'pending', 'pending', 'cashfree', 'cashfree',
+        $11, $12, $13, $14, $14
+      )`,
+      [
+        internalOrderId,
+        orderNumber,
+        userId,
+        subtotal,
+        assemblyCharge,
+        convenienceFee,
+        convenienceFeePercent,
+        gst,
+        gstPercent,
+        grandTotal,
+        cfOrderId,
+        JSON.stringify(deliveryAddress),
+        JSON.stringify(verifiedItems)
+      ]
+    );
+    for (const it of verifiedItems) {
+      const orderItemId = `item_${crypto2.randomUUID()}`;
+      await execute(
+        `INSERT INTO order_items (
+          id, order_id, product_id, name, sku, price, quantity, selected_color, images_json, specifications_json, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          orderItemId,
+          internalOrderId,
+          it.productId,
+          it.name,
+          it.sku,
+          it.price,
+          it.quantity,
+          it.selectedColor || null,
+          JSON.stringify(it.images),
+          JSON.stringify(it.specifications),
+          now
+        ]
+      );
+    }
+    const cf = getCashfreeConfig();
+    if (!cf.clientId || !cf.clientSecret) {
+      console.warn("[Cashfree] CASHFREE_CLIENT_ID or CASHFREE_CLIENT_SECRET is not configured.");
+      res.status(500).json({
+        error: "Cashfree payment gateway credentials are not configured on the server. Please set CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET."
+      });
+      return;
+    }
+    const appUrl = (process.env.APP_URL || "http://localhost:5173").replace(/\/$/, "");
+    const returnUrl = `${appUrl}/checkout/payment-return?order_id={order_id}`;
+    const cfPayload = {
+      order_id: cfOrderId,
+      order_amount: grandTotal,
+      order_currency: "INR",
+      customer_details: {
+        customer_id: userId,
+        customer_name: deliveryAddress.fullName || req.user.name || "Valued Customer",
+        customer_email: req.user.email || "customer@gmfurniture.in",
+        customer_phone: cleanPhone
+      },
+      order_meta: {
+        return_url: returnUrl,
+        notify_url: `${appUrl}/api/payments/cashfree/webhook`
+      },
+      order_note: `GM Furniture Order ${orderNumber}`
+    };
+    const cfRes = await fetch(`${cf.baseUrl}/orders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-id": cf.clientId,
+        "x-client-secret": cf.clientSecret,
+        "x-api-version": cf.apiVersion
+      },
+      body: JSON.stringify(cfPayload)
+    });
+    if (!cfRes.ok) {
+      const errJson = await cfRes.json().catch(() => ({}));
+      console.error("[Cashfree] Create order error:", errJson);
+      res.status(502).json({
+        error: errJson?.message || "Unable to start payment session with Cashfree. Please try again."
+      });
+      return;
+    }
+    const cfData = await cfRes.json();
+    const paymentSessionId = cfData?.payment_session_id;
+    await execute(
+      "UPDATE orders SET payment_session_id = $1, updated_at = NOW() WHERE id = $2",
+      [paymentSessionId, internalOrderId]
+    );
+    res.status(201).json({
+      success: true,
+      paymentSessionId,
+      cfOrderId,
+      orderId: internalOrderId,
+      orderNumber,
+      environment: cf.env,
+      grandTotal
+    });
+  } catch (error) {
+    console.error("Create Cashfree order error:", error);
+    res.status(500).json({ error: "Failed to initialize Cashfree payment order." });
+  }
+});
+function formatOrderFull(ord) {
+  return {
+    id: ord.id,
+    orderNumber: ord.order_number,
+    subtotal: Number(ord.subtotal),
+    discount: Number(ord.discount || 0),
+    assemblyCharge: Number(ord.assembly_charge || 0),
+    convenienceFee: Number(ord.convenience_fee || 0),
+    convenienceFeePercent: Number(ord.convenience_fee_percent || 0),
+    gst: Number(ord.gst || 0),
+    gstPercent: Number(ord.gst_percent || 18),
+    total: Number(ord.total),
+    status: ord.status,
+    paymentStatus: ord.payment_status,
+    paymentMethod: ord.payment_method,
+    paymentGateway: ord.payment_gateway,
+    paymentOrderId: ord.payment_order_id,
+    paymentTransactionId: ord.payment_transaction_id,
+    paidAt: ord.paid_at,
+    deliveryAddress: typeof ord.delivery_address_json === "string" ? JSON.parse(ord.delivery_address_json) : ord.delivery_address_json,
+    items: typeof ord.items_json === "string" ? JSON.parse(ord.items_json) : ord.items_json,
+    createdAt: ord.created_at
+  };
+}
+app.get("/api/payments/cashfree/status", async (req, res) => {
+  try {
+    const orderIdParam = (req.query.order_id || "").trim();
+    if (!orderIdParam) {
+      res.status(400).json({ error: "order_id query parameter is required." });
+      return;
+    }
+    const order = await queryOne(
+      "SELECT * FROM orders WHERE payment_order_id = $1 OR id = $1 OR order_number = $1",
+      [orderIdParam]
+    );
+    if (!order) {
+      res.status(404).json({ error: "Order not found." });
+      return;
+    }
+    if (order.payment_status === "paid") {
+      res.json({
+        success: true,
+        paymentStatus: "SUCCESS",
+        order: formatOrderFull(order)
+      });
+      return;
+    }
+    const cf = getCashfreeConfig();
+    if (!cf.clientId || !cf.clientSecret) {
+      res.json({
+        success: false,
+        paymentStatus: "PENDING",
+        message: "Cashfree credentials not configured.",
+        order: formatOrderFull(order)
+      });
+      return;
+    }
+    const cfOrderId = order.payment_order_id || order.id;
+    const paymentsRes = await fetch(`${cf.baseUrl}/orders/${encodeURIComponent(cfOrderId)}/payments`, {
+      headers: {
+        "x-client-id": cf.clientId,
+        "x-client-secret": cf.clientSecret,
+        "x-api-version": cf.apiVersion
+      }
+    });
+    const payments = paymentsRes.ok ? await paymentsRes.json() : [];
+    let isSuccess = false;
+    let isFailed = false;
+    let isPending = true;
+    let transactionId = null;
+    if (Array.isArray(payments) && payments.length > 0) {
+      const successPayment = payments.find((p) => p.payment_status === "SUCCESS");
+      if (successPayment) {
+        isSuccess = true;
+        isPending = false;
+        transactionId = String(successPayment.cf_payment_id || successPayment.bank_reference || "");
+      } else {
+        const allFailed = payments.every(
+          (p) => ["FAILED", "USER_DROPPED", "CANCELLED"].includes(p.payment_status)
+        );
+        if (allFailed) {
+          isFailed = true;
+          isPending = false;
+        }
+      }
+    } else {
+      const orderRes = await fetch(`${cf.baseUrl}/orders/${encodeURIComponent(cfOrderId)}`, {
+        headers: {
+          "x-client-id": cf.clientId,
+          "x-client-secret": cf.clientSecret,
+          "x-api-version": cf.apiVersion
+        }
+      });
+      if (orderRes.ok) {
+        const cfOrder = await orderRes.json();
+        if (cfOrder?.order_status === "PAID") {
+          isSuccess = true;
+          isPending = false;
+        } else if (cfOrder?.order_status === "EXPIRED") {
+          isFailed = true;
+          isPending = false;
+        }
+      }
+    }
+    if (isSuccess) {
+      const now = /* @__PURE__ */ new Date();
+      const updateResult = await execute(
+        `UPDATE orders
+         SET payment_status = 'paid', status = 'confirmed', payment_transaction_id = $1, paid_at = $2, updated_at = $2
+         WHERE id = $3 AND payment_status != 'paid'`,
+        [transactionId || "cf_verified", now, order.id]
+      );
+      if (updateResult.rowCount > 0) {
+        const items = typeof order.items_json === "string" ? JSON.parse(order.items_json) : order.items_json;
+        if (Array.isArray(items)) {
+          for (const it of items) {
+            const prodId = it.product?.id || it.productId;
+            const qty = Math.max(1, Math.round(Number(it.quantity || 1)));
+            if (prodId) {
+              await execute(
+                "UPDATE products SET stock = GREATEST(0, stock - $1), updated_at = $2 WHERE id = $3",
+                [qty, now, prodId]
+              );
+            }
+          }
+        }
+        if (order.user_id) {
+          await execute("DELETE FROM cart_items WHERE user_id = $1", [order.user_id]);
+        }
+      }
+      const refreshed = await queryOne("SELECT * FROM orders WHERE id = $1", [order.id]);
+      res.json({
+        success: true,
+        paymentStatus: "SUCCESS",
+        order: formatOrderFull(refreshed)
+      });
+      return;
+    }
+    if (isFailed) {
+      await execute(
+        `UPDATE orders SET payment_status = 'failed', updated_at = NOW() WHERE id = $1 AND payment_status != 'paid'`,
+        [order.id]
+      );
+      const refreshed = await queryOne("SELECT * FROM orders WHERE id = $1", [order.id]);
+      res.json({
+        success: true,
+        paymentStatus: "FAILED",
+        message: "Payment was not completed or was cancelled at the gateway.",
+        order: formatOrderFull(refreshed)
+      });
+      return;
+    }
+    res.json({
+      success: true,
+      paymentStatus: "PENDING",
+      message: "Payment is being verified.",
+      order: formatOrderFull(order)
+    });
+  } catch (error) {
+    console.error("Verify Cashfree status error:", error);
+    res.status(500).json({ error: "Failed to verify payment status." });
+  }
+});
+app.post("/api/payments/cashfree/webhook", async (req, res) => {
+  try {
+    const cf = getCashfreeConfig();
+    const signature = req.headers["x-webhook-signature"];
+    const timestamp = req.headers["x-webhook-timestamp"];
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+    if (cf.clientSecret && signature && timestamp) {
+      const generatedSignature = crypto2.createHmac("sha256", cf.clientSecret).update(timestamp + rawBody).digest("base64");
+      if (signature !== generatedSignature) {
+        console.warn("[Cashfree Webhook] Invalid webhook signature detected.");
+        res.status(400).json({ error: "Invalid webhook signature." });
+        return;
+      }
+    }
+    const payload = req.body;
+    const eventType = payload.type || payload.event;
+    const orderData = payload.data?.order || payload.order;
+    const paymentData = payload.data?.payment || payload.payment;
+    const cfOrderId = orderData?.order_id || payload.order_id;
+    if (!cfOrderId) {
+      res.status(200).json({ status: "ignored_missing_order_id" });
+      return;
+    }
+    const isPaid = eventType === "PAYMENT_SUCCESS_WEBHOOK" || eventType === "ORDER_PAID" || paymentData?.payment_status === "SUCCESS";
+    if (isPaid) {
+      const order = await queryOne(
+        "SELECT * FROM orders WHERE payment_order_id = $1 OR id = $1",
+        [cfOrderId]
+      );
+      if (order && order.payment_status !== "paid") {
+        const txId = String(paymentData?.cf_payment_id || paymentData?.bank_reference || "webhook_verified");
+        const now = /* @__PURE__ */ new Date();
+        const updateResult = await execute(
+          `UPDATE orders
+           SET payment_status = 'paid', status = 'confirmed', payment_transaction_id = $1, paid_at = $2, updated_at = $2
+           WHERE id = $3 AND payment_status != 'paid'`,
+          [txId, now, order.id]
+        );
+        if (updateResult.rowCount > 0) {
+          const items = typeof order.items_json === "string" ? JSON.parse(order.items_json) : order.items_json;
+          if (Array.isArray(items)) {
+            for (const it of items) {
+              const prodId = it.product?.id || it.productId;
+              const qty = Math.max(1, Math.round(Number(it.quantity || 1)));
+              if (prodId) {
+                await execute(
+                  "UPDATE products SET stock = GREATEST(0, stock - $1), updated_at = $2 WHERE id = $3",
+                  [qty, now, prodId]
+                );
+              }
+            }
+          }
+          if (order.user_id) {
+            await execute("DELETE FROM cart_items WHERE user_id = $1", [order.user_id]);
+          }
+        }
+      }
+    }
+    res.status(200).json({ status: "processed" });
+  } catch (error) {
+    console.error("[Cashfree Webhook] Error:", error);
+    res.status(500).json({ error: "Webhook processing failed." });
   }
 });
 app.get("/api/admin/products", verifyAdmin, async (_req, res) => {

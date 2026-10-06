@@ -1,28 +1,21 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   Lock,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
   Plus,
   Home,
   Briefcase,
-  MapPin,
-  CreditCard,
-  Building2,
 } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { useSettings } from '@/context/SettingsContext'
 import { formatCurrency } from '@/lib/utils'
 import { Address } from '@/types'
+import { getCashfreeSDK } from '@/lib/cashfree'
 
 export const CheckoutPage: React.FC = () => {
-  const navigate = useNavigate()
   const { user, token } = useAuth()
   const { settings } = useSettings()
   const {
@@ -34,15 +27,13 @@ export const CheckoutPage: React.FC = () => {
     gst,
     gstPercent,
     total,
-    clearCart,
   } = useCart()
 
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('new')
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState<boolean>(true)
+  const [, setIsLoadingAddresses] = useState<boolean>(true)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
-  const [generatedOrderNumber, setGeneratedOrderNumber] = useState('')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [saveNewAddress, setSaveNewAddress] = useState(true)
 
   // New Address form fields
@@ -87,6 +78,7 @@ export const CheckoutPage: React.FC = () => {
 
   const handleProceedToPay = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrorMessage(null)
     setIsProcessing(true)
 
     let deliveryAddress: {
@@ -101,7 +93,7 @@ export const CheckoutPage: React.FC = () => {
     if (selectedAddressId !== 'new') {
       const selected = savedAddresses.find((a) => a.id === selectedAddressId)
       if (!selected) {
-        alert('Please select a valid delivery address.')
+        setErrorMessage('Please select a valid delivery address.')
         setIsProcessing(false)
         return
       }
@@ -114,8 +106,13 @@ export const CheckoutPage: React.FC = () => {
         pincode: selected.pincode,
       }
     } else {
-      if (!formData.fullName.trim() || !formData.phone.trim() || !formData.addressLine.trim() || !formData.pincode.trim()) {
-        alert('Please complete all delivery address fields.')
+      if (
+        !formData.fullName.trim() ||
+        !formData.phone.trim() ||
+        !formData.addressLine.trim() ||
+        !formData.pincode.trim()
+      ) {
+        setErrorMessage('Please complete all delivery address fields.')
         setIsProcessing(false)
         return
       }
@@ -154,9 +151,21 @@ export const CheckoutPage: React.FC = () => {
       }
     }
 
+    // Validate 10-digit phone number
+    const phoneDigits = deliveryAddress.phone.replace(/\D/g, '')
+    const cleanPhone = phoneDigits.length > 10 && phoneDigits.startsWith('91')
+      ? phoneDigits.slice(2)
+      : phoneDigits
+
+    if (cleanPhone.length !== 10) {
+      setErrorMessage('Please provide a valid 10-digit Indian mobile number for order delivery.')
+      setIsProcessing(false)
+      return
+    }
+
     try {
-      // POST order to PostgreSQL with pending status (prepping Cashfree)
-      const res = await fetch('/api/orders', {
+      // 1. Create order on backend & initialize Cashfree session
+      const res = await fetch('/api/payments/cashfree/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,46 +173,58 @@ export const CheckoutPage: React.FC = () => {
         },
         body: JSON.stringify({
           items: items.map((it) => ({
-            product: {
-              id: it.product.id,
-              name: it.product.name,
-              images: it.product.images,
-            },
+            productId: it.product.id,
             quantity: it.quantity,
             selectedColor: it.selectedColor,
-            price: it.product.price,
           })),
           deliveryAddress,
-          subtotal,
-          assemblyCharge,
-          convenienceFee,
-          convenienceFeePercent,
-          gst,
-          gstPercent,
-          discount: 0,
-          total,
-          paymentGateway: 'cashfree',
         }),
       })
 
-      if (res.ok) {
-        const data = await res.json()
-        setGeneratedOrderNumber(data.order.orderNumber)
-        setIsSuccessModalOpen(true)
-        clearCart()
-      } else {
-        const errData = await res.json()
-        alert(errData.error || 'Failed to initialize payment order.')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        setErrorMessage(errData.error || 'Unable to start payment. Please try again.')
+        setIsProcessing(false)
+        return
       }
+
+      const data = await res.json()
+      const { paymentSessionId, environment } = data
+
+      if (!paymentSessionId) {
+        setErrorMessage('Unable to initialize payment session. Please try again.')
+        setIsProcessing(false)
+        return
+      }
+
+      // 2. Load official Cashfree SDK and trigger checkout
+      let CashfreeSDK
+      try {
+        CashfreeSDK = await getCashfreeSDK()
+      } catch (err) {
+        console.error('Failed to load Cashfree SDK:', err)
+        setErrorMessage('Payment service is temporarily unavailable. Please try again.')
+        setIsProcessing(false)
+        return
+      }
+
+      const cashfree = CashfreeSDK({
+        mode: environment === 'production' ? 'production' : 'sandbox',
+      })
+
+      // 3. Open Cashfree Checkout (Customer chooses UPI/Cards/Netbanking on Cashfree)
+      cashfree.checkout({
+        paymentSessionId,
+        redirectTarget: '_self',
+      })
     } catch (err) {
       console.error('Order creation error:', err)
-      alert('Network error while initializing order.')
-    } finally {
+      setErrorMessage('Network error while initializing payment. Please try again.')
       setIsProcessing(false)
     }
   }
 
-  if (items.length === 0 && !isSuccessModalOpen) {
+  if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
         <h2 className="text-xl font-medium text-foreground">No Items to Checkout</h2>
@@ -244,13 +265,12 @@ export const CheckoutPage: React.FC = () => {
 
       <form onSubmit={handleProceedToPay}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Main Checkout (Left Column) */}
+          {/* Main Checkout (Left Column: Delivery Address) */}
           <div className="lg:col-span-7 space-y-8">
-            {/* 1. Delivery Address Selection */}
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
                 <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground">
-                  1. Delivery Address
+                  Delivery Address
                 </h2>
                 {settings.gstin && (
                   <span className="text-[10px] text-muted font-mono">
@@ -466,38 +486,6 @@ export const CheckoutPage: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* 2. Payment Gateway Information (Cashfree Prepared) */}
-            <div className="space-y-4">
-              <div className="pb-2 border-b border-border">
-                <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground">
-                  2. Payment Method
-                </h2>
-              </div>
-
-              <div className="p-5 bg-surface border border-border rounded space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <CreditCard className="w-5 h-5 text-foreground" />
-                    <div>
-                      <span className="text-xs font-semibold text-foreground block">
-                        Cashfree Payments Gateway
-                      </span>
-                      <span className="text-[11px] text-muted">
-                        UPI, Cards (Visa, MasterCard, RuPay), Net Banking & EMI
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
-                    Encrypted
-                  </span>
-                </div>
-
-                <p className="text-xs text-muted leading-relaxed">
-                  Clicking <strong className="text-foreground">PROCEED TO PAY</strong> will initiate a secure payment session. All major Indian payment methods are supported with instant bank verification.
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Sidebar Order Summary (Right Column) */}
@@ -528,7 +516,7 @@ export const CheckoutPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Financial breakdown strictly following Requirement 10 */}
+            {/* Financial breakdown */}
             <div className="pt-4 border-t border-border space-y-2.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted">Product Price</span>
@@ -568,73 +556,27 @@ export const CheckoutPage: React.FC = () => {
                 type="submit"
                 variant="primary"
                 size="lg"
+                disabled={isProcessing}
                 isLoading={isProcessing}
                 className="w-full text-xs uppercase tracking-widest font-semibold"
               >
-                PROCEED TO PAY &rarr;
+                {isProcessing ? 'Connecting to secure payment...' : 'PROCEED TO PAY →'}
               </Button>
+
+              {errorMessage && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-800 text-xs rounded leading-relaxed text-center">
+                  {errorMessage}
+                </div>
+              )}
             </div>
 
-            <p className="text-[10px] text-muted text-center mt-3">
-              Standard terms of sale apply. Official GST tax invoice will be generated.
-            </p>
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center mt-3">
+              <Lock className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Secured by Cashfree Payments · Official Gateway</span>
+            </div>
           </div>
         </div>
       </form>
-
-      {/* Order Confirmation Modal */}
-      <Modal
-        isOpen={isSuccessModalOpen}
-        onClose={() => {
-          setIsSuccessModalOpen(false)
-          navigate('/account/orders')
-        }}
-        maxWidth="lg"
-      >
-        <div className="text-center py-6">
-          <div className="w-16 h-16 rounded-full bg-surface border border-border flex items-center justify-center mx-auto mb-4 text-emerald-600">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
-
-          <span className="editorial-badge text-muted">Order Initialized</span>
-          <h3 className="text-2xl font-light text-foreground mt-2 tracking-tight">
-            Order Reference: {generatedOrderNumber}
-          </h3>
-          <p className="text-xs text-muted mt-2 max-w-md mx-auto leading-relaxed">
-            Your furniture order has been recorded in the database. When Cashfree payment is integrated, payment verification will confirm and dispatch your order.
-          </p>
-
-          <div className="mt-6 p-4 bg-surface border border-border text-xs text-left max-w-md mx-auto space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted">Order ID:</span>
-              <span className="font-mono font-semibold">{generatedOrderNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted">Amount Payable:</span>
-              <span className="font-semibold text-foreground">{formatCurrency(total)}</span>
-            </div>
-            {settings.gstin && (
-              <div className="flex justify-between">
-                <span className="text-muted">Store GSTIN:</span>
-                <span className="font-mono">{settings.gstin}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link to="/account/orders" className="w-full sm:w-auto">
-              <Button variant="primary" size="md" className="w-full">
-                View in My Orders
-              </Button>
-            </Link>
-            <Link to="/" className="w-full sm:w-auto">
-              <Button variant="outline" size="md" className="w-full">
-                Return to Storefront
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </Modal>
     </div>
   )
 }
