@@ -120,11 +120,11 @@ export const PaymentReturnPage: React.FC = () => {
             </div>
 
             <span className="editorial-badge text-emerald-800 bg-emerald-50 border border-emerald-200">
-              Payment Verified · Confirmed
+              Payment: Paid · Confirmed
             </span>
 
-            <h1 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight">
-              Order Placed Successfully
+            <h1 className="text-3xl sm:text-4xl font-light text-foreground mt-2 tracking-tight uppercase">
+              ORDER CONFIRMED
             </h1>
 
             <p className="text-xs sm:text-sm text-muted mt-2 max-w-md leading-relaxed">
@@ -136,20 +136,20 @@ export const PaymentReturnPage: React.FC = () => {
           {/* Quick Meta details */}
           <div className="py-6 border-b border-border grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
             <div>
-              <span className="text-muted block text-[11px] uppercase tracking-wider">Order Reference</span>
+              <span className="text-muted block text-[11px] uppercase tracking-wider">Order ID</span>
               <span className="font-mono font-semibold text-foreground mt-0.5 block">{order.orderNumber}</span>
             </div>
             <div>
-              <span className="text-muted block text-[11px] uppercase tracking-wider">Payment Gateway</span>
-              <span className="font-semibold text-foreground mt-0.5 block uppercase">Cashfree (Verified)</span>
+              <span className="text-muted block text-[11px] uppercase tracking-wider">Payment</span>
+              <span className="font-semibold text-emerald-600 mt-0.5 block uppercase">Paid</span>
             </div>
             <div>
               <span className="text-muted block text-[11px] uppercase tracking-wider">Total Amount</span>
               <span className="font-semibold text-foreground mt-0.5 block">{formatCurrency(order.total)}</span>
             </div>
             <div>
-              <span className="text-muted block text-[11px] uppercase tracking-wider">Estimated Dispatch</span>
-              <span className="font-semibold text-foreground mt-0.5 block">7 - 10 Business Days</span>
+              <span className="text-muted block text-[11px] uppercase tracking-wider">Payment Gateway</span>
+              <span className="font-semibold text-foreground mt-0.5 block uppercase">Cashfree (Verified)</span>
             </div>
           </div>
 

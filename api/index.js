@@ -566,8 +566,21 @@ async function verifyAdmin(req, res, next) {
 dotenv3.config();
 var app = express();
 app.set("trust proxy", true);
+function getPublicAppUrl() {
+  const isVercel = process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV) || Boolean(process.env.VERCEL_URL);
+  const isProd = process.env.NODE_ENV === "production" || isVercel;
+  const configured = (process.env.APP_URL || "").trim().replace(/\/$/, "");
+  if (isProd) {
+    if (!configured || configured.includes("localhost") || configured.includes("127.0.0.1")) {
+      return "https://gmfurniture.vercel.app";
+    }
+    return configured;
+  }
+  return configured || "http://localhost:5173";
+}
 var allowedOrigins = [
-  process.env.APP_URL || "https://gmfurniture.vercel.app",
+  getPublicAppUrl(),
+  "https://gmfurniture.vercel.app",
   "https://gm-furnitures.vercel.app",
   "http://localhost:5173",
   "http://localhost:4173",
@@ -671,9 +684,23 @@ app.get("/api", (_req, res) => {
 });
 app.get("/api/health", async (_req, res) => {
   const dbTest = await testDatabaseConnection();
+  const cf = getCashfreeConfig();
+  const publicAppUrl = getPublicAppUrl();
   res.json({
     status: dbTest.ok ? "ok" : "degraded",
     environment: process.env.NODE_ENV || "production",
+    isVercel: process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV),
+    vercelEnv: process.env.VERCEL_ENV || null,
+    appUrl: {
+      configured: Boolean(process.env.APP_URL),
+      configuredValue: process.env.APP_URL || null,
+      resolvedValue: publicAppUrl,
+      sampleReturnUrl: `${publicAppUrl}/checkout/payment-return?order_id={order_id}`
+    },
+    cashfree: {
+      environment: cf.env,
+      configured: Boolean(cf.clientId && cf.clientSecret)
+    },
     database: {
       configured: hasDatabaseUrl(),
       connected: dbTest.ok,
@@ -1638,8 +1665,16 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
       });
       return;
     }
-    const appUrl = (process.env.APP_URL || "http://localhost:5173").replace(/\/$/, "");
+    const appUrl = getPublicAppUrl();
     const returnUrl = `${appUrl}/checkout/payment-return?order_id={order_id}`;
+    console.log("[Cashfree] Order initialization diagnostic:", {
+      appUrlConfigured: Boolean(process.env.APP_URL),
+      appUrlValue: appUrl,
+      nodeEnv: process.env.NODE_ENV || "production",
+      cashfreeEnvironment: cf.env
+    });
+    console.log(`Cashfree return URL:
+${returnUrl}`);
     const cfPayload = {
       order_id: cfOrderId,
       order_amount: grandTotal,
@@ -2956,5 +2991,6 @@ app.use((err, _req, res, _next) => {
 var app_default = app;
 export {
   app,
-  app_default as default
+  app_default as default,
+  getPublicAppUrl
 };

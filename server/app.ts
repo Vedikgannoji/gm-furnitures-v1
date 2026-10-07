@@ -27,9 +27,36 @@ const app = express()
 // Trust proxy for Vercel deployment
 app.set('trust proxy', true)
 
+/**
+ * Resolves the public application base URL for Cashfree redirects and notifications.
+ *
+ * Rules:
+ * - In production or when deployed on Vercel (VERCEL=1 or VERCEL_ENV or NODE_ENV=production),
+ *   localhost is strictly disallowed. If APP_URL is missing or contains localhost, it
+ *   explicitly falls back to 'https://gmfurniture.vercel.app'.
+ * - In local development, it defaults to 'http://localhost:5173'.
+ */
+export function getPublicAppUrl(): string {
+  const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV) || Boolean(process.env.VERCEL_URL)
+  const isProd = process.env.NODE_ENV === 'production' || isVercel
+  const configured = (process.env.APP_URL || '').trim().replace(/\/$/, '')
+
+  if (isProd) {
+    // In production/Vercel, NEVER allow localhost to silently leak into return URLs
+    if (!configured || configured.includes('localhost') || configured.includes('127.0.0.1')) {
+      return 'https://gmfurniture.vercel.app'
+    }
+    return configured
+  }
+
+  // Local development fallback
+  return configured || 'http://localhost:5173'
+}
+
 // Allow Vercel frontend origin plus localhost for development
 const allowedOrigins = [
-  process.env.APP_URL || 'https://gmfurniture.vercel.app',
+  getPublicAppUrl(),
+  'https://gmfurniture.vercel.app',
   'https://gm-furnitures.vercel.app',
   'http://localhost:5173',
   'http://localhost:4173',
@@ -155,9 +182,24 @@ app.get('/api', (_req: Request, res: Response) => {
 
 app.get('/api/health', async (_req: Request, res: Response) => {
   const dbTest = await testDatabaseConnection()
+  const cf = getCashfreeConfig()
+  const publicAppUrl = getPublicAppUrl()
+
   res.json({
     status: dbTest.ok ? 'ok' : 'degraded',
     environment: process.env.NODE_ENV || 'production',
+    isVercel: process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV),
+    vercelEnv: process.env.VERCEL_ENV || null,
+    appUrl: {
+      configured: Boolean(process.env.APP_URL),
+      configuredValue: process.env.APP_URL || null,
+      resolvedValue: publicAppUrl,
+      sampleReturnUrl: `${publicAppUrl}/checkout/payment-return?order_id={order_id}`,
+    },
+    cashfree: {
+      environment: cf.env,
+      configured: Boolean(cf.clientId && cf.clientSecret),
+    },
     database: {
       configured: hasDatabaseUrl(),
       connected: dbTest.ok,
@@ -1353,8 +1395,21 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       return
     }
 
-    const appUrl = (process.env.APP_URL || 'http://localhost:5173').replace(/\/$/, '')
+    const appUrl = getPublicAppUrl()
     const returnUrl = `${appUrl}/checkout/payment-return?order_id={order_id}`
+
+    // Safe diagnostic logging
+    console.log('[Cashfree] Order initialization diagnostic:', {
+      appUrlConfigured: Boolean(process.env.APP_URL),
+      appUrlValue: appUrl,
+      nodeEnv: process.env.NODE_ENV || 'production',
+      cashfreeEnvironment: cf.env,
+    })
+
+    // Explicit logging requirement:
+    // Cashfree return URL:
+    // <generated URL>
+    console.log(`Cashfree return URL:\n${returnUrl}`)
 
     const cfPayload = {
       order_id: cfOrderId,
