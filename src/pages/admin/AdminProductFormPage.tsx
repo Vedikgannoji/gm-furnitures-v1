@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Category, Room, Collection } from '@/types'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { invalidateProductsCache } from '@/hooks/useProducts'
 
 export const AdminProductFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -380,6 +381,7 @@ export const AdminProductFormPage: React.FC = () => {
         throw new Error(data.error || 'Failed to save product in database.')
       }
 
+      invalidateProductsCache()
       showToast(
         isEdit ? 'Product Updated' : 'Product Created',
         `"${payload.name}" successfully saved in database.`,
@@ -410,6 +412,7 @@ export const AdminProductFormPage: React.FC = () => {
         throw new Error(data.error || 'Failed to delete product.')
       }
 
+      invalidateProductsCache()
       showToast('Product Removed', `Product was removed from the database.`, 'info')
       navigate('/admin/products')
     } catch (err: any) {

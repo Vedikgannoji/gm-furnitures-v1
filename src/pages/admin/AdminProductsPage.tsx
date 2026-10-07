@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import { API_BASE } from '@/lib/api'
+import { invalidateProductsCache } from '@/hooks/useProducts'
 
 export const AdminProductsPage: React.FC = () => {
   const { showToast } = useToast()
@@ -88,6 +89,7 @@ export const AdminProductsPage: React.FC = () => {
       }
 
       showToast('Product Removed', `"${deleteModalProduct.name}" deleted from database.`, 'info')
+      invalidateProductsCache()
       setProducts((prev) => prev.filter((p) => p.id !== deleteModalProduct.id))
       setDeleteModalProduct(null)
     } catch (err: any) {

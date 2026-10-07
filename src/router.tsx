@@ -76,6 +76,7 @@ export const router = createBrowserRouter([
       { path: 'shop', element: <ShopPage /> },
       { path: 'shop/:category', element: <CategoryPage /> },
       { path: 'products/:slug', element: <ProductDetailPage />, errorElement: <StorefrontErrorBoundary /> },
+      { path: 'product/:slug', element: <ProductDetailPage />, errorElement: <StorefrontErrorBoundary /> },
       { path: 'rooms', element: <RoomsPage /> },
       { path: 'rooms/:slug', element: <RoomDetailPage /> },
       { path: 'collections', element: <CollectionsPage /> },

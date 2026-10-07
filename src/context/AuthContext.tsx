@@ -15,6 +15,7 @@ interface AuthContextType {
   token: string | null
   isAuthenticated: boolean
   isLoading: boolean
+  isLoggingOut: boolean
   login: (email: string, password: string) => Promise<UserProfile>
   register: (name: string, email: string, password: string) => Promise<UserProfile>
   loginWithGoogle: (credential: string) => Promise<UserProfile>
@@ -30,7 +31,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(() => {
     return typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null
   })
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? !!localStorage.getItem(TOKEN_KEY) : false
+  })
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false)
 
   // Verify session on mount or when token changes
   useEffect(() => {
@@ -115,9 +119,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const logout = () => {
+    setIsLoggingOut(true)
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setUser(null)
+    setTimeout(() => {
+      setIsLoggingOut(false)
+    }, 600)
   }
 
   return (
@@ -127,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isAuthenticated: !!user,
         isLoading,
+        isLoggingOut,
         login,
         register,
         loginWithGoogle,

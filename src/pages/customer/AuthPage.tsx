@@ -13,7 +13,11 @@ export const AuthPage: React.FC = () => {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const { showToast } = useToast()
-  const { user, login, register, loginWithGoogle, logout, isAuthenticated } = useAuth()
+  const { user, login, register, loginWithGoogle, logout, isAuthenticated, isLoggingOut } = useAuth()
+
+  if (isLoggingOut) {
+    return null
+  }
 
   const isAdminLogin = location.pathname.startsWith('/admin') || searchParams.get('redirect')?.startsWith('/admin') === true
   const requestedRedirect = searchParams.get('redirect') || ''

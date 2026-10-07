@@ -291,11 +291,6 @@ export const CheckoutPage: React.FC = () => {
                 <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground">
                   Delivery Address
                 </h2>
-                {settings.gstin && (
-                  <span className="text-[10px] text-muted font-mono">
-                    GSTIN: {settings.gstin}
-                  </span>
-                )}
               </div>
 
               {/* Saved Addresses List */}
@@ -537,29 +532,34 @@ export const CheckoutPage: React.FC = () => {
 
             {/* Coupon Code Section */}
             <div className="pt-4 border-t border-border space-y-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5" />
-                <span>Coupon Code</span>
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>COUPON CODE</span>
+                </span>
+                <span className="text-[11px] text-muted-foreground/70 font-normal">
+                  Have a promo code?
+                </span>
+              </div>
 
               {appliedCoupon ? (
-                <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs text-emerald-950 uppercase">
+                        <span className="font-sans font-semibold text-xs text-foreground uppercase tracking-wide">
                           {appliedCoupon.code}
                         </span>
-                        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.2 bg-emerald-200/80 text-emerald-800 rounded">
+                        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded">
                           {appliedCoupon.discountType === 'percent'
                             ? `${appliedCoupon.discountValue}% OFF`
                             : `${formatCurrency(appliedCoupon.discountValue)} OFF`}
                         </span>
                       </div>
-                      <span className="text-[11px] text-emerald-700 block mt-0.5">
+                      <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block mt-0.5">
                         You saved {formatCurrency(appliedCoupon.discountAmount)}
                       </span>
                     </div>
@@ -582,7 +582,7 @@ export const CheckoutPage: React.FC = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Enter promo code (e.g. WELCOME10)"
+                      placeholder="Enter promo code"
                       value={couponInput}
                       onChange={(e) => {
                         setCouponInput(e.target.value.toUpperCase())
@@ -631,11 +631,11 @@ export const CheckoutPage: React.FC = () => {
                           }
                         }
                       }}
-                      className="flex-1 h-9 bg-background border border-border px-3 font-mono font-medium text-xs uppercase tracking-wider focus:border-foreground focus:outline-none"
+                      className="flex-1 h-10 bg-surface/50 border border-border px-3.5 font-sans text-xs uppercase text-foreground placeholder:normal-case placeholder:text-muted transition-colors focus:bg-background focus:border-foreground focus:outline-none"
                     />
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="primary"
                       size="sm"
                       disabled={isApplyingCoupon || !couponInput.trim()}
                       isLoading={isApplyingCoupon}
@@ -680,7 +680,7 @@ export const CheckoutPage: React.FC = () => {
                           setIsApplyingCoupon(false)
                         }
                       }}
-                      className="px-4 text-xs font-semibold uppercase tracking-wider"
+                      className="h-10 px-5 text-[11px] font-semibold uppercase tracking-wider bg-foreground text-background hover:bg-foreground/90 disabled:opacity-40 transition-all shrink-0"
                     >
                       APPLY
                     </Button>

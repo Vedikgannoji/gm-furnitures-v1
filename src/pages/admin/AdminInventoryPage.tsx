@@ -5,6 +5,7 @@ import { Product } from '@/types'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import { API_BASE } from '@/lib/api'
+import { invalidateProductsCache } from '@/hooks/useProducts'
 
 export const AdminInventoryPage: React.FC = () => {
   const { showToast } = useToast()
@@ -62,6 +63,7 @@ export const AdminInventoryPage: React.FC = () => {
           const stockStatus =
             newStock === 0 ? 'out_of_stock' : newStock <= threshold ? 'low_stock' : 'in_stock'
           showToast('Stock Updated', `${p.name} → ${newStock} units.`, 'info')
+          invalidateProductsCache()
           return { ...p, stock: newStock, stockStatus }
         })
       )

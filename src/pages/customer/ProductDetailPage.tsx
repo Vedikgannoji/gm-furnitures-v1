@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   Heart,
@@ -25,23 +25,151 @@ import { useCart } from '@/context/CartContext'
 import { useWishlist } from '@/context/WishlistContext'
 import { useToast } from '@/context/ToastContext'
 
+const ProductDetailSkeleton: React.FC = () => (
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16 animate-pulse">
+    {/* Breadcrumbs skeleton */}
+    <div className="flex items-center gap-2 mb-4">
+      <div className="h-3 w-12 bg-border/60 rounded" />
+      <span className="text-muted/40">/</span>
+      <div className="h-3 w-16 bg-border/60 rounded" />
+      <span className="text-muted/40">/</span>
+      <div className="h-3 w-28 bg-border/60 rounded" />
+    </div>
+
+    {/* Main PDP Grid Skeleton */}
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+      {/* LEFT COLUMN: Gallery Skeleton */}
+      <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4">
+        <div className="flex sm:flex-col gap-3 shrink-0">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="w-16 h-20 sm:w-20 sm:h-24 bg-surface border border-border/50 rounded" />
+          ))}
+        </div>
+        <div className="flex-1 aspect-[4/3] sm:aspect-square bg-surface border border-border/50 rounded flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-border border-t-foreground/40 animate-spin" />
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Details Skeleton */}
+      <div className="lg:col-span-5 space-y-6">
+        <div className="space-y-2">
+          <div className="h-3 w-20 bg-border/60 rounded" />
+          <div className="h-8 w-3/4 bg-surface border border-border/40 rounded" />
+          <div className="h-6 w-32 bg-surface border border-border/40 rounded" />
+        </div>
+
+        <div className="space-y-2 pt-2">
+          <div className="h-3 w-full bg-border/40 rounded" />
+          <div className="h-3 w-5/6 bg-border/40 rounded" />
+          <div className="h-3 w-2/3 bg-border/40 rounded" />
+        </div>
+
+        <div className="space-y-3 pt-3 border-t border-border/60">
+          <div className="h-3 w-24 bg-border/60 rounded" />
+          <div className="flex gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 w-20 bg-surface border border-border/50 rounded" />
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4 space-y-3 border-t border-border/60">
+          <div className="h-12 w-full bg-surface border border-border/70 rounded" />
+          <div className="h-12 w-full bg-surface border border-border/70 rounded" />
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { addToCart, setIsCartDrawerOpen } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
   const { showToast } = useToast()
-  const { products } = useProducts()
+  const { products, isLoading: isCatalogLoading } = useProducts()
 
-  const product = products.find((p) => p.slug === slug)
+  const [directProduct, setDirectProduct] = useState<import('@/types').Product | null>(null)
+  const [isDirectLoading, setIsDirectLoading] = useState<boolean>(false)
+  const [hasAttemptedDirect, setHasAttemptedDirect] = useState<boolean>(false)
+  const [directError, setDirectError] = useState<string | null>(null)
+
+  const catalogMatch = products.find((p) => p.slug === slug || p.id === slug)
+  const product = catalogMatch || directProduct
+
+  // If not found in catalog after catalog loaded, fetch single product directly
+  useEffect(() => {
+    if (!slug) return
+    if (catalogMatch) return
+
+    if (!isCatalogLoading && !hasAttemptedDirect) {
+      let isMounted = true
+      setIsDirectLoading(true)
+      fetch(`/api/products/${encodeURIComponent(slug)}`)
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            if (isMounted) setDirectProduct(data)
+          } else if (res.status === 404) {
+            if (isMounted) setDirectProduct(null)
+          } else {
+            const errData = await res.json().catch(() => ({}))
+            if (isMounted) setDirectError(errData.error || 'Failed to load product.')
+          }
+        })
+        .catch((err) => {
+          if (isMounted) setDirectError(err.message || 'Network error.')
+        })
+        .finally(() => {
+          if (isMounted) {
+            setIsDirectLoading(false)
+            setHasAttemptedDirect(true)
+          }
+        })
+
+      return () => {
+        isMounted = false
+      }
+    }
+  }, [slug, catalogMatch, isCatalogLoading, hasAttemptedDirect])
 
   const colors = product && Array.isArray(product.colors) ? product.colors : []
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0)
-  const [selectedColor, setSelectedColor] = useState<string>(
-    colors[0]?.name || 'Standard'
-  )
+  const [selectedColor, setSelectedColor] = useState<string>('Standard')
   const [quantity, setQuantity] = useState<number>(1)
   const [isZoomOpen, setIsZoomOpen] = useState<boolean>(false)
+
+  // Sync selected color once product loads
+  useEffect(() => {
+    if (colors.length > 0) {
+      setSelectedColor(colors[0]?.name || 'Standard')
+    }
+    setSelectedImageIndex(0)
+  }, [product?.id])
+
+  const isPageLoading = (isCatalogLoading && !product) || isDirectLoading
+
+  if (isPageLoading) {
+    return <ProductDetailSkeleton />
+  }
+
+  if (directError) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+        <EmptyState
+          icon={RotateCcw}
+          title="Unable to Load Piece"
+          description={directError}
+          actionLabel="Try Again"
+          onAction={() => {
+            setHasAttemptedDirect(false)
+            setDirectError(null)
+          }}
+        />
+      </div>
+    )
+  }
 
   if (!product) {
     return (
