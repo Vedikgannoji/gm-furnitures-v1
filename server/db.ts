@@ -318,35 +318,36 @@ export async function initDatabase(): Promise<void> {
   `)
 
   // 1b. Schema migrations for existing tables (seamless upgrade)
-  await query(`
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge NUMERIC(12, 2) NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee NUMERIC(12, 2) NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee_percent REAL NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst NUMERIC(12, 2) NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_percent REAL NOT NULL DEFAULT 18;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree';
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_type VARCHAR(50);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_value NUMERIC(12, 2);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(12, 2) DEFAULT 0;
-    ALTER TABLE orders ALTER COLUMN subtotal TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN total TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN assembly_charge TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN convenience_fee TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN gst TYPE NUMERIC(12, 2);
-    CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id);
+  const migrations = [
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge NUMERIC(12, 2) NOT NULL DEFAULT 0',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee NUMERIC(12, 2) NOT NULL DEFAULT 0',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee_percent REAL NOT NULL DEFAULT 0',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst NUMERIC(12, 2) NOT NULL DEFAULT 0',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_percent REAL NOT NULL DEFAULT 18',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT \'cashfree\'',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_type VARCHAR(50)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_value NUMERIC(12, 2)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(12, 2) DEFAULT 0',
+    'CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id)',
+    'ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_slug VARCHAR(255)',
+    'ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_image TEXT',
+    'ALTER TABLE order_items ADD COLUMN IF NOT EXISTS material VARCHAR(255)',
+    'ALTER TABLE order_items ADD COLUMN IF NOT EXISTS finish VARCHAR(255)',
+  ]
 
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_slug VARCHAR(255);
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_image TEXT;
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS material VARCHAR(255);
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS finish VARCHAR(255);
-  `).catch((err) => {
-    console.warn('[Database] Note on orders/order_items table schema migration:', err.message)
-  })
+  for (const sql of migrations) {
+    try {
+      await query(sql)
+    } catch (err: any) {
+      console.warn(`[Database Migration Note] ${sql}:`, err.message)
+    }
+  }
 
   // 2. Create indexes for performance
   await query(`

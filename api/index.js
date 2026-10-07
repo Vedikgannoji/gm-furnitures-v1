@@ -282,35 +282,35 @@ async function initDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
-  await query(`
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge NUMERIC(12, 2) NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee NUMERIC(12, 2) NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee_percent REAL NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst NUMERIC(12, 2) NOT NULL DEFAULT 0;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_percent REAL NOT NULL DEFAULT 18;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree';
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_type VARCHAR(50);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_value NUMERIC(12, 2);
-    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(12, 2) DEFAULT 0;
-    ALTER TABLE orders ALTER COLUMN subtotal TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN total TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN assembly_charge TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN convenience_fee TYPE NUMERIC(12, 2);
-    ALTER TABLE orders ALTER COLUMN gst TYPE NUMERIC(12, 2);
-    CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id);
-
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_slug VARCHAR(255);
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_image TEXT;
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS material VARCHAR(255);
-    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS finish VARCHAR(255);
-  `).catch((err) => {
-    console.warn("[Database] Note on orders/order_items table schema migration:", err.message);
-  });
+  const migrations = [
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS assembly_charge NUMERIC(12, 2) NOT NULL DEFAULT 0",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee NUMERIC(12, 2) NOT NULL DEFAULT 0",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS convenience_fee_percent REAL NOT NULL DEFAULT 0",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst NUMERIC(12, 2) NOT NULL DEFAULT 0",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_percent REAL NOT NULL DEFAULT 18",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree'",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_type VARCHAR(50)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_value NUMERIC(12, 2)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(12, 2) DEFAULT 0",
+    "CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id)",
+    "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_slug VARCHAR(255)",
+    "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_image TEXT",
+    "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS material VARCHAR(255)",
+    "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS finish VARCHAR(255)"
+  ];
+  for (const sql of migrations) {
+    try {
+      await query(sql);
+    } catch (err) {
+      console.warn(`[Database Migration Note] ${sql}:`, err.message);
+    }
+  }
   await query(`
     CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
     CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
@@ -2923,12 +2923,9 @@ app.get("/api/admin/orders", verifyAdmin, async (_req, res) => {
   try {
     const rows = await query(
       `SELECT
-        o.id, o.order_number, o.subtotal, o.discount, o.total,
-        o.assembly_charge, o.convenience_fee, o.gst,
-        o.coupon_code, o.coupon_discount_amount,
-        o.status, o.payment_status, o.payment_gateway, o.payment_order_id,
-        o.delivery_address_json, o.items_json, o.created_at,
-        u.id as user_id, u.name as customer_name, u.email as customer_email, u.phone as customer_phone
+        o.*,
+        u.name as customer_name,
+        u.email as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       ORDER BY o.created_at DESC`
@@ -2937,23 +2934,23 @@ app.get("/api/admin/orders", verifyAdmin, async (_req, res) => {
       const parsedAddr = safeParseJson(r.delivery_address_json, {});
       return {
         id: r.id,
-        orderNumber: r.order_number,
-        date: new Date(r.created_at).toLocaleDateString("en-IN", {
+        orderNumber: r.order_number || r.id,
+        date: r.created_at ? new Date(r.created_at).toLocaleDateString("en-IN", {
           month: "short",
           day: "numeric",
           year: "numeric"
-        }),
+        }) : "",
         createdAt: r.created_at,
         customer: {
           id: r.user_id || "",
           name: r.customer_name || parsedAddr.fullName || "Store Client",
           email: r.customer_email || parsedAddr.email || "",
-          phone: r.customer_phone || parsedAddr.phone || ""
+          phone: parsedAddr.phone || r.customer_phone || r.phone || ""
         },
         items: formatHistoricalItems(r.items_json),
-        subtotal: Number(r.subtotal),
+        subtotal: Number(r.subtotal || 0),
         discount: Number(r.discount || 0),
-        total: Number(r.total),
+        total: Number(r.total || 0),
         status: r.status || "pending",
         paymentStatus: r.payment_status || "pending",
         paymentGateway: r.payment_gateway || "cashfree",
@@ -2973,13 +2970,9 @@ app.get("/api/admin/orders/:id", verifyAdmin, async (req, res) => {
     const id = String(req.params.id);
     const r = await queryOne(
       `SELECT
-        o.id, o.order_number, o.subtotal, o.discount, o.total,
-        o.assembly_charge, o.convenience_fee, o.gst,
-        o.status, o.payment_status, o.payment_method, o.payment_gateway,
-        o.payment_order_id, o.payment_transaction_id, o.paid_at,
-        o.coupon_code, o.coupon_discount_type, o.coupon_discount_value, o.coupon_discount_amount,
-        o.delivery_address_json, o.items_json, o.created_at, o.updated_at,
-        u.id as user_id, u.name as customer_name, u.email as customer_email, u.phone as customer_phone
+        o.*,
+        u.name as customer_name,
+        u.email as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       WHERE o.id = $1 OR o.order_number = $1`,
@@ -3051,7 +3044,7 @@ app.get("/api/admin/orders/:id", verifyAdmin, async (req, res) => {
         id: r.user_id || "",
         name: r.customer_name || parsedAddr.fullName || "Store Client",
         email: r.customer_email || parsedAddr.email || "",
-        phone: r.customer_phone || parsedAddr.phone || ""
+        phone: parsedAddr.phone || r.customer_phone || r.phone || ""
       },
       deliveryAddress: {
         fullName: parsedAddr.fullName || "",
@@ -3485,28 +3478,30 @@ app.get("/api/admin/customers", verifyAdmin, async (_req, res) => {
 });
 app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
   try {
-    const { from, to } = req.query;
-    let dateFilter = "";
-    const params = [];
-    let pIdx = 1;
-    if (from) {
-      dateFilter += ` AND o.created_at >= $${pIdx++}`;
-      params.push(from);
+    const { from, to, granularity } = req.query;
+    const now = /* @__PURE__ */ new Date();
+    const defaultTo = now.toISOString().split("T")[0];
+    const past30 = new Date(now);
+    past30.setDate(past30.getDate() - 29);
+    const defaultFrom = past30.toISOString().split("T")[0];
+    let cleanFrom = typeof from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(from.trim()) ? from.trim() : defaultFrom;
+    let cleanTo = typeof to === "string" && /^\d{4}-\d{2}-\d{2}$/.test(to.trim()) ? to.trim() : defaultTo;
+    if (cleanFrom > cleanTo) {
+      const tmp = cleanFrom;
+      cleanFrom = cleanTo;
+      cleanTo = tmp;
     }
-    if (to) {
-      dateFilter += ` AND o.created_at < $${pIdx++}`;
-      const toDate = new Date(to);
-      toDate.setDate(toDate.getDate() + 1);
-      params.push(toDate.toISOString().split("T")[0]);
-    }
+    const selectedGranularity = granularity === "monthly" ? "monthly" : "daily";
+    const dateParams = [cleanFrom, cleanTo];
     const kpiRow = await queryOne(
       `SELECT
         COUNT(*)                            AS total_orders,
         COALESCE(SUM(o.total), 0)          AS total_revenue,
         COALESCE(AVG(o.total), 0)          AS avg_order_value
       FROM orders o
-      WHERE 1=1 ${dateFilter}`,
-      params
+      WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+        AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date`,
+      dateParams
     );
     const totalOrders = Number(kpiRow?.total_orders || 0);
     const totalRevenue = Number(kpiRow?.total_revenue || 0);
@@ -3529,22 +3524,92 @@ app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
     const custWithOrders = Number(repeatRow?.customers_with_orders || 0);
     const repCust = Number(repeatRow?.repeat_customers || 0);
     const repeatRatio = custWithOrders > 0 ? Math.round(repCust / custWithOrders * 100) : 0;
-    const monthlyRows = await query(
-      `SELECT
-        TO_CHAR(o.created_at, 'Mon') AS month,
-        TO_CHAR(o.created_at, 'YYYY-MM') AS month_key,
-        COUNT(*) AS orders,
-        COALESCE(SUM(o.total), 0) AS revenue
-      FROM orders o
-      WHERE 1=1 ${dateFilter}
-      GROUP BY TO_CHAR(o.created_at, 'YYYY-MM'), TO_CHAR(o.created_at, 'Mon')
-      ORDER BY month_key ASC
-      LIMIT 12`,
-      params
-    );
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const timeSeries = [];
+    if (selectedGranularity === "monthly") {
+      const monthlyRows = await query(
+        `SELECT
+          TO_CHAR(o.created_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM') AS month_key,
+          COUNT(*) AS orders,
+          COALESCE(SUM(o.total), 0) AS revenue,
+          COALESCE(AVG(o.total), 0) AS avg_order_value
+        FROM orders o
+        WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+          AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+        GROUP BY month_key
+        ORDER BY month_key ASC`,
+        dateParams
+      );
+      const rowMap = /* @__PURE__ */ new Map();
+      for (const r of monthlyRows) {
+        rowMap.set(r.month_key, r);
+      }
+      const startMonth = /* @__PURE__ */ new Date(cleanFrom + "T00:00:00Z");
+      const endMonth = /* @__PURE__ */ new Date(cleanTo + "T00:00:00Z");
+      startMonth.setUTCDate(1);
+      endMonth.setUTCDate(1);
+      const curr = new Date(startMonth);
+      while (curr <= endMonth) {
+        const yyyy = curr.getUTCFullYear();
+        const mm = String(curr.getUTCMonth() + 1).padStart(2, "0");
+        const monthKey = `${yyyy}-${mm}`;
+        const label = `${monthNames[curr.getUTCMonth()]} ${yyyy}`;
+        const found = rowMap.get(monthKey);
+        timeSeries.push({
+          date: monthKey,
+          label,
+          formattedDate: label,
+          revenue: found ? Number(found.revenue) : 0,
+          orders: found ? Number(found.orders) : 0,
+          avgOrderValue: found ? Math.round(Number(found.avg_order_value)) : 0
+        });
+        curr.setUTCMonth(curr.getUTCMonth() + 1);
+      }
+    } else {
+      const dailyRows = await query(
+        `SELECT
+          TO_CHAR(o.created_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD') AS day_key,
+          COUNT(*) AS orders,
+          COALESCE(SUM(o.total), 0) AS revenue,
+          COALESCE(AVG(o.total), 0) AS avg_order_value
+        FROM orders o
+        WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+          AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+        GROUP BY day_key
+        ORDER BY day_key ASC`,
+        dateParams
+      );
+      const rowMap = /* @__PURE__ */ new Map();
+      for (const r of dailyRows) {
+        rowMap.set(r.day_key, r);
+      }
+      const curr = /* @__PURE__ */ new Date(cleanFrom + "T00:00:00Z");
+      const end = /* @__PURE__ */ new Date(cleanTo + "T00:00:00Z");
+      while (curr <= end) {
+        const yyyy = curr.getUTCFullYear();
+        const mm = String(curr.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(curr.getUTCDate()).padStart(2, "0");
+        const dateKey = `${yyyy}-${mm}-${dd}`;
+        const label = `${dd} ${monthNames[curr.getUTCMonth()]}`;
+        const formattedDate = `${dd} ${monthNames[curr.getUTCMonth()]} ${yyyy}`;
+        const found = rowMap.get(dateKey);
+        timeSeries.push({
+          date: dateKey,
+          label,
+          formattedDate,
+          revenue: found ? Number(found.revenue) : 0,
+          orders: found ? Number(found.orders) : 0,
+          avgOrderValue: found ? Math.round(Number(found.avg_order_value)) : 0
+        });
+        curr.setUTCDate(curr.getUTCDate() + 1);
+      }
+    }
     const allOrders = await query(
-      `SELECT o.items_json, o.total FROM orders o WHERE 1=1 ${dateFilter}`,
-      params
+      `SELECT o.items_json, o.total
+       FROM orders o
+       WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+         AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date`,
+      dateParams
     );
     const categoryMap = {};
     const productMap = {};
@@ -3584,17 +3649,21 @@ app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
     }
     const categorySales = Object.entries(categoryMap).map(([category, value]) => ({ category, value })).sort((a, b) => b.value - a.value);
     const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+    const monthlyRevenue = timeSeries.map((t) => ({
+      month: t.label,
+      revenue: t.revenue,
+      orders: t.orders
+    }));
     res.json({
       totalOrders,
       totalRevenue,
       avgOrderValue: Math.round(avgOrderValue),
       totalCustomers,
       repeatRatio,
-      monthlyRevenue: monthlyRows.map((r) => ({
-        month: r.month,
-        revenue: Number(r.revenue),
-        orders: Number(r.orders)
-      })),
+      granularity: selectedGranularity,
+      timeSeries,
+      dailyMetrics: timeSeries,
+      monthlyRevenue,
       categorySales,
       topProducts
     });

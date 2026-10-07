@@ -15,12 +15,24 @@ import { BarChart2, RefreshCw, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 
+interface AnalyticsPoint {
+  date: string
+  label: string
+  formattedDate: string
+  revenue: number
+  orders: number
+  avgOrderValue: number
+}
+
 interface AnalyticsData {
   totalOrders: number
   totalRevenue: number
   avgOrderValue: number
   totalCustomers: number
   repeatRatio: number
+  granularity?: 'daily' | 'monthly'
+  timeSeries: AnalyticsPoint[]
+  dailyMetrics?: AnalyticsPoint[]
   monthlyRevenue: Array<{ month: string; revenue: number; orders: number }>
   categorySales: Array<{ category: string; value: number }>
   topProducts: Array<{ name: string; sku: string; image: string; revenue: number; units: number }>
@@ -28,11 +40,11 @@ interface AnalyticsData {
 
 const PIE_COLORS = ['#18181b', '#3f3f46', '#71717a', '#a1a1aa', '#d4d4d8']
 
-// Default 6-month window: last 6 calendar months
+// Default window: last 30 days
 function defaultDateRange() {
   const to = new Date()
   const from = new Date()
-  from.setMonth(from.getMonth() - 6)
+  from.setDate(from.getDate() - 29)
   return {
     from: from.toISOString().split('T')[0],
     to: to.toISOString().split('T')[0],
@@ -45,12 +57,17 @@ export const AdminAnalyticsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState(defaultDateRange)
+  const [granularity, setGranularity] = useState<'daily' | 'monthly'>('daily')
 
   const fetchAnalytics = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
-      const params = new URLSearchParams({ from: dateRange.from, to: dateRange.to })
+      const params = new URLSearchParams({
+        from: dateRange.from,
+        to: dateRange.to,
+        granularity,
+      })
       const res = await fetch(`/api/admin/analytics?${params}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
@@ -59,21 +76,34 @@ export const AdminAnalyticsPage: React.FC = () => {
         throw new Error(d.error || 'Failed to load analytics.')
       }
       setData(await res.json())
-    } catch (err: any) {
-      setError(err.message || 'Unable to compute analytics.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unable to compute analytics.'
+      setError(message)
     } finally {
       setIsLoading(false)
     }
-  }, [token, dateRange])
+  }, [token, dateRange, granularity])
 
-  useEffect(() => { fetchAnalytics() }, [fetchAnalytics])
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
 
   const hasOrders = (data?.totalOrders ?? 0) > 0
+  const chartSeries = data?.timeSeries && data.timeSeries.length > 0
+    ? data.timeSeries
+    : (data?.monthlyRevenue || []).map((m) => ({
+        date: m.month,
+        label: m.month,
+        formattedDate: m.month,
+        revenue: m.revenue,
+        orders: m.orders,
+        avgOrderValue: m.orders > 0 ? Math.round(m.revenue / m.orders) : 0,
+      }))
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-border gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between pb-6 border-b border-border gap-4">
         <div>
           <span className="editorial-badge text-muted">Intelligence & Economics</span>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight mt-1">
@@ -85,8 +115,34 @@ export const AdminAnalyticsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 text-xs flex-wrap">
-          <div className="flex items-center gap-1.5 border border-border bg-background px-2 py-1.5">
-            <label className="text-[10px] text-muted uppercase tracking-wider">From</label>
+          {/* Granularity Selector */}
+          <div className="flex items-center border border-border bg-background p-0.5 h-9">
+            <button
+              type="button"
+              onClick={() => setGranularity('daily')}
+              className={`px-3 h-full text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+                granularity === 'daily'
+                  ? 'bg-foreground text-background shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              Daily
+            </button>
+            <button
+              type="button"
+              onClick={() => setGranularity('monthly')}
+              className={`px-3 h-full text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+                granularity === 'monthly'
+                  ? 'bg-foreground text-background shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              Monthly
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 border border-border bg-background px-2.5 h-9">
+            <label className="text-[10px] text-muted uppercase tracking-wider font-semibold">From</label>
             <input
               type="date"
               value={dateRange.from}
@@ -94,8 +150,9 @@ export const AdminAnalyticsPage: React.FC = () => {
               className="bg-transparent text-xs focus:outline-none"
             />
           </div>
-          <div className="flex items-center gap-1.5 border border-border bg-background px-2 py-1.5">
-            <label className="text-[10px] text-muted uppercase tracking-wider">To</label>
+
+          <div className="flex items-center gap-1.5 border border-border bg-background px-2.5 h-9">
+            <label className="text-[10px] text-muted uppercase tracking-wider font-semibold">To</label>
             <input
               type="date"
               value={dateRange.to}
@@ -103,10 +160,11 @@ export const AdminAnalyticsPage: React.FC = () => {
               className="bg-transparent text-xs focus:outline-none"
             />
           </div>
+
           <button
             onClick={fetchAnalytics}
             disabled={isLoading}
-            className="h-9 px-3 border border-border text-xs flex items-center gap-1.5 hover:bg-surface transition-colors"
+            className="h-9 px-3.5 border border-border text-xs flex items-center gap-1.5 hover:bg-surface transition-colors font-medium"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Apply</span>
@@ -172,61 +230,94 @@ export const AdminAnalyticsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* No-data banner */}
-          {!hasOrders && (
-            <div className="bg-surface border border-border p-8 text-center space-y-2">
-              <BarChart2 className="w-10 h-10 text-border mx-auto" />
-              <p className="text-sm font-medium text-foreground">No Sales Data Yet</p>
-              <p className="text-xs text-muted max-w-sm mx-auto">
-                Revenue charts, category breakdowns, and product performance will appear here once real
-                orders are recorded. All metrics are calculated exclusively from actual database records.
-              </p>
-            </div>
-          )}
-
-          {/* Revenue chart — only when orders exist */}
-          {hasOrders && data && data.monthlyRevenue.length > 0 && (
-            <div className="bg-background border border-border p-6">
+          {/* Revenue chart — rendered with all series points including zero-order days */}
+          {chartSeries.length > 0 && (
+            <div className="bg-background border border-border p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 pb-2 border-b border-border">
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground">
-                    Monthly Revenue & Order Volume
+                    {granularity === 'daily' ? 'Daily Revenue & Order Velocity' : 'Monthly Revenue & Order Volume'}
                   </h3>
-                  <p className="text-[11px] text-muted mt-0.5">Actual revenue from confirmed orders</p>
+                  <p className="text-[11px] text-muted mt-0.5">
+                    {granularity === 'daily'
+                      ? 'Daily time-series with zero-volume days preserved'
+                      : 'Aggregated monthly cadence from confirmed orders'}
+                  </p>
                 </div>
                 <span className="text-xs font-mono font-semibold text-foreground mt-2 sm:mt-0">
-                  {data.monthlyRevenue.length} month{data.monthlyRevenue.length !== 1 ? 's' : ''} of data
+                  {chartSeries.length} {granularity === 'daily' ? 'days' : 'months'} of data
                 </span>
               </div>
 
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.monthlyRevenue}>
+                  <LineChart data={chartSeries} margin={{ top: 10, right: 15, left: 10, bottom: 5 }}>
                     <CartesianGrid stroke="#f0f0f0" strokeDasharray="3 3" />
-                    <XAxis dataKey="month" stroke="#888888" fontSize={11} tickLine={false} />
+                    <XAxis
+                      dataKey="label"
+                      stroke="#888888"
+                      fontSize={10}
+                      tickLine={false}
+                      interval={chartSeries.length > 20 ? Math.ceil(chartSeries.length / 10) : 0}
+                    />
                     <YAxis
                       stroke="#888888"
                       fontSize={10}
                       tickLine={false}
+                      domain={[0, 'auto']}
                       tickFormatter={(val) =>
-                        val >= 100000 ? `₹${(val / 100000).toFixed(0)}L` : `₹${val.toLocaleString('en-IN')}`
+                        val >= 100000 ? `₹${(val / 100000).toFixed(1)}L` : `₹${Number(val).toLocaleString('en-IN')}`
                       }
                     />
                     <Tooltip
-                      formatter={(val) => [formatCurrency(Number(val ?? 0)), 'Revenue']}
-                      contentStyle={{ backgroundColor: '#111', color: '#fff', border: 'none', fontSize: '11px' }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload || !payload.length) return null
+                        const item = payload[0].payload as AnalyticsPoint
+                        return (
+                          <div className="bg-zinc-950 text-white p-3 border border-zinc-800 shadow-2xl text-xs space-y-1.5 min-w-[170px]">
+                            <div className="font-semibold text-zinc-300 pb-1 border-b border-zinc-800">
+                              {item.formattedDate || item.label || item.date}
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-zinc-400">Revenue:</span>
+                              <span className="font-semibold text-white">{formatCurrency(item.revenue)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-zinc-400">Orders:</span>
+                              <span className="font-medium text-white">{item.orders}</span>
+                            </div>
+                            {item.orders > 0 && (
+                              <div className="flex justify-between gap-4">
+                                <span className="text-zinc-400">Avg Value:</span>
+                                <span className="font-medium text-white">{formatCurrency(item.avgOrderValue)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }}
                     />
                     <Line
                       type="monotone"
                       dataKey="revenue"
                       stroke="#18181b"
-                      strokeWidth={2.5}
-                      dot={{ fill: '#18181b', r: 4 }}
-                      activeDot={{ r: 6 }}
+                      strokeWidth={2}
+                      dot={chartSeries.length <= 31 ? { fill: '#18181b', r: 3 } : false}
+                      activeDot={{ r: 5 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+          )}
+
+          {/* No orders banner if zero orders in range */}
+          {!hasOrders && (
+            <div className="bg-surface border border-border p-8 text-center space-y-2">
+              <BarChart2 className="w-10 h-10 text-border mx-auto" />
+              <p className="text-sm font-medium text-foreground">No Orders in Selected Date Range</p>
+              <p className="text-xs text-muted max-w-sm mx-auto">
+                No purchases occurred between {dateRange.from} and {dateRange.to}. Try expanding the date range above to inspect historical transactions.
+              </p>
             </div>
           )}
 

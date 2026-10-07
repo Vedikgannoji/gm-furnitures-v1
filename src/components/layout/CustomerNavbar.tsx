@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -25,6 +25,31 @@ export const CustomerNavbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
+
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false)
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsSearchOpen(false)
+      }
+    }
+    if (isSearchOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
+      setTimeout(() => searchInputRef.current?.focus(), 50)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isSearchOpen])
 
   useEffect(() => {
     let isMounted = true
@@ -160,18 +185,18 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            {/* Rooms - Non-clickable with compact black box Coming Soon */}
-            <div className="flex items-center gap-1.5 cursor-default select-none py-4">
-              <span className="text-foreground">Rooms</span>
-              <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+            {/* Rooms - Non-clickable with compact black box Coming Soon positioned directly below */}
+            <div className="flex flex-col items-center justify-center cursor-default select-none py-1 group leading-none">
+              <span className="text-foreground leading-tight">Rooms</span>
+              <span className="mt-1 bg-black text-white text-[7px] font-bold tracking-widest uppercase px-1.5 py-0.5 leading-none text-center whitespace-nowrap">
                 COMING SOON
               </span>
             </div>
 
-            {/* Collections - Non-clickable with compact black box Coming Soon */}
-            <div className="flex items-center gap-1.5 cursor-default select-none py-4">
-              <span className="text-foreground">Collections</span>
-              <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.5 leading-none">
+            {/* Collections - Non-clickable with compact black box Coming Soon positioned directly below */}
+            <div className="flex flex-col items-center justify-center cursor-default select-none py-1 group leading-none">
+              <span className="text-foreground leading-tight">Collections</span>
+              <span className="mt-1 bg-black text-white text-[7px] font-bold tracking-widest uppercase px-1.5 py-0.5 leading-none text-center whitespace-nowrap">
                 COMING SOON
               </span>
             </div>
@@ -187,40 +212,59 @@ export const CustomerNavbar: React.FC = () => {
 
           {/* Actions & Utilities */}
           <div className="flex items-center space-x-3 sm:space-x-4">
-            {/* Desktop Search trigger */}
-            <div className="hidden lg:block relative">
-              {isSearchOpen ? (
-                <form onSubmit={handleSearchSubmit} className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search furniture, oak, dining table..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    autoFocus
-                    className="h-8 w-60 bg-surface pl-8 pr-7 text-xs border border-border focus:border-foreground focus:outline-none placeholder:text-muted"
-                  />
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-foreground" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSearchOpen(false)
-                      setSearchQuery('')
-                    }}
-                    className="absolute right-2 top-2 p-0.5 text-muted hover:text-foreground transition-colors"
-                    aria-label="Close search"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              ) : (
-                <button
-                  onClick={() => setIsSearchOpen(true)}
-                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity flex items-center gap-1.5 text-xs uppercase tracking-wider"
-                  aria-label="Search catalog"
-                >
-                  <Search className="w-4 h-4 text-foreground" />
-                  <span className="hidden xl:inline text-[11px] text-foreground">Search</span>
-                </button>
+            {/* Desktop Search trigger (Never shifts navbar layout) */}
+            <div className="hidden lg:block relative" ref={searchContainerRef}>
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen((prev) => !prev)}
+                className={`p-1.5 transition-colors flex items-center gap-1.5 text-xs uppercase tracking-wider ${
+                  isSearchOpen ? 'text-foreground font-semibold' : 'text-foreground hover:opacity-70'
+                }`}
+                aria-label="Search catalog"
+                aria-expanded={isSearchOpen}
+              >
+                <Search className="w-4 h-4 text-foreground" />
+                <span className="hidden xl:inline text-[11px] text-foreground">Search</span>
+              </button>
+
+              {/* Controlled Search Dropdown Overlay */}
+              {isSearchOpen && (
+                <div className="absolute top-full right-0 mt-3 w-80 sm:w-96 bg-white border border-border shadow-2xl p-3 z-50 animate-slide-down">
+                  <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+                    <Search className="w-4 h-4 absolute left-3 text-muted pointer-events-none" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Search furniture, oak, dining table..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-9 w-full bg-surface pl-9 pr-14 text-xs border border-border focus:border-foreground focus:outline-none placeholder:text-muted"
+                    />
+                    <div className="absolute right-1.5 flex items-center gap-1">
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="p-1 text-muted hover:text-foreground transition-colors"
+                          aria-label="Clear search text"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSearchOpen(false)
+                          setSearchQuery('')
+                        }}
+                        className="p-1 text-muted hover:text-foreground transition-colors"
+                        aria-label="Close search dropdown"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
+                </div>
               )}
             </div>
 

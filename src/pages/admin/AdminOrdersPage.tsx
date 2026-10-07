@@ -82,12 +82,14 @@ export const AdminOrdersPage: React.FC = () => {
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
-      const q = searchQuery.toLowerCase()
+      const q = searchQuery.toLowerCase().trim()
       const matchSearch =
-        o.orderNumber.toLowerCase().includes(q) ||
-        o.customer.name.toLowerCase().includes(q) ||
-        o.customer.email.toLowerCase().includes(q)
-      const matchStatus = statusFilter === 'all' || o.status.toLowerCase() === statusFilter.toLowerCase()
+        !q ||
+        (o.orderNumber || '').toLowerCase().includes(q) ||
+        (o.customer?.name || '').toLowerCase().includes(q) ||
+        (o.customer?.email || '').toLowerCase().includes(q) ||
+        (o.customer?.phone || '').toLowerCase().includes(q)
+      const matchStatus = statusFilter === 'all' || (o.status || '').toLowerCase() === statusFilter.toLowerCase()
       return matchSearch && matchStatus
     })
   }, [orders, searchQuery, statusFilter])

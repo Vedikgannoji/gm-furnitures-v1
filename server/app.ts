@@ -2880,12 +2880,9 @@ app.get('/api/admin/orders', verifyAdmin, async (_req: AuthenticatedRequest, res
   try {
     const rows = await query(
       `SELECT
-        o.id, o.order_number, o.subtotal, o.discount, o.total,
-        o.assembly_charge, o.convenience_fee, o.gst,
-        o.coupon_code, o.coupon_discount_amount,
-        o.status, o.payment_status, o.payment_gateway, o.payment_order_id,
-        o.delivery_address_json, o.items_json, o.created_at,
-        u.id as user_id, u.name as customer_name, u.email as customer_email, u.phone as customer_phone
+        o.*,
+        u.name as customer_name,
+        u.email as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       ORDER BY o.created_at DESC`
@@ -2895,23 +2892,25 @@ app.get('/api/admin/orders', verifyAdmin, async (_req: AuthenticatedRequest, res
       const parsedAddr = safeParseJson<DeliveryAddressSnapshot>(r.delivery_address_json, {})
       return {
         id: r.id,
-        orderNumber: r.order_number,
-        date: new Date(r.created_at).toLocaleDateString('en-IN', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
+        orderNumber: r.order_number || r.id,
+        date: r.created_at
+          ? new Date(r.created_at).toLocaleDateString('en-IN', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })
+          : '',
         createdAt: r.created_at,
         customer: {
           id: r.user_id || '',
           name: r.customer_name || parsedAddr.fullName || 'Store Client',
           email: r.customer_email || parsedAddr.email || '',
-          phone: r.customer_phone || parsedAddr.phone || '',
+          phone: parsedAddr.phone || r.customer_phone || r.phone || '',
         },
         items: formatHistoricalItems(r.items_json),
-        subtotal: Number(r.subtotal),
+        subtotal: Number(r.subtotal || 0),
         discount: Number(r.discount || 0),
-        total: Number(r.total),
+        total: Number(r.total || 0),
         status: r.status || 'pending',
         paymentStatus: r.payment_status || 'pending',
         paymentGateway: r.payment_gateway || 'cashfree',
@@ -2934,13 +2933,9 @@ app.get('/api/admin/orders/:id', verifyAdmin, async (req: AuthenticatedRequest, 
     const id = String(req.params.id)
     const r = await queryOne(
       `SELECT
-        o.id, o.order_number, o.subtotal, o.discount, o.total,
-        o.assembly_charge, o.convenience_fee, o.gst,
-        o.status, o.payment_status, o.payment_method, o.payment_gateway,
-        o.payment_order_id, o.payment_transaction_id, o.paid_at,
-        o.coupon_code, o.coupon_discount_type, o.coupon_discount_value, o.coupon_discount_amount,
-        o.delivery_address_json, o.items_json, o.created_at, o.updated_at,
-        u.id as user_id, u.name as customer_name, u.email as customer_email, u.phone as customer_phone
+        o.*,
+        u.name as customer_name,
+        u.email as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       WHERE o.id = $1 OR o.order_number = $1`,
@@ -3022,7 +3017,7 @@ app.get('/api/admin/orders/:id', verifyAdmin, async (req: AuthenticatedRequest, 
         id: r.user_id || '',
         name: r.customer_name || parsedAddr.fullName || 'Store Client',
         email: r.customer_email || parsedAddr.email || '',
-        phone: r.customer_phone || parsedAddr.phone || '',
+        phone: parsedAddr.phone || r.customer_phone || r.phone || '',
       },
       deliveryAddress: {
         fullName: parsedAddr.fullName || '',
@@ -3549,24 +3544,32 @@ app.get('/api/admin/customers', verifyAdmin, async (_req: AuthenticatedRequest, 
 // ==========================================
 app.get('/api/admin/analytics', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { from, to } = req.query as { from?: string; to?: string }
+    const { from, to, granularity } = req.query as { from?: string; to?: string; granularity?: string }
 
-    let dateFilter = ''
-    const params: any[] = []
-    let pIdx = 1
+    // Default to last 30 days if not provided
+    const now = new Date()
+    const defaultTo = now.toISOString().split('T')[0]
+    const past30 = new Date(now)
+    past30.setDate(past30.getDate() - 29)
+    const defaultFrom = past30.toISOString().split('T')[0]
 
-    if (from) {
-      dateFilter += ` AND o.created_at >= $${pIdx++}`
-      params.push(from)
+    let cleanFrom = typeof from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(from.trim())
+      ? from.trim()
+      : defaultFrom
+    let cleanTo = typeof to === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(to.trim())
+      ? to.trim()
+      : defaultTo
+
+    if (cleanFrom > cleanTo) {
+      const tmp = cleanFrom
+      cleanFrom = cleanTo
+      cleanTo = tmp
     }
-    if (to) {
-      dateFilter += ` AND o.created_at < $${pIdx++}`
-      const toDate = new Date(to)
-      toDate.setDate(toDate.getDate() + 1)
-      params.push(toDate.toISOString().split('T')[0])
-    }
 
-    // KPI totals
+    const selectedGranularity = granularity === 'monthly' ? 'monthly' : 'daily'
+    const dateParams = [cleanFrom, cleanTo]
+
+    // 1. KPI totals (exact same date filter)
     const kpiRow = await queryOne<{
       total_orders: string | number
       total_revenue: string | number
@@ -3577,21 +3580,22 @@ app.get('/api/admin/analytics', verifyAdmin, async (req: AuthenticatedRequest, r
         COALESCE(SUM(o.total), 0)          AS total_revenue,
         COALESCE(AVG(o.total), 0)          AS avg_order_value
       FROM orders o
-      WHERE 1=1 ${dateFilter}`,
-      params
+      WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+        AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date`,
+      dateParams
     )
 
     const totalOrders: number = Number(kpiRow?.total_orders || 0)
     const totalRevenue: number = Number(kpiRow?.total_revenue || 0)
     const avgOrderValue: number = Number(kpiRow?.avg_order_value || 0)
 
-    // Total registered non-admin customers
+    // 2. Total registered non-admin customers
     const custRow = await queryOne<{ c: string | number }>(
       "SELECT COUNT(*) as c FROM users WHERE role != 'admin'"
     )
     const totalCustomers: number = Number(custRow?.c || 0)
 
-    // Repeat customer ratio
+    // 3. Repeat customer ratio
     const repeatRow = await queryOne<{
       repeat_customers: string | number
       customers_with_orders: string | number
@@ -3611,25 +3615,116 @@ app.get('/api/admin/analytics', verifyAdmin, async (req: AuthenticatedRequest, r
     const repCust = Number(repeatRow?.repeat_customers || 0)
     const repeatRatio = custWithOrders > 0 ? Math.round((repCust / custWithOrders) * 100) : 0
 
-    // Monthly revenue breakdown (PostgreSQL TO_CHAR)
-    const monthlyRows = await query(
-      `SELECT
-        TO_CHAR(o.created_at, 'Mon') AS month,
-        TO_CHAR(o.created_at, 'YYYY-MM') AS month_key,
-        COUNT(*) AS orders,
-        COALESCE(SUM(o.total), 0) AS revenue
-      FROM orders o
-      WHERE 1=1 ${dateFilter}
-      GROUP BY TO_CHAR(o.created_at, 'YYYY-MM'), TO_CHAR(o.created_at, 'Mon')
-      ORDER BY month_key ASC
-      LIMIT 12`,
-      params
-    )
+    // 4. Time-series aggregation
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const timeSeries: Array<{
+      date: string
+      label: string
+      formattedDate: string
+      revenue: number
+      orders: number
+      avgOrderValue: number
+    }> = []
 
-    // Category sales & product performance from order items
+    if (selectedGranularity === 'monthly') {
+      const monthlyRows = await query(
+        `SELECT
+          TO_CHAR(o.created_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM') AS month_key,
+          COUNT(*) AS orders,
+          COALESCE(SUM(o.total), 0) AS revenue,
+          COALESCE(AVG(o.total), 0) AS avg_order_value
+        FROM orders o
+        WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+          AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+        GROUP BY month_key
+        ORDER BY month_key ASC`,
+        dateParams
+      )
+
+      const rowMap = new Map<string, any>()
+      for (const r of monthlyRows) {
+        rowMap.set(r.month_key, r)
+      }
+
+      // Generate all calendar months between cleanFrom and cleanTo inclusive
+      const startMonth = new Date(cleanFrom + 'T00:00:00Z')
+      const endMonth = new Date(cleanTo + 'T00:00:00Z')
+      startMonth.setUTCDate(1)
+      endMonth.setUTCDate(1)
+
+      const curr = new Date(startMonth)
+      while (curr <= endMonth) {
+        const yyyy = curr.getUTCFullYear()
+        const mm = String(curr.getUTCMonth() + 1).padStart(2, '0')
+        const monthKey = `${yyyy}-${mm}`
+        const label = `${monthNames[curr.getUTCMonth()]} ${yyyy}`
+        const found = rowMap.get(monthKey)
+
+        timeSeries.push({
+          date: monthKey,
+          label,
+          formattedDate: label,
+          revenue: found ? Number(found.revenue) : 0,
+          orders: found ? Number(found.orders) : 0,
+          avgOrderValue: found ? Math.round(Number(found.avg_order_value)) : 0,
+        })
+
+        curr.setUTCMonth(curr.getUTCMonth() + 1)
+      }
+    } else {
+      // Daily aggregation
+      const dailyRows = await query(
+        `SELECT
+          TO_CHAR(o.created_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD') AS day_key,
+          COUNT(*) AS orders,
+          COALESCE(SUM(o.total), 0) AS revenue,
+          COALESCE(AVG(o.total), 0) AS avg_order_value
+        FROM orders o
+        WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+          AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+        GROUP BY day_key
+        ORDER BY day_key ASC`,
+        dateParams
+      )
+
+      const rowMap = new Map<string, any>()
+      for (const r of dailyRows) {
+        rowMap.set(r.day_key, r)
+      }
+
+      // Generate every single calendar day between cleanFrom and cleanTo inclusive
+      const curr = new Date(cleanFrom + 'T00:00:00Z')
+      const end = new Date(cleanTo + 'T00:00:00Z')
+
+      while (curr <= end) {
+        const yyyy = curr.getUTCFullYear()
+        const mm = String(curr.getUTCMonth() + 1).padStart(2, '0')
+        const dd = String(curr.getUTCDate()).padStart(2, '0')
+        const dateKey = `${yyyy}-${mm}-${dd}`
+        const label = `${dd} ${monthNames[curr.getUTCMonth()]}`
+        const formattedDate = `${dd} ${monthNames[curr.getUTCMonth()]} ${yyyy}`
+        const found = rowMap.get(dateKey)
+
+        timeSeries.push({
+          date: dateKey,
+          label,
+          formattedDate,
+          revenue: found ? Number(found.revenue) : 0,
+          orders: found ? Number(found.orders) : 0,
+          avgOrderValue: found ? Math.round(Number(found.avg_order_value)) : 0,
+        })
+
+        curr.setUTCDate(curr.getUTCDate() + 1)
+      }
+    }
+
+    // 5. Category sales & product performance from order items
     const allOrders = await query(
-      `SELECT o.items_json, o.total FROM orders o WHERE 1=1 ${dateFilter}`,
-      params
+      `SELECT o.items_json, o.total
+       FROM orders o
+       WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
+         AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date`,
+      dateParams
     )
 
     const categoryMap: Record<string, number> = {}
@@ -3683,17 +3778,22 @@ app.get('/api/admin/analytics', verifyAdmin, async (req: AuthenticatedRequest, r
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5)
 
+    const monthlyRevenue = timeSeries.map((t) => ({
+      month: t.label,
+      revenue: t.revenue,
+      orders: t.orders,
+    }))
+
     res.json({
       totalOrders,
       totalRevenue,
       avgOrderValue: Math.round(avgOrderValue),
       totalCustomers,
       repeatRatio,
-      monthlyRevenue: monthlyRows.map((r) => ({
-        month: r.month,
-        revenue: Number(r.revenue),
-        orders: Number(r.orders),
-      })),
+      granularity: selectedGranularity,
+      timeSeries,
+      dailyMetrics: timeSeries,
+      monthlyRevenue,
       categorySales,
       topProducts,
     })
