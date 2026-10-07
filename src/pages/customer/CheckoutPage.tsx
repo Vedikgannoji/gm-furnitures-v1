@@ -543,23 +543,23 @@ export const CheckoutPage: React.FC = () => {
               </div>
 
               {appliedCoupon ? (
-                <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded flex items-center justify-between">
+                <div className="p-3 bg-white dark:bg-zinc-900 border-2 border-emerald-600 rounded flex items-center justify-between shadow-xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <div className="w-6 h-6 rounded-full bg-emerald-700 flex items-center justify-center text-white shrink-0">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-sans font-semibold text-xs text-foreground uppercase tracking-wide">
+                        <span className="font-mono font-bold text-xs text-zinc-950 dark:text-white uppercase tracking-wider">
                           {appliedCoupon.code}
                         </span>
-                        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded">
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-emerald-800 text-white rounded">
                           {appliedCoupon.discountType === 'percent'
                             ? `${appliedCoupon.discountValue}% OFF`
                             : `${formatCurrency(appliedCoupon.discountValue)} OFF`}
                         </span>
                       </div>
-                      <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block mt-0.5">
+                      <span className="text-xs font-semibold text-emerald-950 dark:text-emerald-300 block mt-0.5">
                         You saved {formatCurrency(appliedCoupon.discountAmount)}
                       </span>
                     </div>
@@ -571,10 +571,11 @@ export const CheckoutPage: React.FC = () => {
                       setAppliedCoupon(null)
                       setCouponError(null)
                     }}
-                    className="p-1 text-muted hover:text-rose-600 transition-colors"
+                    className="p-1 text-zinc-500 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 transition-colors rounded"
                     title="Remove coupon"
+                    aria-label="Remove coupon"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
               ) : (
@@ -717,7 +718,7 @@ export const CheckoutPage: React.FC = () => {
               </div>
 
               {appliedCoupon && (
-                <div className="flex justify-between text-emerald-600 font-medium">
+                <div className="flex justify-between text-emerald-800 dark:text-emerald-300 font-semibold">
                   <span>Coupon Discount ({appliedCoupon.code})</span>
                   <span>-{formatCurrency(appliedCoupon.discountAmount)}</span>
                 </div>

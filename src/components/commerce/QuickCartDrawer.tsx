@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
 import { useCart } from '@/context/CartContext'
@@ -8,6 +8,7 @@ import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { EmptyState } from './EmptyState'
 
 export const QuickCartDrawer: React.FC = () => {
+  const location = useLocation()
   const {
     items,
     isCartDrawerOpen,
@@ -18,6 +19,11 @@ export const QuickCartDrawer: React.FC = () => {
     cartCount,
   } = useCart()
 
+  // Automatically close cart drawer on any route/location change
+  useEffect(() => {
+    setIsCartDrawerOpen(false)
+  }, [location.pathname, location.search, location.hash, setIsCartDrawerOpen])
+
   return (
     <Drawer
       isOpen={isCartDrawerOpen}
@@ -27,14 +33,41 @@ export const QuickCartDrawer: React.FC = () => {
       width="max-w-md"
     >
       {items.length === 0 ? (
-        <EmptyState
-          icon={ShoppingBag}
-          title="Your shopping bag is empty"
-          description="Explore our furniture collection to begin outfitting your space."
-          actionLabel="EXPLORE CATALOG →"
-          actionHref="/shop"
-          onAction={() => setIsCartDrawerOpen(false)}
-        />
+        <div className="flex flex-col h-full justify-between">
+          <EmptyState
+            icon={ShoppingBag}
+            title="Your shopping bag is empty"
+            description="Explore our furniture collection to begin outfitting your space."
+            actionLabel="EXPLORE CATALOG →"
+            actionHref="/shop"
+            onAction={() => setIsCartDrawerOpen(false)}
+          />
+
+          <div className="px-4 pb-8 w-full max-w-sm mx-auto -mt-6">
+            <div className="pt-4 border-t border-border flex flex-col items-center">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-2.5">
+                Explore Categories
+              </span>
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {[
+                  { name: 'Living Room', path: '/shop?category=living' },
+                  { name: 'Dining', path: '/shop?category=dining' },
+                  { name: 'Bedroom', path: '/shop?category=bedroom' },
+                  { name: 'Office', path: '/shop?category=office' },
+                ].map((cat) => (
+                  <Link
+                    key={cat.name}
+                    to={cat.path}
+                    onClick={() => setIsCartDrawerOpen(false)}
+                    className="px-2.5 py-1 text-[11px] font-medium border border-border bg-surface hover:bg-foreground hover:text-background transition-colors uppercase tracking-wider"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="flex flex-col h-full justify-between">
           {/* Items List */}
@@ -44,13 +77,18 @@ export const QuickCartDrawer: React.FC = () => {
                 key={`${item.product.id}-${item.selectedColor}`}
                 className="py-4 flex gap-4 items-start"
               >
-                <div className="w-20 h-24 bg-surface shrink-0 border border-border overflow-hidden">
+                <Link
+                  to={`/products/${item.product.slug}`}
+                  onClick={() => setIsCartDrawerOpen(false)}
+                  className="w-20 h-24 bg-surface shrink-0 border border-border overflow-hidden block hover:opacity-85 transition-opacity"
+                  title={item.product.name}
+                >
                   <img
                     src={item.product.images[0]}
                     alt={item.product.name}
                     className="w-full h-full object-cover"
                   />
-                </div>
+                </Link>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2">
@@ -148,6 +186,13 @@ export const QuickCartDrawer: React.FC = () => {
                   View Full Bag
                 </Button>
               </Link>
+              <button
+                type="button"
+                onClick={() => setIsCartDrawerOpen(false)}
+                className="w-full py-1 text-[11px] font-semibold text-muted hover:text-foreground uppercase tracking-widest transition-colors text-center"
+              >
+                Continue Shopping
+              </button>
             </div>
           </div>
         </div>

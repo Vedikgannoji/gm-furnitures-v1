@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
   ShoppingBag,
@@ -17,6 +17,7 @@ import { Category } from '@/types'
 
 export const CustomerNavbar: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, isAuthenticated } = useAuth()
   const { cartCount, setIsCartDrawerOpen } = useCart()
   const { wishlistCount } = useWishlist()
@@ -25,6 +26,12 @@ export const CustomerNavbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
+
+  // Close menus on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+    setIsSearchOpen(false)
+  }, [location.pathname, location.search, location.hash])
 
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -83,7 +90,7 @@ export const CustomerNavbar: React.FC = () => {
       <header className="sticky top-0 z-40 w-full bg-white border-b border-border shadow-[0_1px_0_0_#E5E5E5]">
         {/* Top minimal announcement banner */}
         <div className="bg-white text-center py-2 px-4 text-[10px] sm:text-[11px] font-medium tracking-[0.2em] uppercase text-zinc-600 border-b border-border">
-          <span>FROM THE HOUSE OF GM GROUP · INTERIORS & CONSTRUCTIONS</span>
+          <span>FROM THE HOUSE OF GM BROTHERS (INTERIORS AND CONSTRUCTIONS)</span>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

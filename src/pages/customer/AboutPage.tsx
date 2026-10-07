@@ -145,7 +145,7 @@ export const AboutPage: React.FC = () => {
           </span>
 
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight text-foreground max-w-2xl uppercase leading-snug">
-            FROM THE HOUSE OF GM GROUP OF INTERIORS AND CONSTRUCTIONS
+            FROM THE HOUSE OF GM BROTHERS (INTERIORS AND CONSTRUCTIONS)
           </h2>
 
           <p className="mt-2.5 text-xs sm:text-sm text-muted max-w-xl leading-relaxed">

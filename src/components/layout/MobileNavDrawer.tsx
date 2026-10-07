@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Drawer } from '@/components/ui/Drawer'
 import { Category, Room, Collection } from '@/types'
 import { ArrowRight, User, Heart, LogOut } from 'lucide-react'
@@ -11,10 +11,18 @@ export interface MobileNavDrawerProps {
 }
 
 export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) => {
+  const location = useLocation()
   const { user, isAuthenticated, logout } = useAuth()
   const [categories, setCategories] = useState<Category[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    if (isOpen) {
+      onClose()
+    }
+  }, [location.pathname, location.search, location.hash])
 
   useEffect(() => {
     let isMounted = true

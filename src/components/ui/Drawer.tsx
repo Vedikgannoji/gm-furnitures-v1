@@ -25,13 +25,22 @@ export const Drawer: React.FC<DrawerProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
+    const handlePopState = () => {
+      onClose()
+    }
+
     if (isOpen) {
       document.body.style.overflow = 'hidden'
       window.addEventListener('keydown', handleKeyDown)
+      window.addEventListener('popstate', handlePopState)
+    } else {
+      document.body.style.overflow = ''
     }
+
     return () => {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = ''
       window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('popstate', handlePopState)
     }
   }, [isOpen, onClose])
 

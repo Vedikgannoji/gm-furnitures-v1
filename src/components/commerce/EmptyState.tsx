@@ -29,7 +29,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <p className="text-xs text-muted mt-2 leading-relaxed max-w-sm">{description}</p>
       {(actionLabel && actionHref) && (
         <div className="mt-6">
-          <Link to={actionHref}>
+          <Link
+            to={actionHref}
+            onClick={() => {
+              if (onAction) onAction()
+            }}
+          >
             <Button variant="primary" size="md">
               {actionLabel}
             </Button>
