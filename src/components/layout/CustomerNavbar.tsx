@@ -89,23 +89,23 @@ export const CustomerNavbar: React.FC = () => {
     <>
       <header className="sticky top-0 z-40 w-full bg-white border-b border-border shadow-[0_1px_0_0_#E5E5E5]">
         {/* Top minimal announcement banner */}
-        <div className="bg-white text-center py-2 px-4 text-[10px] sm:text-[11px] font-medium tracking-[0.2em] uppercase text-zinc-600 border-b border-border">
+        <div className="bg-white text-center py-1.5 sm:py-2 px-3 text-[9px] sm:text-[11px] font-medium tracking-[0.12em] sm:tracking-[0.2em] uppercase text-zinc-600 border-b border-border leading-normal">
           <span>FROM THE HOUSE OF GM BROTHERS (INTERIORS AND CONSTRUCTIONS)</span>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Mobile Menu Button */}
-          <div className="flex items-center gap-2 lg:hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+          {/* Mobile Menu Button & Search */}
+          <div className="flex items-center gap-1 lg:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 -ml-2 text-foreground hover:text-muted transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-foreground hover:text-muted transition-colors -ml-1 rounded active:bg-zinc-100"
               aria-label="Open mobile menu"
             >
               <Menu className="w-5 h-5" />
             </button>
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2 text-foreground hover:text-muted transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-foreground hover:text-muted transition-colors rounded active:bg-zinc-100"
               aria-label="Search catalog"
             >
               <Search className="w-4 h-4" />
@@ -113,18 +113,18 @@ export const CustomerNavbar: React.FC = () => {
           </div>
 
           {/* Brand Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group">
+          <div className="flex items-center shrink-0">
+            <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
               <img
                 src="/logo.png"
                 alt="GM Logo"
-                className="h-7 sm:h-8 w-auto object-contain shrink-0"
+                className="h-6 sm:h-8 w-auto object-contain shrink-0"
               />
               <div className="flex flex-col items-start text-left">
-                <span className="text-sm sm:text-base font-semibold tracking-[0.2em] uppercase text-foreground leading-tight">
+                <span className="text-xs sm:text-base font-semibold tracking-[0.18em] sm:tracking-[0.2em] uppercase text-foreground leading-tight truncate">
                   GM FURNITURE
                 </span>
-                <span className="text-[9px] tracking-[0.25em] uppercase text-muted font-light leading-tight">
+                <span className="text-[8px] sm:text-[9px] tracking-[0.2em] sm:tracking-[0.25em] uppercase text-muted font-light leading-tight">
                   ATELIER & LIVING
                 </span>
               </div>
@@ -275,12 +275,12 @@ export const CustomerNavbar: React.FC = () => {
               )}
             </div>
 
-            {/* Auth State */}
-            {isAuthenticated ? (
+            {/* Auth State & Action Icons */}
+            {isAuthenticated && (
               <>
                 <Link
                   to="/account"
-                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity"
+                  className="hidden lg:flex w-10 h-10 items-center justify-center text-foreground hover:opacity-70 transition-opacity rounded"
                   aria-label="Customer account"
                   title={`Account: ${user?.name || ''}`}
                 >
@@ -289,36 +289,39 @@ export const CustomerNavbar: React.FC = () => {
 
                 <Link
                   to="/account/wishlist"
-                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity relative"
+                  className="w-10 h-10 flex items-center justify-center text-foreground hover:opacity-70 transition-opacity relative rounded active:bg-zinc-100"
                   aria-label="Wishlist"
                   title="Wishlist"
                 >
                   <Heart className="w-4 h-4 text-foreground" />
                   {wishlistCount > 0 && (
-                    <span className="absolute 0 top-0.5 right-0.5 w-3.5 h-3.5 bg-foreground text-background text-[9px] font-semibold flex items-center justify-center rounded-full">
+                    <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-foreground text-background text-[9px] font-semibold flex items-center justify-center rounded-full">
                       {wishlistCount}
                     </span>
                   )}
                 </Link>
-
-                <button
-                  onClick={() => setIsCartDrawerOpen(true)}
-                  className="p-1.5 text-foreground hover:opacity-70 transition-opacity relative flex items-center gap-1.5"
-                  aria-label="Open cart"
-                  title="Shopping Bag"
-                >
-                  <ShoppingBag className="w-4 h-4 text-foreground" />
-                  {cartCount > 0 && (
-                    <span className="w-4 h-4 bg-foreground text-background text-[10px] font-semibold flex items-center justify-center rounded-full">
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
               </>
-            ) : (
+            )}
+
+            {/* Shopping Bag Button — Always visible for guests & authenticated users */}
+            <button
+              onClick={() => setIsCartDrawerOpen(true)}
+              className="w-10 h-10 flex items-center justify-center text-foreground hover:opacity-70 transition-opacity relative rounded active:bg-zinc-100"
+              aria-label="Open cart"
+              title="Shopping Bag"
+            >
+              <ShoppingBag className="w-4 h-4 text-foreground" />
+              {cartCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-foreground text-background text-[10px] font-semibold flex items-center justify-center rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            {!isAuthenticated && (
               <Link
                 to="/auth"
-                className="h-8 px-3.5 bg-foreground text-background hover:bg-black/85 text-[11px] font-semibold uppercase tracking-wider flex items-center transition-colors shadow-sm"
+                className="hidden lg:flex h-8 px-3.5 bg-foreground text-background hover:bg-black/85 text-[11px] font-semibold uppercase tracking-wider items-center transition-colors shadow-sm ml-1"
               >
                 Sign In
               </Link>
@@ -328,21 +331,21 @@ export const CustomerNavbar: React.FC = () => {
 
         {/* Mobile Search dropdown if opened */}
         {isSearchOpen && (
-          <div className="lg:hidden p-3 bg-white border-t border-border animate-slide-down">
-            <form onSubmit={handleSearchSubmit} className="relative">
+          <div className="lg:hidden p-3 bg-white border-t border-border animate-slide-down shadow-sm">
+            <form onSubmit={handleSearchSubmit} className="relative flex items-center">
               <input
                 type="text"
                 placeholder="Search sofas, chairs, tables, beds..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
-                className="h-10 w-full bg-surface pl-9 pr-12 text-xs border border-border focus:border-foreground focus:outline-none"
+                className="h-10 w-full bg-surface pl-9 pr-14 text-xs border border-border focus:border-foreground focus:outline-none"
               />
-              <Search className="w-4 h-4 absolute left-3 top-3 text-muted" />
-              <div className="absolute right-2 top-2 flex items-center gap-1.5">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-muted pointer-events-none" />
+              <div className="absolute right-2 top-2 flex items-center gap-1">
                 <button
                   type="submit"
-                  className="h-6 px-2 text-[10px] uppercase tracking-wider bg-foreground text-background"
+                  className="h-6 px-2 text-[10px] font-semibold uppercase tracking-wider bg-foreground text-background"
                 >
                   Go
                 </button>

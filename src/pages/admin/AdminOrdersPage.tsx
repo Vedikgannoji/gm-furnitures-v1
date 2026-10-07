@@ -167,8 +167,8 @@ export const AdminOrdersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-background border border-border overflow-x-auto shadow-sm">
+      {/* Table & Mobile Cards */}
+      <div className="bg-background border border-border shadow-sm">
         {isLoading ? (
           <div className="p-12 text-center">
             <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -187,64 +187,126 @@ export const AdminOrdersPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-border bg-surface text-muted uppercase text-[10px] tracking-wider">
-                <th className="py-3.5 px-4 font-semibold">Order ID</th>
-                <th className="py-3.5 px-4 font-semibold">Customer</th>
-                <th className="py-3.5 px-4 font-semibold">Date</th>
-                <th className="py-3.5 px-4 font-semibold">Total</th>
-                <th className="py-3.5 px-4 font-semibold">Payment</th>
-                <th className="py-3.5 px-4 font-semibold">Fulfillment Status</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <>
+            {/* Mobile Card View (<640px) */}
+            <div className="sm:hidden divide-y divide-border">
               {filtered.map((ord) => {
                 const orderBadge = getStatusBadge(ord.status)
                 const paymentBadge = getPaymentBadge(ord.paymentStatus)
 
                 return (
-                  <tr
-                    key={ord.id}
+                  <div
+                    key={`card-${ord.id}`}
                     onClick={() => navigate(`/admin/orders/${ord.id}`)}
-                    className="hover:bg-surface/70 transition-colors cursor-pointer group"
+                    className="p-4 bg-background hover:bg-surface/60 transition-colors cursor-pointer space-y-2.5"
                   >
-                    <td className="py-3.5 px-4 font-mono font-medium text-foreground">
-                      {ord.orderNumber}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="font-medium text-foreground block">{ord.customer.name}</span>
-                      <span className="text-[11px] text-muted block">{ord.customer.email}</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-muted whitespace-nowrap">{ord.date}</td>
-                    <td className="py-3.5 px-4 font-semibold text-foreground">
-                      {formatCurrency(ord.total)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${paymentBadge.style}`}>
-                        {paymentBadge.label}
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-semibold text-xs text-foreground">
+                        {ord.orderNumber}
                       </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${orderBadge.style}`}>
-                        {orderBadge.label}
+                      <span className="text-[11px] text-muted">{ord.date}</span>
+                    </div>
+
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-medium text-xs text-foreground block truncate">
+                          {ord.customer.name}
+                        </span>
+                        <span className="text-[11px] text-muted block truncate">
+                          {ord.customer.email}
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-foreground shrink-0">
+                        {formatCurrency(ord.total)}
                       </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${paymentBadge.style}`}>
+                          {paymentBadge.label}
+                        </span>
+                        <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${orderBadge.style}`}>
+                          {orderBadge.label}
+                        </span>
+                      </div>
+
                       <Link
                         to={`/admin/orders/${ord.id}`}
-                        className="inline-flex items-center gap-1 text-xs text-foreground font-medium hover:underline p-1 group-hover:text-foreground"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-foreground uppercase tracking-wider py-1 px-2.5 border border-border bg-surface"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>Manage</span>
+                        <span>View</span>
                       </Link>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 )
               })}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop Table (>=640px) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-surface text-muted uppercase text-[10px] tracking-wider">
+                    <th className="py-3.5 px-4 font-semibold">Order ID</th>
+                    <th className="py-3.5 px-4 font-semibold">Customer</th>
+                    <th className="py-3.5 px-4 font-semibold">Date</th>
+                    <th className="py-3.5 px-4 font-semibold">Total</th>
+                    <th className="py-3.5 px-4 font-semibold">Payment</th>
+                    <th className="py-3.5 px-4 font-semibold">Fulfillment Status</th>
+                    <th className="py-3.5 px-4 font-semibold text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filtered.map((ord) => {
+                    const orderBadge = getStatusBadge(ord.status)
+                    const paymentBadge = getPaymentBadge(ord.paymentStatus)
+
+                    return (
+                      <tr
+                        key={ord.id}
+                        onClick={() => navigate(`/admin/orders/${ord.id}`)}
+                        className="hover:bg-surface/70 transition-colors cursor-pointer group"
+                      >
+                        <td className="py-3.5 px-4 font-mono font-medium text-foreground">
+                          {ord.orderNumber}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-medium text-foreground block">{ord.customer.name}</span>
+                          <span className="text-[11px] text-muted block">{ord.customer.email}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-muted whitespace-nowrap">{ord.date}</td>
+                        <td className="py-3.5 px-4 font-semibold text-foreground">
+                          {formatCurrency(ord.total)}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${paymentBadge.style}`}>
+                            {paymentBadge.label}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${orderBadge.style}`}>
+                            {orderBadge.label}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <Link
+                            to={`/admin/orders/${ord.id}`}
+                            className="inline-flex items-center gap-1 text-xs text-foreground font-medium hover:underline p-1 group-hover:text-foreground"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Manage</span>
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

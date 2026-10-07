@@ -51,25 +51,38 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
   }, [isOpen])
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} position="left" title="Navigation" width="max-w-xs">
-      <div className="flex flex-col space-y-6 pt-2 pb-8">
+    <Drawer isOpen={isOpen} onClose={onClose} position="left" title="Navigation" width="w-[85vw] max-w-xs">
+      <div className="flex flex-col space-y-5 pt-1 pb-8">
+        {/* Brand Header */}
+        <div className="flex items-center gap-2.5 pb-4 border-b border-border">
+          <img src="/logo.png" alt="GM Logo" className="h-7 w-auto object-contain shrink-0" />
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold tracking-[0.2em] uppercase text-foreground leading-tight">
+              GM FURNITURE
+            </span>
+            <span className="text-[8px] tracking-[0.25em] uppercase text-muted font-light leading-tight">
+              ATELIER & LIVING
+            </span>
+          </div>
+        </div>
+
         {/* Main Nav Links */}
-        <div className="flex flex-col space-y-3">
+        <div className="flex flex-col space-y-1">
           <Link
             to="/shop"
             onClick={onClose}
-            className="text-sm uppercase tracking-widest font-medium text-foreground hover:text-muted flex items-center justify-between py-1"
+            className="min-h-[40px] text-xs uppercase tracking-widest font-semibold text-foreground hover:text-muted flex items-center justify-between px-1.5 rounded active:bg-zinc-100 transition-colors"
           >
             <span>All Furniture</span>
             <ArrowRight className="w-4 h-4 text-muted" />
           </Link>
-          <div className="text-sm uppercase tracking-widest font-medium text-foreground flex items-center justify-between py-1 opacity-80 cursor-default select-none">
+          <div className="min-h-[40px] text-xs uppercase tracking-widest font-medium text-foreground flex items-center justify-between px-1.5 opacity-80 cursor-default select-none">
             <span>Rooms</span>
             <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-2 py-0.5 leading-none">
               COMING SOON
             </span>
           </div>
-          <div className="text-sm uppercase tracking-widest font-medium text-foreground flex items-center justify-between py-1 opacity-80 cursor-default select-none">
+          <div className="min-h-[40px] text-xs uppercase tracking-widest font-medium text-foreground flex items-center justify-between px-1.5 opacity-80 cursor-default select-none">
             <span>Collections</span>
             <span className="bg-black text-white text-[8px] font-bold tracking-wider uppercase px-2 py-0.5 leading-none">
               COMING SOON

@@ -202,18 +202,99 @@ export const AdminProductsPage: React.FC = () => {
             No products match the selected criteria.
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-border bg-surface text-muted uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 font-semibold">Piece</th>
-                <th className="py-3 px-4 font-semibold">SKU</th>
-                <th className="py-3 px-4 font-semibold">Category</th>
-                <th className="py-3 px-4 font-semibold">Price</th>
-                <th className="py-3 px-4 font-semibold">Stock</th>
-                <th className="py-3 px-4 font-semibold">Status</th>
-                <th className="py-3 px-4 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
+          <>
+            {/* Mobile Card List (<640px) */}
+            <div className="sm:hidden divide-y divide-border">
+              {filteredProducts.map((p) => {
+                const stockStatus =
+                  p.stockStatus || (p.stock === 0 ? 'out_of_stock' : p.stock <= 3 ? 'low_stock' : 'in_stock')
+                const displayImg =
+                  p.images && p.images.length > 0
+                    ? p.images[0]
+                    : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80'
+
+                return (
+                  <div key={`m-prod-${p.id}`} className="p-4 bg-background space-y-3">
+                    <div className="flex gap-3 items-start">
+                      <img
+                        src={displayImg}
+                        alt={p.name}
+                        className="w-14 h-16 object-cover border border-border shrink-0 bg-surface"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          to={`/admin/products/${p.id}`}
+                          className="font-medium text-xs text-foreground hover:underline line-clamp-2 leading-snug"
+                        >
+                          {p.name}
+                        </Link>
+                        <p className="text-[11px] font-mono text-muted mt-0.5">{p.sku}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-semibold text-foreground">
+                            {formatCurrency(p.price)}
+                          </span>
+                          <span className="text-[11px] text-muted">• {p.stock} units</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-border/50 text-xs">
+                      <span
+                        className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${
+                          stockStatus === 'in_stock'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : stockStatus === 'low_stock'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : 'bg-rose-50 text-rose-800 border-rose-200'
+                        }`}
+                      >
+                        {stockStatus.replace('_', ' ')}
+                      </span>
+
+                      <div className="flex items-center gap-3">
+                        <Link
+                          to={`/products/${p.slug}`}
+                          target="_blank"
+                          className="p-1 text-muted hover:text-foreground"
+                          title="Preview"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                        <Link
+                          to={`/admin/products/${p.id}`}
+                          className="p-1 text-muted hover:text-foreground"
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Link>
+                        <button
+                          onClick={() => setDeleteModalProduct(p)}
+                          className="p-1 text-muted hover:text-rose-600"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop Table (>=640px) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-surface text-muted uppercase text-[10px] tracking-wider">
+                    <th className="py-3 px-4 font-semibold">Piece</th>
+                    <th className="py-3 px-4 font-semibold">SKU</th>
+                    <th className="py-3 px-4 font-semibold">Category</th>
+                    <th className="py-3 px-4 font-semibold">Price</th>
+                    <th className="py-3 px-4 font-semibold">Stock</th>
+                    <th className="py-3 px-4 font-semibold">Status</th>
+                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
             <tbody className="divide-y divide-border">
               {filteredProducts.map((p) => {
                 const stockStatus =
@@ -305,8 +386,10 @@ export const AdminProductsPage: React.FC = () => {
               })}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      </>
+    )}
+  </div>
 
       {/* Delete Confirmation Modal */}
       <Modal

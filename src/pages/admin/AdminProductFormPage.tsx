@@ -462,7 +462,7 @@ export const AdminProductFormPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {isEdit && (
             <Button
               type="button"
@@ -472,7 +472,7 @@ export const AdminProductFormPage: React.FC = () => {
               className="text-rose-600 hover:bg-rose-50 border-rose-200 flex items-center gap-1.5"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Product</span>
+              <span>Delete</span>
             </Button>
           )}
 
@@ -505,7 +505,7 @@ export const AdminProductFormPage: React.FC = () => {
       )}
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-border gap-2 overflow-x-auto text-xs font-medium">
+      <div className="flex border-b border-border gap-1 sm:gap-2 overflow-x-auto no-scrollbar text-xs font-medium">
         {tabs.map((t) => (
           <button
             key={t.id}

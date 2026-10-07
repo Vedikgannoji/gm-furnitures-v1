@@ -120,18 +120,52 @@ export const AdminCustomersPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-border bg-surface text-muted uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 font-semibold">Client Name</th>
-                <th className="py-3 px-4 font-semibold">Contact Email</th>
-                <th className="py-3 px-4 font-semibold">Auth Provider</th>
-                <th className="py-3 px-4 font-semibold text-center">Orders</th>
-                <th className="py-3 px-4 font-semibold">Lifetime Spend</th>
-                <th className="py-3 px-4 font-semibold">Last Order</th>
-                <th className="py-3 px-4 font-semibold">Joined</th>
-              </tr>
-            </thead>
+          <>
+            {/* Mobile Card View (<640px) */}
+            <div className="sm:hidden divide-y divide-border">
+              {filtered.map((c) => (
+                <div key={`m-cust-${c.id}`} className="p-4 bg-background space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-surface border border-border flex items-center justify-center font-semibold text-[11px] shrink-0">
+                        {c.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <span className="font-medium text-xs text-foreground">{c.name}</span>
+                    </div>
+                    <span className="px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border border-border bg-surface text-muted capitalize">
+                      {c.provider}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-muted font-mono">{c.email}</div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-border/50 text-xs">
+                    <div className="flex items-center gap-3">
+                      <span>{c.totalOrders} Order{c.totalOrders !== 1 ? 's' : ''}</span>
+                      <span className="font-semibold text-foreground">
+                        {c.totalSpent > 0 ? formatCurrency(c.totalSpent) : '—'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-muted">Joined {c.joinedDate}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table (>=640px) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-surface text-muted uppercase text-[10px] tracking-wider">
+                    <th className="py-3 px-4 font-semibold">Client Name</th>
+                    <th className="py-3 px-4 font-semibold">Contact Email</th>
+                    <th className="py-3 px-4 font-semibold">Auth Provider</th>
+                    <th className="py-3 px-4 font-semibold text-center">Orders</th>
+                    <th className="py-3 px-4 font-semibold">Lifetime Spend</th>
+                    <th className="py-3 px-4 font-semibold">Last Order</th>
+                    <th className="py-3 px-4 font-semibold">Joined</th>
+                  </tr>
+                </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-surface/50 transition-colors">
@@ -161,8 +195,10 @@ export const AdminCustomersPage: React.FC = () => {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
-    </div>
+        </div>
+      </>
+    )}
+  </div>
+</div>
   )
 }

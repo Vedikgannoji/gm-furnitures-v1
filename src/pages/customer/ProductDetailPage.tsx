@@ -332,7 +332,7 @@ export const ProductDetailPage: React.FC = () => {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 sm:pb-16">
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
@@ -618,6 +618,29 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* Sticky Mobile Bottom CTA Bar */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur-md border-t border-border px-4 py-2.5 pb-safe z-30 flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] text-muted uppercase tracking-wider truncate">
+            {selectedColor ? `Finish: ${selectedColor}` : product.name}
+          </span>
+          <span className="text-sm font-semibold text-foreground">
+            {formatCurrency(product.price || 0)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleAddToCart}
+            disabled={product.stockStatus === 'out_of_stock'}
+            className="px-5 h-10 text-xs font-semibold uppercase tracking-wider"
+          >
+            Add to Bag
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

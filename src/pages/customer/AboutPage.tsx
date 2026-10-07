@@ -153,12 +153,12 @@ export const AboutPage: React.FC = () => {
           </p>
 
           {/* Dual Black CTAs */}
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 w-full sm:w-auto">
             <a
               href="https://www.instagram.com/gm_interiors9/"
               target="_blank"
               rel="noopener noreferrer"
-              className="h-11 px-7 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors shadow-sm"
+              className="h-11 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2.5 transition-colors shadow-sm"
             >
               <InstagramIcon className="w-4 h-4" />
               <span>Follow Us on Instagram</span>
@@ -168,7 +168,7 @@ export const AboutPage: React.FC = () => {
               href="https://gminteriors.co/"
               target="_blank"
               rel="noopener noreferrer"
-              className="h-11 px-7 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors shadow-sm"
+              className="h-11 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2.5 transition-colors shadow-sm"
             >
               <GlobeIcon className="w-4 h-4 text-background" />
               <span>Visit Official Website</span>

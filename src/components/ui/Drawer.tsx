@@ -19,7 +19,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   title,
   children,
   className,
-  width = 'max-w-md',
+  width = 'w-full max-w-full sm:max-w-md',
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -47,8 +47,8 @@ export const Drawer: React.FC<DrawerProps> = ({
   if (!isOpen) return null
 
   const positionStyles = {
-    right: 'inset-y-0 right-0 h-full w-full',
-    left: 'inset-y-0 left-0 h-full w-full',
+    right: 'inset-y-0 right-0 h-full w-full max-w-full',
+    left: 'inset-y-0 left-0 h-full w-full max-w-full',
     bottom: 'inset-x-0 bottom-0 max-h-[85vh] w-full',
   }
 
@@ -71,9 +71,9 @@ export const Drawer: React.FC<DrawerProps> = ({
           className
         )}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-border shrink-0">
           {title ? (
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground truncate pr-2">
               {title}
             </h3>
           ) : (
@@ -81,14 +81,14 @@ export const Drawer: React.FC<DrawerProps> = ({
           )}
           <button
             onClick={onClose}
-            className="p-1 text-muted hover:text-foreground transition-colors"
+            className="p-2 -mr-2 text-muted hover:text-foreground transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
             aria-label="Close panel"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 pb-safe">{children}</div>
       </div>
     </div>
   )

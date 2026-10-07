@@ -145,7 +145,7 @@ export const HomePage: React.FC = () => {
   return (
     <div className="flex flex-col space-y-8 sm:space-y-10 lg:space-y-12 pb-14 sm:pb-16">
       {/* 1. HERO SECTION */}
-      <section className="relative min-h-[540px] sm:min-h-[580px] lg:h-[80vh] w-full flex items-center overflow-hidden border-b border-border">
+      <section className="relative min-h-[480px] sm:min-h-[580px] lg:h-[80vh] w-full flex items-center overflow-hidden border-b border-border">
         <div className="absolute inset-0 z-0">
           <img
             src="/hero.png"
@@ -153,29 +153,29 @@ export const HomePage: React.FC = () => {
             className="w-full h-full object-cover object-center sm:object-[center_35%]"
             loading="eager"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/30 sm:bg-gradient-to-r sm:from-black/75 sm:via-black/40 sm:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30 sm:bg-gradient-to-r sm:from-black/75 sm:via-black/40 sm:to-transparent" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-28 w-full relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-28 w-full relative z-10">
           <div className="max-w-xl lg:max-w-2xl">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-white leading-[1.1] text-balance">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-light tracking-tight text-white leading-[1.12] text-balance">
               Furniture for considered spaces.
             </h1>
-            <p className="mt-4 sm:mt-5 text-sm sm:text-base text-zinc-200 font-normal leading-relaxed max-w-lg drop-shadow-sm">
+            <p className="mt-3.5 sm:mt-5 text-sm sm:text-base text-zinc-200 font-normal leading-relaxed max-w-lg drop-shadow-sm">
               Handcrafted solid wood furniture and architectural interiors by GM Group. Designed for modern living spaces across India.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <Link
                 to="/shop"
-                className="h-11 px-7 bg-white text-black hover:bg-zinc-100 text-xs font-semibold uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"
+                className="h-11 sm:h-11 px-7 bg-white text-black hover:bg-zinc-100 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg text-center"
               >
                 <span>Shop Furniture</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
               <a
                 href="#new-arrivals"
-                className="h-11 px-7 bg-black/30 backdrop-blur-sm hover:bg-black/50 text-white border border-white/30 text-xs font-semibold uppercase tracking-widest flex items-center gap-2 transition-all"
+                className="h-11 sm:h-11 px-7 bg-black/30 backdrop-blur-sm hover:bg-black/50 text-white border border-white/30 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2 transition-all text-center"
               >
                 <span>Explore New Arrivals</span>
               </a>
@@ -187,7 +187,7 @@ export const HomePage: React.FC = () => {
       {/* 2. TRUST / SERVICE ASSURANCE STRIP */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-6 sm:-mt-8 relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border bg-white border border-border shadow-sm">
-          <div className="p-5 sm:p-6 flex items-start gap-3.5">
+          <div className="p-4 sm:p-6 flex items-start gap-3.5">
             <Award className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
@@ -199,7 +199,7 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 flex items-start gap-3.5">
+          <div className="p-4 sm:p-6 flex items-start gap-3.5">
             <Truck className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
@@ -211,7 +211,7 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 flex items-start gap-3.5">
+          <div className="p-4 sm:p-6 flex items-start gap-3.5">
             <Shield className="w-5 h-5 text-foreground shrink-0 mt-0.5 stroke-[1.5]" />
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
@@ -227,12 +227,12 @@ export const HomePage: React.FC = () => {
 
       {/* 3. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-2 sm:-mt-4">
-        <div className="bg-white border border-border p-6 sm:p-10 lg:p-12 flex flex-col items-center text-center">
-          <div className="mb-4 flex items-center justify-center">
+        <div className="bg-white border border-border p-5 sm:p-10 lg:p-12 flex flex-col items-center text-center">
+          <div className="mb-3.5 sm:mb-4 flex items-center justify-center">
             <img
               src="/logo.png"
               alt="GM Group Logo"
-              className="h-10 sm:h-12 w-auto object-contain"
+              className="h-9 sm:h-12 w-auto object-contain"
             />
           </div>
 
@@ -240,39 +240,39 @@ export const HomePage: React.FC = () => {
             Brand Heritage
           </span>
 
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight text-foreground max-w-2xl uppercase leading-snug">
+          <h2 className="text-base sm:text-2xl lg:text-3xl font-light tracking-tight text-foreground max-w-2xl uppercase leading-snug px-1">
             FROM THE HOUSE OF GM BROTHERS (INTERIORS AND CONSTRUCTIONS)
           </h2>
 
           <div
             ref={metricsRef}
-            className="mt-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10 w-full max-w-2xl border-y border-border"
+            className="mt-6 py-5 sm:py-6 grid grid-cols-2 gap-4 sm:gap-10 w-full max-w-2xl border-y border-border"
           >
-            <div className="flex flex-col items-center">
-              <span className="text-4xl sm:text-5xl font-light text-foreground tracking-tight tabular-nums">
+            <div className="flex flex-col items-center text-center">
+              <span className="text-3xl sm:text-5xl font-light text-foreground tracking-tight tabular-nums">
                 {projectsDisplay}
               </span>
-              <span className="text-xs uppercase tracking-widest text-muted mt-1.5">
-                projects completed in interiors and constructions
+              <span className="text-[10px] sm:text-xs uppercase tracking-widest text-muted mt-1.5 leading-tight">
+                Projects Completed
               </span>
             </div>
 
-            <div className="flex flex-col items-center">
-              <span className="text-4xl sm:text-5xl font-light text-foreground tracking-tight tabular-nums">
+            <div className="flex flex-col items-center text-center">
+              <span className="text-3xl sm:text-5xl font-light text-foreground tracking-tight tabular-nums">
                 {followersDisplay}
               </span>
-              <span className="text-xs uppercase tracking-widest text-muted mt-1.5">
-                followers on Instagram
+              <span className="text-[10px] sm:text-xs uppercase tracking-widest text-muted mt-1.5 leading-tight">
+                Instagram Followers
               </span>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 w-full sm:w-auto">
             <a
               href="https://www.instagram.com/gm_interiors9/"
               target="_blank"
               rel="noopener noreferrer"
-              className="h-11 px-7 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors shadow-sm"
+              className="h-11 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2.5 transition-colors shadow-sm"
             >
               <InstagramIcon className="w-4 h-4" />
               <span>Follow Us on Instagram</span>
@@ -282,7 +282,7 @@ export const HomePage: React.FC = () => {
               href="https://gminteriors.co/"
               target="_blank"
               rel="noopener noreferrer"
-              className="h-11 px-7 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center gap-2.5 transition-colors shadow-sm"
+              className="h-11 px-6 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2.5 transition-colors shadow-sm"
             >
               <Globe className="w-4 h-4 text-background" />
               <span>Visit Official Website</span>
@@ -416,7 +416,79 @@ export const HomePage: React.FC = () => {
             </Link>
           </div>
 
-          <div className="overflow-hidden w-full relative">
+          {/* Mobile Swipe Track (<640px) */}
+          <div className="sm:hidden overflow-x-auto no-scrollbar flex gap-3.5 pb-2 -mx-4 px-4 snap-x snap-mandatory">
+            {rooms.map((room) => {
+              const isDining = room.slug?.toLowerCase().includes('dining') || room.name?.toLowerCase().includes('dining')
+
+              if (isDining) {
+                return (
+                  <Link
+                    key={`mobile-room-${room.id}`}
+                    to="/shop?category=Dining"
+                    className="w-[260px] shrink-0 snap-start flex flex-col bg-background border border-border overflow-hidden cursor-pointer"
+                  >
+                    <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                      <img
+                        src={room.image}
+                        alt={room.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="p-4 flex flex-col flex-1 justify-between">
+                      <div>
+                        {room.tagline && (
+                          <span className="editorial-badge text-muted">{room.tagline}</span>
+                        )}
+                        <h3 className="text-lg font-medium text-foreground mt-1">{room.name}</h3>
+                        <p className="text-xs text-muted mt-1.5 leading-relaxed line-clamp-2">
+                          {room.description}
+                        </p>
+                      </div>
+                      <div className="mt-3.5 pt-2.5 border-t border-border/50 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground uppercase tracking-wider text-[10px]">
+                          VIEW ROOM
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted" />
+                      </div>
+                    </div>
+                  </Link>
+                )
+              }
+
+              return (
+                <div
+                  key={`mobile-room-${room.id}`}
+                  className="w-[260px] shrink-0 snap-start flex flex-col bg-background border border-border overflow-hidden cursor-default select-none pointer-events-none"
+                >
+                  <div className="aspect-[16/10] w-full overflow-hidden relative bg-surface">
+                    <img
+                      src={room.image}
+                      alt={room.name}
+                      className="w-full h-full object-cover opacity-40 brightness-110"
+                      loading="lazy"
+                    />
+                    <ComingSoonOverlay />
+                  </div>
+                  <div className="p-4 flex flex-col flex-1 justify-between">
+                    <div>
+                      {room.tagline && (
+                        <span className="editorial-badge text-muted">{room.tagline}</span>
+                      )}
+                      <h3 className="text-lg font-medium text-muted mt-1">{room.name}</h3>
+                      <p className="text-xs text-muted/70 mt-1.5 leading-relaxed line-clamp-2">
+                        {room.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop Marquee Track (>=640px) */}
+          <div className="hidden sm:block overflow-hidden w-full relative">
             <div className="flex w-max hover:[animation-play-state:paused]">
               <div className="flex shrink-0 gap-5 sm:gap-6 pr-5 sm:pr-6 animate-marquee-slow motion-reduce:animate-none">
                 {rooms.map((room) => {

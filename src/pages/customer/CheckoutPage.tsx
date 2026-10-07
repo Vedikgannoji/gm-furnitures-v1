@@ -283,7 +283,7 @@ export const CheckoutPage: React.FC = () => {
       </div>
 
       <form onSubmit={handleProceedToPay}>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Main Checkout (Left Column: Delivery Address) */}
           <div className="lg:col-span-7 space-y-8">
             <div className="space-y-4">
@@ -503,7 +503,7 @@ export const CheckoutPage: React.FC = () => {
           </div>
 
           {/* Sidebar Order Summary (Right Column) */}
-          <div className="lg:col-span-5 bg-surface border border-border p-6 sm:p-8 sticky top-24 rounded">
+          <div className="lg:col-span-5 bg-surface border border-border p-5 sm:p-7 lg:p-8 sticky top-24 rounded">
             <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground pb-4 border-b border-border">
               Order Review ({items.length} {items.length === 1 ? 'Piece' : 'Pieces'})
             </h3>

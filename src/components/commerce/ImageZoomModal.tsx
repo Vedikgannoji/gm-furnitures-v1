@@ -18,15 +18,22 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 50, y: 50 })
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  // Reset zoom on open
+  // Reset zoom and lock background scroll on open
   useEffect(() => {
     if (isOpen) {
       setZoomLevel(1.5)
       setPosition({ x: 50, y: 50 })
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
     }
   }, [isOpen, imageSrc])
 
-  // ESC key listener
+  // ESC key and popstate listener
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,8 +41,16 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
         onClose()
       }
     }
+    const handlePopState = () => {
+      onClose()
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('popstate', handlePopState)
+    }
   }, [isOpen, onClose])
 
   // Wheel zoom listener
@@ -72,26 +87,29 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
     >
       {/* Top action toolbar */}
       <div
-        className="absolute top-4 inset-x-4 sm:inset-x-8 flex items-center justify-between z-30 pointer-events-none"
+        className="absolute top-4 inset-x-3 sm:inset-x-8 flex items-center justify-between z-30 pointer-events-none pt-safe"
       >
-        <div className="flex items-center gap-2 bg-black/70 backdrop-blur border border-white/20 text-white px-3 py-1.5 rounded text-xs font-mono tracking-wider pointer-events-auto">
-          <span>{Math.round(zoomLevel * 100)}% ZOOM</span>
+        <div className="flex items-center gap-2 bg-black/75 backdrop-blur border border-white/20 text-white px-2.5 py-1.5 rounded text-xs font-mono tracking-wider pointer-events-auto">
+          <span>{Math.round(zoomLevel * 100)}%</span>
           <span className="text-zinc-400">·</span>
           <span className="text-[11px] text-zinc-300 hidden sm:inline">
-            Scroll mouse wheel to zoom in/out · Move to pan
+            Scroll mouse wheel to zoom · Move to pan
+          </span>
+          <span className="text-[11px] text-zinc-300 sm:hidden">
+            Double-tap to reset
           </span>
         </div>
 
         <div className="flex items-center gap-2 pointer-events-auto">
           {/* Zoom controls */}
-          <div className="flex items-center bg-black/70 backdrop-blur border border-white/20 rounded overflow-hidden">
+          <div className="flex items-center bg-black/75 backdrop-blur border border-white/20 rounded overflow-hidden">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 setZoomLevel((prev) => Math.max(1, Number((prev - 0.25).toFixed(2))))
               }}
-              className="p-2 text-white hover:bg-white/20 transition-colors"
+              className="p-2 sm:p-2 text-white hover:bg-white/20 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
               title="Zoom out"
               aria-label="Zoom out"
             >
@@ -104,7 +122,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                 setZoomLevel(1)
                 setPosition({ x: 50, y: 50 })
               }}
-              className="px-2 py-2 text-[11px] text-white hover:bg-white/20 transition-colors font-mono"
+              className="px-2.5 py-2 text-[11px] text-white hover:bg-white/20 transition-colors font-mono min-h-[36px] flex items-center justify-center"
               title="Reset zoom"
               aria-label="Reset zoom"
             >
@@ -116,7 +134,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                 e.stopPropagation()
                 setZoomLevel((prev) => Math.min(4, Number((prev + 0.25).toFixed(2))))
               }}
-              className="p-2 text-white hover:bg-white/20 transition-colors"
+              className="p-2 sm:p-2 text-white hover:bg-white/20 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
               title="Zoom in"
               aria-label="Zoom in"
             >
@@ -128,8 +146,8 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2.5 bg-black/80 hover:bg-white hover:text-black text-white border border-white/20 rounded transition-colors shadow-lg"
-            title="Close viewer (Esc)"
+            className="w-10 h-10 bg-black/85 hover:bg-white hover:text-black text-white border border-white/20 rounded flex items-center justify-center transition-colors shadow-lg active:scale-95"
+            title="Close viewer"
             aria-label="Close viewer"
           >
             <X className="w-5 h-5" />

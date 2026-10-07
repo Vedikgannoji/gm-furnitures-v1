@@ -46,18 +46,19 @@ export const Footer: React.FC = () => {
               <p className="text-xs text-muted mb-3">
                 Receive invitations to new furniture releases and interior design updates.
               </p>
-              <form onSubmit={handleSubscribe} className="flex max-w-sm">
+              <form onSubmit={handleSubscribe} className="flex w-full max-w-sm">
                 <input
                   type="email"
                   required
                   placeholder="Enter your email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-surface border border-border border-r-0 px-3 py-2 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-foreground flex-1"
+                  className="bg-surface border border-border border-r-0 px-3 py-2 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-foreground flex-1 min-w-0"
                 />
                 <button
                   type="submit"
-                  className="bg-foreground text-background px-4 py-2 text-xs uppercase tracking-wider font-medium hover:bg-black/80 transition-colors flex items-center gap-1 shrink-0"
+                  className="bg-foreground text-background px-4 py-2 text-xs uppercase tracking-wider font-medium hover:bg-black/80 transition-colors flex items-center justify-center shrink-0 min-w-[44px]"
+                  aria-label="Subscribe to newsletter"
                 >
                   {subscribed ? <Check className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
                 </button>

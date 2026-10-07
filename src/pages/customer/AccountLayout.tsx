@@ -38,10 +38,10 @@ export const AccountLayout: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Navigation Sidebar */}
-        <aside className="lg:col-span-3 bg-surface border border-border p-4">
-          <nav className="space-y-1">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+        {/* Navigation Sidebar (Horizontal swipe on mobile, vertical sidebar on desktop) */}
+        <aside className="lg:col-span-3 bg-surface border border-border p-3 sm:p-4">
+          <nav className="flex lg:flex-col overflow-x-auto no-scrollbar gap-1.5 pb-1 lg:pb-0">
             {navItems.map((item) => {
               const Icon = item.icon
               return (
@@ -51,22 +51,22 @@ export const AccountLayout: React.FC = () => {
                   end={item.exact}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 px-3 py-2.5 text-xs font-medium transition-colors',
+                      'flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 text-xs font-medium transition-colors shrink-0 whitespace-nowrap rounded-none',
                       isActive
-                        ? 'bg-background text-foreground font-semibold border-l-2 border-foreground shadow-sm'
+                        ? 'bg-background text-foreground font-semibold border-b-2 lg:border-b-0 lg:border-l-2 border-foreground shadow-sm'
                         : 'text-muted hover:text-foreground hover:bg-background/50'
                     )
                   }
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4 shrink-0" />
                   <span>{item.label}</span>
                 </NavLink>
               )
             })}
           </nav>
 
-          {/* Sign Out at bottom of sidebar separated by divider */}
-          <div className="mt-4 pt-3 border-t border-border">
+          {/* Sign Out on desktop, or quick action */}
+          <div className="hidden lg:block mt-4 pt-3 border-t border-border">
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-muted hover:text-foreground hover:bg-background/50 transition-colors"

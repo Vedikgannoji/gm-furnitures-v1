@@ -61,10 +61,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className }) 
             toggleWishlist(product.id, product.name)
           }}
           className={cn(
-            'absolute top-3 right-3 h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm',
+            'absolute top-2.5 right-2.5 sm:top-3 sm:right-3 h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm touch-manipulation',
             isSaved
               ? 'bg-foreground text-background'
-              : 'bg-background/90 hover:bg-background text-foreground opacity-90 sm:opacity-0 sm:group-hover:opacity-100'
+              : 'bg-background/90 hover:bg-background text-foreground opacity-95 sm:opacity-0 sm:group-hover:opacity-100'
           )}
           aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
         >
@@ -81,8 +81,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className }) 
               e.stopPropagation()
               addToCart(product, 1)
             }}
-            className="absolute bottom-3 right-3 sm:left-3 sm:right-3 h-9 bg-background/95 hover:bg-foreground hover:text-background border border-border text-foreground text-xs uppercase tracking-wider font-medium flex items-center justify-center gap-1.5 transition-all duration-200 shadow-sm opacity-90 sm:opacity-0 sm:group-hover:opacity-100 px-3"
+            className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:left-3 sm:right-3 h-9 min-w-[36px] sm:min-w-0 bg-background/95 hover:bg-foreground hover:text-background border border-border text-foreground text-xs uppercase tracking-wider font-medium flex items-center justify-center gap-1.5 transition-all duration-200 shadow-sm opacity-95 sm:opacity-0 sm:group-hover:opacity-100 px-2.5 sm:px-3 touch-manipulation"
             title="Quick add to bag"
+            aria-label="Add to Bag"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Add to Bag</span>
@@ -103,13 +104,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, className }) 
 
         <Link
           to={`/products/${product.slug}`}
-          className="text-sm font-medium text-foreground tracking-tight hover:text-muted transition-colors line-clamp-1"
+          className="text-sm font-medium text-foreground tracking-tight hover:text-muted transition-colors line-clamp-2 leading-snug"
         >
           {product.name}
         </Link>
 
         {product.material && (
-          <p className="text-xs text-muted/90 mt-0.5 line-clamp-1">
+          <p className="text-xs text-muted/90 mt-1 line-clamp-1">
             {product.material}
           </p>
         )}
