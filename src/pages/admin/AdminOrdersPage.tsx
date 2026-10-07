@@ -4,6 +4,14 @@ import { Search, Eye, ShoppingBag, RefreshCw, AlertCircle, ChevronRight } from '
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 
+interface AdminOrderItem {
+  productId?: string
+  name?: string
+  sku?: string
+  price?: number
+  quantity?: number
+}
+
 interface AdminOrder {
   id: string
   orderNumber: string
@@ -12,6 +20,7 @@ interface AdminOrder {
   total: number
   status: string
   paymentStatus: string
+  items?: AdminOrderItem[]
 }
 
 function getStatusBadge(status: string) {
@@ -26,10 +35,8 @@ function getStatusBadge(status: string) {
     case 'shipped':
       return { label: 'Shipped', style: 'bg-indigo-50 text-indigo-800 border-indigo-200' }
     case 'confirmed':
-      return { label: 'Confirmed', style: 'bg-blue-50 text-blue-800 border-blue-200' }
-    case 'pending':
     default:
-      return { label: 'Pending', style: 'bg-amber-50 text-amber-800 border-amber-200' }
+      return { label: 'Confirmed', style: 'bg-blue-50 text-blue-800 border-blue-200' }
   }
 }
 
@@ -86,9 +93,15 @@ export const AdminOrdersPage: React.FC = () => {
       const matchSearch =
         !q ||
         (o.orderNumber || '').toLowerCase().includes(q) ||
+        (o.id || '').toLowerCase().includes(q) ||
         (o.customer?.name || '').toLowerCase().includes(q) ||
         (o.customer?.email || '').toLowerCase().includes(q) ||
-        (o.customer?.phone || '').toLowerCase().includes(q)
+        (o.customer?.phone || '').toLowerCase().includes(q) ||
+        (o.items || []).some(
+          (it) =>
+            (it.sku || '').toLowerCase().includes(q) ||
+            (it.name || '').toLowerCase().includes(q)
+        )
       const matchStatus = statusFilter === 'all' || (o.status || '').toLowerCase() === statusFilter.toLowerCase()
       return matchSearch && matchStatus
     })
@@ -122,7 +135,7 @@ export const AdminOrdersPage: React.FC = () => {
         <div className="relative w-full sm:w-80">
           <input
             type="text"
-            placeholder="Search by order ID, customer name, email..."
+            placeholder="Search by order ID, customer name, email, SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-9 bg-surface pl-8 pr-3 text-xs border border-border focus:border-foreground focus:outline-none"
@@ -135,7 +148,6 @@ export const AdminOrdersPage: React.FC = () => {
           className="h-9 px-3 bg-surface border border-border text-xs focus:border-foreground focus:outline-none cursor-pointer w-full sm:w-auto"
         >
           <option value="all">All Fulfillment Stages ({orders.length})</option>
-          <option value="pending">Pending</option>
           <option value="confirmed">Confirmed</option>
           <option value="shipped">Shipped</option>
           <option value="in_transit">In Transit</option>

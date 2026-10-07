@@ -63,25 +63,25 @@ export const AdminDashboardPage: React.FC = () => {
 
   const kpis = [
     {
+      title: 'Total Revenue',
+      value: stats ? formatCurrency(stats.totalRevenue) : '...',
+      sub: 'Verified paid transactions',
+      icon: FileText,
+      highlight: false,
+    },
+    {
+      title: 'Total Orders',
+      value: stats ? stats.totalOrders.toString() : '...',
+      sub: 'Confirmed customer orders',
+      icon: ShoppingBag,
+      highlight: false,
+    },
+    {
       title: 'Total Furniture Pieces',
       value: stats ? stats.totalProducts.toString() : '...',
       sub: `${stats ? stats.publishedProducts : 0} published catalog items`,
       icon: Package,
       highlight: false,
-    },
-    {
-      title: 'Draft / Unpublished',
-      value: stats ? stats.draftProducts.toString() : '...',
-      sub: 'Pieces in development or archive',
-      icon: Layers,
-      highlight: false,
-    },
-    {
-      title: 'Low Stock Priority',
-      value: stats ? stats.lowStockProducts.toString() : '...',
-      sub: stats && stats.lowStockProducts > 0 ? 'Requires stock replenishing' : 'Inventory adequate',
-      icon: AlertTriangle,
-      highlight: stats && stats.lowStockProducts > 0,
     },
     {
       title: 'Registered Customers',

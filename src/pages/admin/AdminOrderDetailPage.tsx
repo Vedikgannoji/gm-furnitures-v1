@@ -98,7 +98,6 @@ interface AdminOrderDetail {
 }
 
 const STATUS_OPTIONS: Array<{ value: OrderStatus; label: string }> = [
-  { value: 'pending', label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
   { value: 'shipped', label: 'Shipped' },
   { value: 'in_transit', label: 'In Transit' },
@@ -584,11 +583,6 @@ export const AdminOrderDetailPage: React.FC = () => {
             <div className="text-right">
               <span className="text-xs font-mono font-bold block text-black">{invoiceNumber}</span>
               <span className="text-[11px] text-zinc-500 block">Date: {order.date}</span>
-              <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-bold uppercase ${
-                order.status === 'delivered' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-              }`}>
-                {order.status.toUpperCase()}
-              </span>
             </div>
           </div>
 

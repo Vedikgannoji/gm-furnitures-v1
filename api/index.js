@@ -1450,7 +1450,13 @@ app.get("/api/orders", verifyAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const rows = await query(
-      `SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT * FROM orders
+       WHERE user_id = $1
+         AND (payment_status IN ('paid', 'success') OR status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+         AND payment_status != 'failed'
+         AND status != 'failed'
+         AND status != 'pending'
+       ORDER BY created_at DESC`,
       [userId]
     );
     const orders = rows.map((r) => ({
@@ -1465,7 +1471,7 @@ app.get("/api/orders", verifyAuth, async (req, res) => {
       gstPercent: Number(r.gst_percent || 18),
       total: Number(r.total),
       status: r.status,
-      paymentStatus: r.payment_status || "pending",
+      paymentStatus: r.payment_status || "paid",
       paymentMethod: r.payment_method || "cashfree",
       couponCode: r.coupon_code || null,
       couponDiscountType: r.coupon_discount_type || null,
@@ -1486,7 +1492,13 @@ app.get("/api/orders/:id", verifyAuth, async (req, res) => {
     const userId = req.user.id;
     const id = String(req.params.id).trim();
     const r = await queryOne(
-      "SELECT * FROM orders WHERE (id = $1 OR order_number = $1) AND user_id = $2",
+      `SELECT * FROM orders
+       WHERE (id = $1 OR order_number = $1)
+         AND user_id = $2
+         AND (payment_status IN ('paid', 'success') OR status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+         AND payment_status != 'failed'
+         AND status != 'failed'
+         AND status != 'pending'`,
       [id, userId]
     );
     if (!r) {
@@ -2093,7 +2105,7 @@ app.get("/api/payments/cashfree/status", async (req, res) => {
     }
     if (isFailed) {
       await execute(
-        `UPDATE orders SET payment_status = 'failed', updated_at = NOW() WHERE id = $1 AND payment_status != 'paid'`,
+        `UPDATE orders SET payment_status = 'failed', status = 'failed', updated_at = NOW() WHERE id = $1 AND payment_status != 'paid'`,
         [order.id]
       );
       const refreshed = await queryOne("SELECT * FROM orders WHERE id = $1", [order.id]);
@@ -2186,6 +2198,14 @@ app.post("/api/payments/cashfree/webhook", async (req, res) => {
             }
           }
         }
+      }
+    } else {
+      const isFailed = eventType === "PAYMENT_FAILED_WEBHOOK" || eventType === "ORDER_FAILED" || eventType === "PAYMENT_USER_DROPPED_WEBHOOK" || paymentData?.payment_status === "FAILED" || paymentData?.payment_status === "USER_DROPPED" || paymentData?.payment_status === "CANCELLED";
+      if (isFailed) {
+        await execute(
+          `UPDATE orders SET payment_status = 'failed', status = 'failed', updated_at = NOW() WHERE (payment_order_id = $1 OR id = $1) AND payment_status != 'paid'`,
+          [cfOrderId]
+        );
       }
     }
     res.status(200).json({ status: "processed" });
@@ -2872,8 +2892,20 @@ app.get("/api/admin/stats", verifyAdmin, async (_req, res) => {
     const draftProdRow = await queryOne("SELECT COUNT(*) as count FROM products WHERE status != 'published'");
     const lowStockRow = await queryOne("SELECT COUNT(*) as count FROM products WHERE stock <= 3");
     const custRow = await queryOne("SELECT COUNT(*) as count FROM users WHERE role != 'admin'");
-    const ordRow = await queryOne("SELECT COUNT(*) as count FROM orders");
-    const revRow = await queryOne("SELECT SUM(total) as revenue FROM orders");
+    const ordRow = await queryOne(
+      `SELECT COUNT(*) as count FROM orders
+       WHERE (payment_status IN ('paid', 'success') OR status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+         AND payment_status != 'failed'
+         AND status != 'failed'
+         AND status != 'pending'`
+    );
+    const revRow = await queryOne(
+      `SELECT COALESCE(SUM(total), 0) as revenue FROM orders
+       WHERE (payment_status IN ('paid', 'success') OR status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+         AND payment_status != 'failed'
+         AND status != 'failed'
+         AND status != 'pending'`
+    );
     const totalProducts = Number(totalProdRow?.count || 0);
     const publishedProducts = Number(pubProdRow?.count || 0);
     const draftProducts = Number(draftProdRow?.count || 0);
@@ -2885,6 +2917,10 @@ app.get("/api/admin/stats", verifyAdmin, async (_req, res) => {
       `SELECT o.id, o.order_number, o.total, o.status, o.created_at, u.name as customer_name, u.email as customer_email
        FROM orders o
        LEFT JOIN users u ON o.user_id = u.id
+       WHERE (o.payment_status IN ('paid', 'success') OR o.status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+         AND o.payment_status != 'failed'
+         AND o.status != 'failed'
+         AND o.status != 'pending'
        ORDER BY o.created_at DESC
        LIMIT 5`
     );
@@ -2919,17 +2955,37 @@ app.get("/api/admin/stats", verifyAdmin, async (_req, res) => {
     res.status(500).json({ error: "Failed to fetch dashboard metrics." });
   }
 });
-app.get("/api/admin/orders", verifyAdmin, async (_req, res) => {
+app.get("/api/admin/orders", verifyAdmin, async (req, res) => {
   try {
-    const rows = await query(
-      `SELECT
+    const searchParam = typeof req.query.search === "string" ? req.query.search.trim() : "";
+    let querySql = `
+      SELECT
         o.*,
         u.name as customer_name,
         u.email as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      ORDER BY o.created_at DESC`
-    );
+      WHERE (o.payment_status IN ('paid', 'success') OR o.status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+        AND o.payment_status != 'failed'
+        AND o.status != 'failed'
+        AND o.status != 'pending'
+    `;
+    const params = [];
+    if (searchParam) {
+      params.push(`%${searchParam.toLowerCase()}%`);
+      querySql += `
+        AND (
+          LOWER(o.order_number) LIKE $1
+          OR LOWER(o.id) LIKE $1
+          OR LOWER(COALESCE(u.name, '')) LIKE $1
+          OR LOWER(COALESCE(u.email, '')) LIKE $1
+          OR LOWER(COALESCE(o.delivery_address_json, '')) LIKE $1
+          OR LOWER(COALESCE(o.items_json, '')) LIKE $1
+        )
+      `;
+    }
+    querySql += ` ORDER BY o.created_at DESC`;
+    const rows = await query(querySql, params);
     const orders = rows.map((r) => {
       const parsedAddr = safeParseJson(r.delivery_address_json, {});
       return {
@@ -2951,8 +3007,8 @@ app.get("/api/admin/orders", verifyAdmin, async (_req, res) => {
         subtotal: Number(r.subtotal || 0),
         discount: Number(r.discount || 0),
         total: Number(r.total || 0),
-        status: r.status || "pending",
-        paymentStatus: r.payment_status || "pending",
+        status: r.status || "confirmed",
+        paymentStatus: r.payment_status || "paid",
         paymentGateway: r.payment_gateway || "cashfree",
         couponCode: r.coupon_code || null,
         couponDiscountAmount: Number(r.coupon_discount_amount || 0),
@@ -2967,7 +3023,7 @@ app.get("/api/admin/orders", verifyAdmin, async (_req, res) => {
 });
 app.get("/api/admin/orders/:id", verifyAdmin, async (req, res) => {
   try {
-    const id = String(req.params.id);
+    const id = String(req.params.id).trim();
     const r = await queryOne(
       `SELECT
         o.*,
@@ -2975,7 +3031,11 @@ app.get("/api/admin/orders/:id", verifyAdmin, async (req, res) => {
         u.email as customer_email
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      WHERE o.id = $1 OR o.order_number = $1`,
+      WHERE (o.id = $1 OR o.order_number = $1)
+        AND (o.payment_status IN ('paid', 'success') OR o.status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+        AND o.payment_status != 'failed'
+        AND o.status != 'failed'
+        AND o.status != 'pending'`,
       [id]
     );
     if (!r) {
@@ -3085,7 +3145,7 @@ app.patch("/api/admin/orders/:id/status", verifyAdmin, async (req, res) => {
   try {
     const id = String(req.params.id);
     const { status } = req.body;
-    const allowed = ["pending", "confirmed", "shipped", "in_transit", "out_for_delivery", "delivered"];
+    const allowed = ["confirmed", "shipped", "in_transit", "out_for_delivery", "delivered"];
     const normalizedStatus = status ? String(status).toLowerCase().trim() : "";
     if (!normalizedStatus || !allowed.includes(normalizedStatus)) {
       res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(", ")}` });
@@ -3447,7 +3507,12 @@ app.get("/api/admin/customers", verifyAdmin, async (_req, res) => {
         const orderAgg = await queryOne(
           `SELECT COUNT(*) as total_orders, COALESCE(SUM(total), 0) as total_spent,
                   MAX(created_at) as last_order_date
-           FROM orders WHERE user_id = $1`,
+           FROM orders
+           WHERE user_id = $1
+             AND (payment_status IN ('paid', 'success') OR status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+             AND payment_status != 'failed'
+             AND status != 'failed'
+             AND status != 'pending'`,
           [u.id]
         );
         return {
@@ -3500,7 +3565,11 @@ app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
         COALESCE(AVG(o.total), 0)          AS avg_order_value
       FROM orders o
       WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
-        AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date`,
+        AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+        AND (o.payment_status IN ('paid', 'success') OR o.status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+        AND o.payment_status != 'failed'
+        AND o.status != 'failed'
+        AND o.status != 'pending'`,
       dateParams
     );
     const totalOrders = Number(kpiRow?.total_orders || 0);
@@ -3518,6 +3587,10 @@ app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
         SELECT user_id, COUNT(*) AS order_count
         FROM orders
         WHERE user_id IS NOT NULL
+          AND (payment_status IN ('paid', 'success') OR status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+          AND payment_status != 'failed'
+          AND status != 'failed'
+          AND status != 'pending'
         GROUP BY user_id
       ) sub`
     );
@@ -3536,6 +3609,10 @@ app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
         FROM orders o
         WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
           AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+          AND (o.payment_status IN ('paid', 'success') OR o.status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+          AND o.payment_status != 'failed'
+          AND o.status != 'failed'
+          AND o.status != 'pending'
         GROUP BY month_key
         ORDER BY month_key ASC`,
         dateParams
@@ -3575,6 +3652,10 @@ app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
         FROM orders o
         WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
           AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+          AND (o.payment_status IN ('paid', 'success') OR o.status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+          AND o.payment_status != 'failed'
+          AND o.status != 'failed'
+          AND o.status != 'pending'
         GROUP BY day_key
         ORDER BY day_key ASC`,
         dateParams
@@ -3608,7 +3689,11 @@ app.get("/api/admin/analytics", verifyAdmin, async (req, res) => {
       `SELECT o.items_json, o.total
        FROM orders o
        WHERE DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') >= $1::date
-         AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date`,
+         AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') <= $2::date
+         AND (o.payment_status IN ('paid', 'success') OR o.status IN ('confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'))
+         AND o.payment_status != 'failed'
+         AND o.status != 'failed'
+         AND o.status != 'pending'`,
       dateParams
     );
     const categoryMap = {};

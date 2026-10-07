@@ -229,11 +229,6 @@ export const AdminInvoicesPage: React.FC = () => {
               <div className="text-right">
                 <span className="text-xs font-mono font-bold block text-black">{previewInvoice.invoiceNumber}</span>
                 <span className="text-[11px] text-zinc-500 block">Date: {previewInvoice.date}</span>
-                <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-bold uppercase ${
-                  previewInvoice.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                }`}>
-                  {previewInvoice.status === 'paid' ? 'PAID IN FULL' : 'ISSUED'}
-                </span>
               </div>
             </div>
 

@@ -384,7 +384,6 @@ export const AccountOrderDetailPage: React.FC = () => {
             <div className="text-right">
               <p className="font-bold text-zinc-700 uppercase tracking-wider text-[10px]">Payment Mode:</p>
               <p className="font-semibold uppercase mt-1">{order.paymentMethod?.replace('_', ' ')}</p>
-              <p className="text-zinc-600">Status: {order.paymentStatus?.toUpperCase()}</p>
             </div>
           </div>
 

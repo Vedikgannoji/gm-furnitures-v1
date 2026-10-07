@@ -56,13 +56,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onItemClick }) => {
       {/* Brand Header */}
       <div>
         <div className="h-16 px-6 flex items-center justify-between border-b border-border">
-          <Link to="/admin" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-foreground text-background font-semibold flex items-center justify-center text-xs tracking-wider">
-              GM
-            </div>
+          <Link to="/admin" className="flex items-center gap-2.5">
+            <img
+              src="/logo.png"
+              alt="GM Furniture"
+              className="h-7 w-auto object-contain shrink-0"
+            />
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-foreground block">
-                GM Furniture Admin
+                GM Furniture
               </span>
               <span className="text-[10px] text-muted tracking-wider block">
                 Management Console
