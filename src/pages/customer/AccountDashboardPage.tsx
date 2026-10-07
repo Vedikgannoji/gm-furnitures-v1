@@ -41,7 +41,13 @@ export const AccountDashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!token) return
+    if (!token) {
+      setOrderCount(0)
+      setAddressCount(0)
+      setLatestOrder(null)
+      setIsLoading(false)
+      return
+    }
 
     let isMounted = true
 

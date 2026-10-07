@@ -65,7 +65,11 @@ export const AccountOrderDetailPage: React.FC = () => {
   useEffect(() => {
     let isMounted = true
     async function loadOrder() {
-      if (!id || !token) return
+      if (!id || !token) {
+        setOrder(null)
+        setIsLoading(false)
+        return
+      }
       setIsLoading(true)
       try {
         const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(id)}`, {

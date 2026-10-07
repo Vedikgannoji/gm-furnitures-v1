@@ -15,33 +15,8 @@ export const AuthPage: React.FC = () => {
   const { showToast } = useToast()
   const { user, login, register, loginWithGoogle, logout, isAuthenticated, isLoggingOut } = useAuth()
 
-  if (isLoggingOut) {
-    return null
-  }
-
   const isAdminLogin = location.pathname.startsWith('/admin') || searchParams.get('redirect')?.startsWith('/admin') === true
   const requestedRedirect = searchParams.get('redirect') || ''
-
-  /**
-   * Compute the final post-login destination based on the authenticated user's
-   * actual role returned from the server. This is the only source of truth for
-   * role-based routing — never a frontend variable or query param alone.
-   *
-   * Security rule: a ?redirect=/admin param cannot grant a normal user admin
-   * access because isAdminLogin will be true in that case, and the non-admin
-   * branch below calls logout() + shows an error instead of navigating.
-   */
-  function getRedirectDestination(loggedInUser: { role?: string }): string {
-    if (loggedInUser.role === 'admin') {
-      return '/admin'
-    }
-    // For normal users: honour an explicit customer-page redirect, but never
-    // let them be sent to an admin route via a crafted query param.
-    if (requestedRedirect && !requestedRedirect.startsWith('/admin')) {
-      return requestedRedirect
-    }
-    return '/'
-  }
 
   const [tab, setTab] = useState<'login' | 'register' | 'forgot'>('login')
   const [isLoading, setIsLoading] = useState(false)
@@ -51,12 +26,35 @@ export const AuthPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
 
+  /**
+   * Compute the post-login destination based on the authenticated user's
+   * actual role and requested redirect. Customer destinations (e.g. /account/orders)
+   * are ALWAYS honored, even if the user happens to have admin privileges.
+   */
+  function getRedirectDestination(loggedInUser: { role?: string }): string {
+    // 1. Explicit customer-page redirect (e.g. /account/orders, /checkout, /account) ALWAYS takes precedence
+    if (requestedRedirect && !requestedRedirect.startsWith('/admin')) {
+      return requestedRedirect
+    }
+    // 2. Explicit admin redirect is allowed only if the verified role is admin
+    if (requestedRedirect && requestedRedirect.startsWith('/admin') && loggedInUser.role === 'admin') {
+      return requestedRedirect
+    }
+    // 3. Explicit admin portal login (/admin/login)
+    if (isAdminLogin && loggedInUser.role === 'admin') {
+      return '/admin'
+    }
+    // 4. Default for customer storefront login
+    return '/account'
+  }
+
   // If already authenticated, redirect appropriately
   useEffect(() => {
+    if (isLoggingOut) return
     if (isAuthenticated && user) {
       if (isAdminLogin) {
         if (user.role === 'admin') {
-          navigate('/admin', { replace: true })
+          navigate(requestedRedirect?.startsWith('/admin') ? requestedRedirect : '/admin', { replace: true })
         } else {
           setErrorMessage('Access denied. Your active account is not an administrator.')
         }
@@ -65,7 +63,11 @@ export const AuthPage: React.FC = () => {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user, isAdminLogin])
+  }, [isAuthenticated, user, isAdminLogin, isLoggingOut])
+
+  if (isLoggingOut) {
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -94,9 +96,9 @@ export const AuthPage: React.FC = () => {
           navigate(getRedirectDestination(loggedInUser), { replace: true })
         }
       } else if (tab === 'register') {
-        await register(name, email, password)
+        const newUser = await register(name, email, password)
         showToast('Account Created', 'Your account has been created.', 'success')
-        navigate('/', { replace: true })
+        navigate(getRedirectDestination(newUser), { replace: true })
       } else {
         showToast('Instructions Sent', 'If an account exists with this email, password reset instructions have been sent.', 'info')
         setTab('login')

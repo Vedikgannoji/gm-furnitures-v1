@@ -34,7 +34,11 @@ export const AccountAddressesPage: React.FC = () => {
   const [isDefault, setIsDefault] = useState(false)
 
   const fetchAddresses = useCallback(async () => {
-    if (!token) return
+    if (!token) {
+      setAddresses([])
+      setIsLoading(false)
+      return
+    }
     setIsLoading(true)
     try {
       const res = await fetch(`${API_BASE}/api/addresses`, {

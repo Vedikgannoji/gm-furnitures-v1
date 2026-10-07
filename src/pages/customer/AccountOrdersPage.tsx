@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Package, ArrowRight, ShieldCheck, ChevronRight } from 'lucide-react'
+import { Package, ChevronRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { API_BASE } from '@/lib/api'
@@ -73,7 +73,11 @@ export const AccountOrdersPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchOrders = useCallback(async () => {
-    if (!token) return
+    if (!token) {
+      setOrders([])
+      setIsLoading(false)
+      return
+    }
     setIsLoading(true)
     try {
       const res = await fetch(`${API_BASE}/api/orders`, {
@@ -81,7 +85,9 @@ export const AccountOrdersPage: React.FC = () => {
       })
       if (res.ok) {
         const data = await res.json()
-        setOrders(data)
+        setOrders(Array.isArray(data) ? data : [])
+      } else if (res.status === 401) {
+        setOrders([])
       }
     } catch (err) {
       console.error('Failed to load orders:', err)
