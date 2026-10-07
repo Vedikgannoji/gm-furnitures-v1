@@ -284,6 +284,37 @@ export async function initDatabase(): Promise<void> {
       gst_percent REAL NOT NULL DEFAULT 18,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS coupons (
+      id VARCHAR(64) PRIMARY KEY,
+      code VARCHAR(100) UNIQUE NOT NULL,
+      discount_type VARCHAR(50) NOT NULL,
+      discount_value NUMERIC(12, 2) NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS order_status_history (
+      id VARCHAR(64) PRIMARY KEY,
+      order_id VARCHAR(64) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      old_status VARCHAR(50) NOT NULL,
+      new_status VARCHAR(50) NOT NULL,
+      changed_by VARCHAR(255) NOT NULL,
+      changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS contact_inquiries (
+      id VARCHAR(64) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      phone VARCHAR(50),
+      subject VARCHAR(255),
+      message TEXT NOT NULL,
+      status VARCHAR(50) NOT NULL DEFAULT 'new',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `)
 
   // 1b. Schema migrations for existing tables (seamless upgrade)
@@ -298,14 +329,23 @@ export async function initDatabase(): Promise<void> {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree';
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255);
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_type VARCHAR(50);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_value NUMERIC(12, 2);
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(12, 2) DEFAULT 0;
     ALTER TABLE orders ALTER COLUMN subtotal TYPE NUMERIC(12, 2);
     ALTER TABLE orders ALTER COLUMN total TYPE NUMERIC(12, 2);
     ALTER TABLE orders ALTER COLUMN assembly_charge TYPE NUMERIC(12, 2);
     ALTER TABLE orders ALTER COLUMN convenience_fee TYPE NUMERIC(12, 2);
     ALTER TABLE orders ALTER COLUMN gst TYPE NUMERIC(12, 2);
     CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id);
+
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_slug VARCHAR(255);
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_image TEXT;
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS material VARCHAR(255);
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS finish VARCHAR(255);
   `).catch((err) => {
-    console.warn('[Database] Note on orders table schema migration:', err.message)
+    console.warn('[Database] Note on orders/order_items table schema migration:', err.message)
   })
 
   // 2. Create indexes for performance
@@ -325,6 +365,11 @@ export async function initDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_cart_user_id ON cart_items(user_id);
     CREATE INDEX IF NOT EXISTS idx_wishlist_user_id ON wishlist_items(user_id);
     CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);
+    CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
+    CREATE INDEX IF NOT EXISTS idx_coupons_is_active ON coupons(is_active);
+    CREATE INDEX IF NOT EXISTS idx_order_status_history_order_id ON order_status_history(order_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_inquiries_status ON contact_inquiries(status);
+    CREATE INDEX IF NOT EXISTS idx_contact_inquiries_created_at ON contact_inquiries(created_at);
   `)
 
   // 3. Seed admin user
@@ -593,6 +638,21 @@ export async function seedInitialTaxonomyAndSettings(): Promise<void> {
         '36AFNPV7079J1ZG', 'AAACG1234F', 'INR (₹)',
         3000, 0, 18, NOW()
       )`
+    )
+  }
+
+  // 5. Seed initial coupons if table is empty
+  const couponCountRow = await queryOne<{ count: string | number }>(
+    'SELECT COUNT(*) as count FROM coupons'
+  )
+  if (Number(couponCountRow?.count || 0) === 0) {
+    console.log('[Database] Seeding initial coupons (WELCOME10, GM5000)...')
+    await execute(
+      `INSERT INTO coupons (id, code, discount_type, discount_value, is_active, created_at, updated_at)
+       VALUES 
+       ('cpn_welcome10', 'WELCOME10', 'percent', 10, 1, NOW(), NOW()),
+       ('cpn_gm5000', 'GM5000', 'fixed', 5000, 1, NOW(), NOW())
+       ON CONFLICT (code) DO NOTHING`
     )
   }
 }

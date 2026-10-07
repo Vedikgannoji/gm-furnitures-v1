@@ -53,6 +53,59 @@ export const AboutPage: React.FC = () => {
     setGalleryImages((prev) => prev.filter((src) => src !== failedSrc))
   }
 
+  // Contact / Inquiry Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: 'Bespoke Furniture Consultation',
+    message: '',
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handleInquirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      setErrorMessage('Please fill in all required fields.')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      setErrorMessage(null)
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim() || undefined,
+          subject: formData.subject,
+          message: formData.message.trim(),
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit inquiry.')
+
+      setIsSubmitted(true)
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: 'Bespoke Furniture Consultation',
+        message: '',
+      })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send inquiry.'
+      setErrorMessage(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16 space-y-8 sm:space-y-10 lg:space-y-12">
       <Breadcrumbs items={[{ label: 'About Us' }]} className="mb-2 sm:mb-3" />
@@ -75,7 +128,7 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION (Tightened) */}
+      {/* 2. FROM THE HOUSE OF GM GROUP BRAND CREDIBILITY SECTION */}
       <section className="w-full">
         <div className="bg-white border border-border p-6 sm:p-8 lg:p-10 flex flex-col items-center text-center shadow-sm">
           {/* Brand Logo */}
@@ -125,7 +178,7 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. AWARDS SECTION (Compact & Refined) */}
+      {/* 3. AWARDS SECTION */}
       <section className="w-full space-y-4">
         {/* Award 1 */}
         <div className="bg-surface border border-border p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5">
@@ -176,7 +229,7 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. GALLERY (Continuous seamless infinite marquee, slow premium speed) */}
+      {/* 4. GALLERY */}
       {galleryImages.length > 0 && (
         <section className="w-full space-y-3">
           <div className="flex items-end justify-between pb-2 border-b border-border">
@@ -232,6 +285,135 @@ export const AboutPage: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* 5. REAL CUSTOMER INQUIRY / CONSULTATION FORM (Persists to PostgreSQL contact_inquiries) */}
+      <section className="w-full bg-surface border border-border p-6 sm:p-10 shadow-sm">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center pb-6 border-b border-border">
+            <span className="editorial-badge text-muted tracking-widest">Connect with our Atelier</span>
+            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1.5 tracking-tight">
+              Architectural Consultation & Inquiries
+            </h2>
+            <p className="text-xs sm:text-sm text-muted mt-2 max-w-lg mx-auto leading-relaxed">
+              Have a question about our bespoke woodwork, custom architectural furniture, or ongoing projects? Submit your request below.
+            </p>
+          </div>
+
+          {isSubmitted ? (
+            <div className="py-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-600">
+                <Award className="w-6 h-6 stroke-[1.5]" />
+              </div>
+              <h3 className="text-lg font-light text-foreground">
+                Inquiry Received
+              </h3>
+              <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
+                Thank you for contacting GM Furniture. We have received your message and will get back to you soon.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsSubmitted(false)}
+                className="mt-4 px-5 py-2 border border-border text-xs uppercase tracking-wider font-semibold hover:bg-background transition-colors"
+              >
+                Send Another Inquiry
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleInquirySubmit} className="pt-6 space-y-4 text-xs">
+              {errorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs rounded">
+                  {errorMessage}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                    Your Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Ananya Sharma"
+                    className="w-full h-10 bg-background border border-border px-3 text-xs focus:border-foreground focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="e.g. ananya@example.com"
+                    className="w-full h-10 bg-background border border-border px-3 text-xs focus:border-foreground focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g. +91 98765 43210"
+                    className="w-full h-10 bg-background border border-border px-3 text-xs focus:border-foreground focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                    Consultation Subject
+                  </label>
+                  <select
+                    value={formData.subject}
+                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    className="w-full h-10 bg-background border border-border px-3 text-xs focus:border-foreground focus:outline-none cursor-pointer"
+                  >
+                    <option value="Bespoke Furniture Consultation">Bespoke Furniture Consultation</option>
+                    <option value="Architectural Woodwork Inquiry">Architectural Woodwork Inquiry</option>
+                    <option value="Interior Project Execution">Interior Project Execution</option>
+                    <option value="General Store Question">General Store Question</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium uppercase tracking-wider text-muted mb-1">
+                  Message / Space Details *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  placeholder="Share details regarding your room dimensions, wood species preferences, or specific inquiries..."
+                  className="w-full bg-background border border-border p-3 text-xs focus:border-foreground focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto px-8 h-11 bg-foreground text-background hover:bg-black/85 text-xs font-semibold uppercase tracking-widest transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Submitting to Atelier...' : 'Submit Inquiry'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </section>
     </div>
   )
 }

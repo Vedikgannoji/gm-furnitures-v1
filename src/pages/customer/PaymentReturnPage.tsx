@@ -13,15 +13,49 @@ import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/utils'
 
+interface ConfirmedOrderItem {
+  productId?: string
+  name: string
+  price: number
+  quantity: number
+  selectedColor?: string
+  image?: string
+  images?: string[]
+}
+
+interface ConfirmedOrder {
+  id: string
+  orderNumber: string
+  subtotal: number
+  assemblyCharge: number
+  convenienceFee: number
+  convenienceFeePercent: number
+  gst: number
+  gstPercent: number
+  couponCode?: string | null
+  couponDiscountAmount?: number
+  total: number
+  paymentGateway?: string
+  deliveryAddress?: {
+    fullName?: string
+    addressLine?: string
+    city?: string
+    state?: string
+    pincode?: string
+    phone?: string
+  }
+  items?: ConfirmedOrderItem[]
+}
+
 export const PaymentReturnPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const { token } = useAuth()
-  const { clearCart } = useCart()
+  const { refreshCart } = useCart()
 
   const orderIdParam = searchParams.get('order_id')
 
   const [paymentStatus, setPaymentStatus] = useState<'checking' | 'SUCCESS' | 'PENDING' | 'FAILED'>('checking')
-  const [order, setOrder] = useState<any>(null)
+  const [order, setOrder] = useState<ConfirmedOrder | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isRechecking, setIsRechecking] = useState(false)
 
@@ -45,7 +79,7 @@ export const PaymentReturnPage: React.FC = () => {
 
         if (data.paymentStatus === 'SUCCESS') {
           setPaymentStatus('SUCCESS')
-          clearCart()
+          refreshCart().catch((err) => console.error('Error refreshing cart:', err))
         } else if (data.paymentStatus === 'FAILED') {
           setPaymentStatus('FAILED')
           setErrorMessage(data.message || 'Payment was not completed.')
@@ -62,7 +96,7 @@ export const PaymentReturnPage: React.FC = () => {
       setPaymentStatus('FAILED')
       setErrorMessage('Network error while verifying payment status.')
     }
-  }, [orderIdParam, token, clearCart])
+  }, [orderIdParam, token, refreshCart])
 
   useEffect(() => {
     verifyPayment()
@@ -159,28 +193,31 @@ export const PaymentReturnPage: React.FC = () => {
               Ordered Pieces ({order.items?.length || 0})
             </h3>
             <div className="divide-y divide-border/60">
-              {order.items?.map((it: any, idx: number) => (
-                <div key={idx} className="py-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-3">
-                    {it.images?.[0] && (
-                      <img
-                        src={it.images[0]}
-                        alt={it.name}
-                        className="w-12 h-14 object-cover border border-border bg-surface shrink-0"
-                      />
-                    )}
-                    <div>
-                      <p className="font-medium text-foreground">{it.name}</p>
-                      <p className="text-[11px] text-muted">
-                        Qty: {it.quantity} {it.selectedColor ? `• ${it.selectedColor}` : ''}
-                      </p>
+              {order.items?.map((it: ConfirmedOrderItem, idx: number) => {
+                const img = it.image || it.images?.[0]
+                return (
+                  <div key={idx} className="py-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      {img && (
+                        <img
+                          src={img}
+                          alt={it.name}
+                          className="w-12 h-14 object-cover border border-border bg-surface shrink-0"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium text-foreground">{it.name}</p>
+                        <p className="text-[11px] text-muted">
+                          Qty: {it.quantity} {it.selectedColor ? `• ${it.selectedColor}` : ''}
+                        </p>
+                      </div>
                     </div>
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(it.price * it.quantity)}
+                    </span>
                   </div>
-                  <span className="font-semibold text-foreground">
-                    {formatCurrency(it.price * it.quantity)}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -204,6 +241,12 @@ export const PaymentReturnPage: React.FC = () => {
               <span>GST on Convenience Fee ({order.gstPercent}%)</span>
               <span className="text-foreground">{formatCurrency(order.gst)}</span>
             </div>
+            {order.couponDiscountAmount && order.couponDiscountAmount > 0 && (
+              <div className="flex justify-between text-emerald-600 font-medium">
+                <span>Coupon Discount ({order.couponCode || 'APPLIED'})</span>
+                <span>-{formatCurrency(order.couponDiscountAmount)}</span>
+              </div>
+            )}
             <div className="pt-2 border-t border-border flex justify-between font-semibold text-sm">
               <span className="uppercase tracking-wider">Grand Total Paid</span>
               <span>{formatCurrency(order.total)}</span>

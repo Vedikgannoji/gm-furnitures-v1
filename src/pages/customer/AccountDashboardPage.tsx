@@ -6,12 +6,38 @@ import { useWishlist } from '@/context/WishlistContext'
 import { useAuth } from '@/context/AuthContext'
 import { API_BASE } from '@/lib/api'
 
+interface DashboardOrderItem {
+  id?: string
+  productId?: string
+  name?: string
+  sku?: string
+  image?: string
+  images?: string[]
+  product?: {
+    id?: string
+    name?: string
+    images?: string[]
+  }
+  quantity: number
+  selectedColor?: string
+  price: number
+}
+
+interface DashboardOrder {
+  id: string
+  orderNumber: string
+  total: number
+  status: string
+  items?: DashboardOrderItem[]
+  createdAt: string
+}
+
 export const AccountDashboardPage: React.FC = () => {
   const { token, user } = useAuth()
   const { wishlistCount } = useWishlist()
   const [orderCount, setOrderCount] = useState<number>(0)
   const [addressCount, setAddressCount] = useState<number>(0)
-  const [latestOrder, setLatestOrder] = useState<any | null>(null)
+  const [latestOrder, setLatestOrder] = useState<DashboardOrder | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -131,27 +157,35 @@ export const AccountDashboardPage: React.FC = () => {
           </div>
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {latestOrder.items?.map((item: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 p-3 bg-surface border border-border">
-                <img
-                  src={
-                    item.product?.images?.[0] ||
-                    'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=400&q=80'
-                  }
-                  alt={item.product?.name || 'Furniture'}
-                  className="w-12 h-14 object-cover shrink-0 border border-border"
-                />
-                <div className="text-xs truncate">
-                  <p className="font-medium text-foreground truncate">{item.product?.name}</p>
-                  <p className="text-muted mt-0.5 text-[11px]">
-                    Qty: {item.quantity} {item.selectedColor ? `• ${item.selectedColor}` : ''}
-                  </p>
-                  <p className="font-semibold text-foreground mt-1">
-                    {formatCurrency(item.price * item.quantity)}
-                  </p>
+            {latestOrder.items?.map((item: DashboardOrderItem, i: number) => {
+              const imageSrc = item.image || item.images?.[0] || item.product?.images?.[0]
+              const itemName = item.name || item.product?.name || 'Piece'
+
+              return (
+                <div key={i} className="flex items-center gap-3 p-3 bg-surface border border-border">
+                  {imageSrc ? (
+                    <img
+                      src={imageSrc}
+                      alt={itemName}
+                      className="w-12 h-14 object-cover shrink-0 border border-border"
+                    />
+                  ) : (
+                    <div className="w-12 h-14 bg-background border border-border shrink-0 flex items-center justify-center text-muted">
+                      <ShoppingBag className="w-4 h-4 stroke-[1.2]" />
+                    </div>
+                  )}
+                  <div className="text-xs truncate">
+                    <p className="font-medium text-foreground truncate">{itemName}</p>
+                    <p className="text-muted mt-0.5 text-[11px]">
+                      Qty: {item.quantity} {item.selectedColor ? `• ${item.selectedColor}` : ''}
+                    </p>
+                    <p className="font-semibold text-foreground mt-1">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ) : (

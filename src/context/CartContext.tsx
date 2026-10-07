@@ -11,6 +11,7 @@ interface CartContextType {
   removeFromCart: (productId: string, color?: string) => void
   updateQuantity: (productId: string, quantity: number, color?: string) => void
   clearCart: () => void
+  refreshCart: () => Promise<void>
   cartCount: number
   subtotal: number
   assemblyCharge: number
@@ -53,6 +54,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoadingCart(false)
     }
   }, [])
+
+  const refreshCart = useCallback(async () => {
+    if (token) {
+      await fetchDBCart(token)
+    }
+  }, [token, fetchDBCart])
 
   useEffect(() => {
     if (isAuthenticated && token) {
@@ -201,6 +208,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeFromCart,
         updateQuantity,
         clearCart,
+        refreshCart,
         cartCount,
         subtotal,
         assemblyCharge,

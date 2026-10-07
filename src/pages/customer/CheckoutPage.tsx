@@ -5,7 +5,11 @@ import {
   Plus,
   Home,
   Briefcase,
+  Tag,
+  X,
+  Check,
 } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { Button } from '@/components/ui/Button'
 import { useCart } from '@/context/CartContext'
@@ -14,6 +18,14 @@ import { useSettings } from '@/context/SettingsContext'
 import { formatCurrency } from '@/lib/utils'
 import { Address } from '@/types'
 import { getCashfreeSDK } from '@/lib/cashfree'
+
+interface AppliedCouponInfo {
+  code: string
+  discountType: 'percent' | 'fixed'
+  discountValue: number
+  discountAmount: number
+  finalPayable: number
+}
 
 export const CheckoutPage: React.FC = () => {
   const { user, token } = useAuth()
@@ -35,6 +47,12 @@ export const CheckoutPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [saveNewAddress, setSaveNewAddress] = useState(true)
+
+  // Coupon State
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCouponInfo | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
 
   // New Address form fields
   const [formData, setFormData] = useState({
@@ -178,6 +196,7 @@ export const CheckoutPage: React.FC = () => {
             selectedColor: it.selectedColor,
           })),
           deliveryAddress,
+          couponCode: appliedCoupon?.code || undefined,
         }),
       })
 
@@ -516,6 +535,163 @@ export const CheckoutPage: React.FC = () => {
               ))}
             </div>
 
+            {/* Coupon Code Section */}
+            <div className="pt-4 border-t border-border space-y-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" />
+                <span>Coupon Code</span>
+              </span>
+
+              {appliedCoupon ? (
+                <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-xs text-emerald-950 uppercase">
+                          {appliedCoupon.code}
+                        </span>
+                        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.2 bg-emerald-200/80 text-emerald-800 rounded">
+                          {appliedCoupon.discountType === 'percent'
+                            ? `${appliedCoupon.discountValue}% OFF`
+                            : `${formatCurrency(appliedCoupon.discountValue)} OFF`}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-emerald-700 block mt-0.5">
+                        You saved {formatCurrency(appliedCoupon.discountAmount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon(null)
+                      setCouponError(null)
+                    }}
+                    className="p-1 text-muted hover:text-rose-600 transition-colors"
+                    title="Remove coupon"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter promo code (e.g. WELCOME10)"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase())
+                        if (couponError) setCouponError(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const code = couponInput.trim().toUpperCase()
+                          if (code) {
+                            setIsApplyingCoupon(true)
+                            fetch('/api/coupons/validate', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                code,
+                                subtotal,
+                                assemblyCharge,
+                                convenienceFee,
+                                gst,
+                                grandTotal: total,
+                              }),
+                            })
+                              .then((r) => r.json())
+                              .then((d) => {
+                                if (d.valid) {
+                                  try {
+                                    confetti({
+                                      particleCount: 65,
+                                      spread: 60,
+                                      origin: { y: 0.65 },
+                                      colors: ['#18181b', '#d4af37', '#b8860b', '#10b981'],
+                                      disableForReducedMotion: true,
+                                    })
+                                  } catch (err) {
+                                    console.warn('Confetti error:', err)
+                                  }
+                                  setAppliedCoupon(d)
+                                  setCouponInput('')
+                                } else {
+                                  setCouponError(d.error || 'Invalid or expired coupon.')
+                                }
+                              })
+                              .catch(() => setCouponError('Failed to validate coupon.'))
+                              .finally(() => setIsApplyingCoupon(false))
+                          }
+                        }
+                      }}
+                      className="flex-1 h-9 bg-background border border-border px-3 font-mono font-medium text-xs uppercase tracking-wider focus:border-foreground focus:outline-none"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isApplyingCoupon || !couponInput.trim()}
+                      isLoading={isApplyingCoupon}
+                      onClick={async () => {
+                        const code = couponInput.trim().toUpperCase()
+                        if (!code) return
+                        setIsApplyingCoupon(true)
+                        try {
+                          const res = await fetch('/api/coupons/validate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              code,
+                              subtotal,
+                              assemblyCharge,
+                              convenienceFee,
+                              gst,
+                              grandTotal: total,
+                            }),
+                          })
+                          const d = await res.json()
+                          if (res.ok && d.valid) {
+                            try {
+                              confetti({
+                                particleCount: 65,
+                                spread: 60,
+                                origin: { y: 0.65 },
+                                colors: ['#18181b', '#d4af37', '#b8860b', '#10b981'],
+                                disableForReducedMotion: true,
+                              })
+                            } catch (err) {
+                              console.warn('Confetti error:', err)
+                            }
+                            setAppliedCoupon(d)
+                            setCouponInput('')
+                          } else {
+                            setCouponError(d.error || 'Invalid or expired coupon code.')
+                          }
+                        } catch {
+                          setCouponError('Failed to validate coupon.')
+                        } finally {
+                          setIsApplyingCoupon(false)
+                        }
+                      }}
+                      className="px-4 text-xs font-semibold uppercase tracking-wider"
+                    >
+                      APPLY
+                    </Button>
+                  </div>
+                  {couponError && (
+                    <p className="text-[11px] text-rose-600 pl-0.5">{couponError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Financial breakdown */}
             <div className="pt-4 border-t border-border space-y-2.5 text-xs">
               <div className="flex justify-between">
@@ -540,12 +716,19 @@ export const CheckoutPage: React.FC = () => {
                 <span className="font-semibold text-foreground">{formatCurrency(gst)}</span>
               </div>
 
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-600 font-medium">
+                  <span>Coupon Discount ({appliedCoupon.code})</span>
+                  <span>-{formatCurrency(appliedCoupon.discountAmount)}</span>
+                </div>
+              )}
+
               <div className="pt-3 border-t border-border flex justify-between items-baseline">
                 <span className="text-sm font-semibold uppercase tracking-wider text-foreground">
                   Grand Total
                 </span>
                 <span className="text-xl font-bold text-foreground">
-                  {formatCurrency(total)}
+                  {formatCurrency(appliedCoupon ? Math.max(0, total - appliedCoupon.discountAmount) : total)}
                 </span>
               </div>
             </div>

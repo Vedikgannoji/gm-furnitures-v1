@@ -111,11 +111,11 @@ app.use('/api', (_req: Request, res: Response, next: NextFunction) => {
 })
 
 // Helper to safely parse JSON or return fallback
-function safeParseJson(value: any, fallback: any) {
+function safeParseJson<T = any>(value: any, fallback: T): T {
   if (value === null || value === undefined) return fallback
-  if (typeof value === 'object') return value
+  if (typeof value === 'object') return value as T
   try {
-    return JSON.parse(value)
+    return JSON.parse(value) as T
   } catch {
     return fallback
   }
@@ -993,6 +993,100 @@ app.delete('/api/addresses/:id', verifyAuth, async (req: AuthenticatedRequest, r
 // 6. PERSISTENT ORDERS ENDPOINTS
 // ==========================================
 
+export interface DeliveryAddressSnapshot {
+  fullName?: string
+  phone?: string
+  email?: string
+  address?: string
+  street?: string
+  city?: string
+  state?: string
+  pinCode?: string
+  postalCode?: string
+  addressType?: string
+  [key: string]: string | undefined
+}
+
+/**
+ * Formats order item snapshots defensively from database records.
+ * Preserves historical product snapshot (name, sku, slug, price, quantity, color, material, finish, image).
+ * NEVER returns demo/fallback images or mock products.
+ */
+function formatHistoricalItems(rawItems: any): Array<{
+  productId: string
+  name: string
+  sku: string
+  slug: string
+  price: number
+  quantity: number
+  selectedColor?: string
+  material?: string
+  finish?: string
+  image: string
+  images: string[]
+  lineTotal: number
+  product: {
+    id: string
+    name: string
+    sku: string
+    images: string[]
+  }
+}> {
+  const parsed = Array.isArray(rawItems)
+    ? rawItems
+    : typeof rawItems === 'string'
+      ? safeParseJson(rawItems, [])
+      : []
+
+  return parsed.map((item: any) => {
+    const rawImages = item.images || item.images_json || item.product?.images || []
+    const images: string[] = Array.isArray(rawImages)
+      ? rawImages.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      : typeof rawImages === 'string'
+        ? safeParseJson<string[]>(rawImages, []).filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+        : []
+
+    const firstImage = (typeof item.image === 'string' && item.image.trim())
+      ? item.image.trim()
+      : (typeof item.product_image === 'string' && item.product_image.trim())
+        ? item.product_image.trim()
+        : images.length > 0
+          ? images[0]
+          : ''
+
+    const price = Number(item.price || item.product?.price || 0)
+    const quantity = Math.max(1, Math.round(Number(item.quantity || 1)))
+    const prodId = String(item.productId || item.product_id || item.product?.id || '')
+    const name = String(item.name || item.product?.name || 'Bespoke Furniture Piece')
+    const sku = String(item.sku || item.product?.sku || '')
+    const slug = String(item.slug || item.product_slug || item.product?.slug || '')
+    const selectedColor = item.selectedColor || item.selected_color || undefined
+    const material = item.material || undefined
+    const finish = item.finish || undefined
+
+    return {
+      productId: prodId,
+      name,
+      sku,
+      slug,
+      price,
+      quantity,
+      selectedColor,
+      material,
+      finish,
+      image: firstImage,
+      images: images.length > 0 ? images : (firstImage ? [firstImage] : []),
+      lineTotal: price * quantity,
+      product: {
+        id: prodId,
+        name,
+        sku,
+        images: images.length > 0 ? images : (firstImage ? [firstImage] : []),
+      },
+    }
+  })
+}
+
 // Get user orders
 app.get('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -1007,12 +1101,21 @@ app.get('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Respon
       orderNumber: r.order_number,
       subtotal: Number(r.subtotal),
       discount: Number(r.discount || 0),
+      assemblyCharge: Number(r.assembly_charge || 0),
+      convenienceFee: Number(r.convenience_fee || 0),
+      convenienceFeePercent: Number(r.convenience_fee_percent || 0),
+      gst: Number(r.gst || 0),
+      gstPercent: Number(r.gst_percent || 18),
       total: Number(r.total),
       status: r.status,
       paymentStatus: r.payment_status || 'pending',
-      paymentMethod: r.payment_method || 'cod',
+      paymentMethod: r.payment_method || 'cashfree',
+      couponCode: r.coupon_code || null,
+      couponDiscountType: r.coupon_discount_type || null,
+      couponDiscountValue: r.coupon_discount_value != null ? Number(r.coupon_discount_value) : null,
+      couponDiscountAmount: Number(r.coupon_discount_amount || 0),
       deliveryAddress: safeParseJson(r.delivery_address_json, {}),
-      items: safeParseJson(r.items_json, []),
+      items: formatHistoricalItems(r.items_json),
       createdAt: r.created_at,
     }))
 
@@ -1038,17 +1141,47 @@ app.get('/api/orders/:id', verifyAuth, async (req: AuthenticatedRequest, res: Re
       return
     }
 
+    const orderItems = await query(
+      'SELECT * FROM order_items WHERE order_id = $1 ORDER BY created_at ASC',
+      [r.id]
+    )
+
+    const items = orderItems.length > 0
+      ? formatHistoricalItems(orderItems.map((oi) => ({
+          productId: oi.product_id,
+          name: oi.name,
+          sku: oi.sku,
+          slug: oi.product_slug,
+          image: oi.product_image,
+          images_json: oi.images_json,
+          price: oi.price,
+          quantity: oi.quantity,
+          selectedColor: oi.selected_color,
+          material: oi.material,
+          finish: oi.finish,
+        })))
+      : formatHistoricalItems(r.items_json)
+
     res.json({
       id: r.id,
       orderNumber: r.order_number,
       subtotal: Number(r.subtotal),
       discount: Number(r.discount || 0),
+      assemblyCharge: Number(r.assembly_charge || 0),
+      convenienceFee: Number(r.convenience_fee || 0),
+      convenienceFeePercent: Number(r.convenience_fee_percent || 0),
+      gst: Number(r.gst || 0),
+      gstPercent: Number(r.gst_percent || 18),
       total: Number(r.total),
       status: r.status,
       paymentStatus: r.payment_status || 'pending',
-      paymentMethod: r.payment_method || 'cod',
+      paymentMethod: r.payment_method || 'cashfree',
+      couponCode: r.coupon_code || null,
+      couponDiscountType: r.coupon_discount_type || null,
+      couponDiscountValue: r.coupon_discount_value != null ? Number(r.coupon_discount_value) : null,
+      couponDiscountAmount: Number(r.coupon_discount_amount || 0),
       deliveryAddress: safeParseJson(r.delivery_address_json, {}),
-      items: safeParseJson(r.items_json, []),
+      items,
       createdAt: r.created_at,
     })
   } catch (error: any) {
@@ -1116,19 +1249,43 @@ app.post('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Respo
     for (const item of items) {
       const orderItemId = `item_${crypto.randomUUID()}`
       const prodId = item.product?.id || item.productId || null
-      const prodName = item.product?.name || item.name || 'Bespoke Furniture Piece'
-      const prodSku = item.product?.sku || item.sku || 'GM-SKU'
+      let prodName = item.product?.name || item.name || 'Bespoke Furniture Piece'
+      let prodSku = item.product?.sku || item.sku || 'GM-SKU'
+      let prodSlug = item.product?.slug || item.slug || ''
+      let prodMaterial = item.product?.material || item.material || ''
+      let prodFinish = item.product?.finish || item.finish || ''
+      let images = item.product?.images || item.images || []
+
+      if (prodId) {
+        const dbProd = await queryOne<any>(
+          'SELECT name, sku, slug, material, finish, images_json FROM products WHERE id = $1',
+          [prodId]
+        )
+        if (dbProd) {
+          prodName = dbProd.name || prodName
+          prodSku = dbProd.sku || prodSku
+          prodSlug = dbProd.slug || prodSlug
+          prodMaterial = dbProd.material || prodMaterial
+          prodFinish = dbProd.finish || prodFinish
+          if (dbProd.images_json) {
+            images = safeParseJson(dbProd.images_json, images)
+          }
+        }
+      }
+
+      const firstImage = Array.isArray(images) && images.length > 0 && typeof images[0] === 'string' ? images[0] : ''
       const prodPrice = Math.round(Number(item.price || item.product?.price || 0))
       const prodQty = Math.max(1, Math.round(Number(item.quantity || 1)))
       const color = item.selectedColor || null
-      const imagesJson = JSON.stringify(item.product?.images || [])
-      const specsJson = JSON.stringify(item.product?.specifications || [])
+      const imagesJson = JSON.stringify(images)
+      const specsJson = JSON.stringify(item.product?.specifications || item.specifications || [])
 
       await execute(
         `INSERT INTO order_items (
-          id, order_id, product_id, name, sku, price, quantity, selected_color, images_json, specifications_json, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [orderItemId, orderId, prodId, prodName, prodSku, prodPrice, prodQty, color, imagesJson, specsJson, now]
+          id, order_id, product_id, name, sku, price, quantity, selected_color,
+          images_json, specifications_json, product_slug, product_image, material, finish, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [orderItemId, orderId, prodId, prodName, prodSku, prodPrice, prodQty, color, imagesJson, specsJson, prodSlug, firstImage, prodMaterial, prodFinish, now]
       )
 
       // 3. Decrement product stock in products table
@@ -1140,10 +1297,16 @@ app.post('/api/orders', verifyAuth, async (req: AuthenticatedRequest, res: Respo
           [prodQty, now, prodId]
         )
       }
-    }
 
-    // 4. Clear user's persistent cart upon successful order
-    await execute('DELETE FROM cart_items WHERE user_id = $1', [userId])
+      // 4. Remove ONLY purchased item from cart
+      if (userId && prodId) {
+        if (color) {
+          await execute('DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2 AND selected_color = $3', [userId, prodId, color])
+        } else {
+          await execute('DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2', [userId, prodId])
+        }
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -1223,7 +1386,7 @@ function getCashfreeConfig() {
 app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
-    const { items, deliveryAddress } = req.body
+    const { items, deliveryAddress, couponCode } = req.body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: 'Your cart must contain at least one item.' })
@@ -1257,9 +1420,13 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       productId: string
       name: string
       sku: string
+      slug: string
       price: number
       quantity: number
       selectedColor?: string
+      material?: string
+      finish?: string
+      image: string
       images: string[]
       specifications: any[]
     }> = []
@@ -1272,7 +1439,7 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       }
 
       const prod = await queryOne<any>(
-        'SELECT id, name, sku, price, stock, status, images_json, specifications_json FROM products WHERE id = $1',
+        'SELECT id, name, sku, slug, price, stock, status, material, finish, images_json, specifications_json FROM products WHERE id = $1',
         [prodId]
       )
 
@@ -1300,14 +1467,21 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       const specs = typeof prod.specifications_json === 'string'
         ? JSON.parse(prod.specifications_json)
         : (prod.specifications_json || [])
+      const firstValidImage = Array.isArray(images) && images.length > 0 && typeof images[0] === 'string'
+        ? images[0]
+        : ''
 
       verifiedItems.push({
         productId: prod.id,
         name: prod.name,
         sku: prod.sku,
+        slug: prod.slug || '',
         price: Number(prod.price),
         quantity: requestedQty,
         selectedColor: it.selectedColor || undefined,
+        material: prod.material || undefined,
+        finish: prod.finish || undefined,
+        image: firstValidImage,
         images,
         specifications: specs,
       })
@@ -1319,11 +1493,38 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
     const convenienceFeePercent = Number(settingsRow?.convenience_fee_percent ?? 0)
     const gstPercent = Number(settingsRow?.gst_percent ?? 18)
 
-    // Calculate server-side grand total strictly matching pricing rules
+    // Calculate server-side totals strictly matching pricing rules
     const subtotal = verifiedItems.reduce((acc, it) => acc + (it.price * it.quantity), 0)
     const convenienceFee = Math.round(subtotal * (convenienceFeePercent / 100) * 100) / 100
     const gst = Math.round(convenienceFee * (gstPercent / 100) * 100) / 100
-    const grandTotal = Math.round((subtotal + assemblyCharge + convenienceFee + gst) * 100) / 100
+    const baseGrandTotal = Math.round((subtotal + assemblyCharge + convenienceFee + gst) * 100) / 100
+
+    // Coupon discount validation and calculation server-side
+    let appliedCouponCode: string | null = couponCode ? String(couponCode).trim().toUpperCase() : null
+    let couponDiscountType: string | null = null
+    let couponDiscountValue: number | null = null
+    let couponDiscountAmount = 0
+
+    if (appliedCouponCode) {
+      const cpn = await queryOne<any>(
+        'SELECT * FROM coupons WHERE code = $1 AND is_active = 1',
+        [appliedCouponCode]
+      )
+      if (cpn) {
+        couponDiscountType = String(cpn.discount_type).toLowerCase()
+        couponDiscountValue = Number(cpn.discount_value)
+        if (couponDiscountType === 'percent') {
+          couponDiscountAmount = Math.round((baseGrandTotal * (couponDiscountValue / 100)) * 100) / 100
+        } else {
+          couponDiscountAmount = Math.min(baseGrandTotal, couponDiscountValue)
+        }
+        couponDiscountAmount = Math.min(baseGrandTotal, couponDiscountAmount)
+      } else {
+        appliedCouponCode = null
+      }
+    }
+
+    const grandTotal = Math.max(0, Math.round((baseGrandTotal - couponDiscountAmount) * 100) / 100)
 
     // Unique IDs
     const internalOrderId = `ord_${crypto.randomUUID()}`
@@ -1340,17 +1541,19 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
         convenience_fee_percent, gst, gst_percent, total,
         status, payment_status, payment_method, payment_gateway,
         payment_order_id, delivery_address_json, items_json,
+        coupon_code, coupon_discount_type, coupon_discount_value, coupon_discount_amount,
         created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10,
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
         'pending', 'pending', 'cashfree', 'cashfree',
-        $11, $12, $13, NOW(), NOW()
+        $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
       )`,
       [
         internalOrderId,
         orderNumber,
         userId,
         subtotal,
+        couponDiscountAmount,
         assemblyCharge,
         convenienceFee,
         convenienceFeePercent,
@@ -1360,16 +1563,21 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
         cfOrderId,
         JSON.stringify(deliveryAddress),
         JSON.stringify(verifiedItems),
+        appliedCouponCode,
+        couponDiscountType,
+        couponDiscountValue,
+        couponDiscountAmount,
       ]
     )
 
-    // 2. Insert item snapshots
+    // 2. Insert item snapshots with all historical metadata
     for (const it of verifiedItems) {
       const orderItemId = `item_${crypto.randomUUID()}`
       await execute(
         `INSERT INTO order_items (
-          id, order_id, product_id, name, sku, price, quantity, selected_color, images_json, specifications_json, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+          id, order_id, product_id, name, sku, price, quantity, selected_color,
+          images_json, specifications_json, product_slug, product_image, material, finish, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())`,
         [
           orderItemId,
           internalOrderId,
@@ -1381,6 +1589,10 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
           it.selectedColor || null,
           JSON.stringify(it.images),
           JSON.stringify(it.specifications),
+          it.slug || null,
+          it.image || (it.images?.[0] ?? null),
+          it.material || null,
+          it.finish || null,
         ]
       )
     }
@@ -1500,20 +1712,22 @@ function formatOrderFull(ord: any) {
     paymentGateway: ord.payment_gateway,
     paymentOrderId: ord.payment_order_id,
     paymentTransactionId: ord.payment_transaction_id,
+    couponCode: ord.coupon_code || null,
+    couponDiscountType: ord.coupon_discount_type || null,
+    couponDiscountValue: ord.coupon_discount_value != null ? Number(ord.coupon_discount_value) : null,
+    couponDiscountAmount: Number(ord.coupon_discount_amount || 0),
     paidAt: ord.paid_at,
     deliveryAddress: typeof ord.delivery_address_json === 'string'
-      ? JSON.parse(ord.delivery_address_json)
-      : ord.delivery_address_json,
-    items: typeof ord.items_json === 'string'
-      ? JSON.parse(ord.items_json)
-      : ord.items_json,
+      ? safeParseJson(ord.delivery_address_json, {})
+      : (ord.delivery_address_json || {}),
+    items: formatHistoricalItems(ord.items_json),
     createdAt: ord.created_at,
   }
 }
 
 // GET /api/payments/cashfree/status?order_id=...
 // Queries database & verifies payment with Cashfree API.
-// Atomically transitions order to 'paid' and decrements stock on verified success.
+// Atomically transitions order to 'paid', decrements stock, and removes purchased cart items.
 app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => {
   try {
     const orderIdParam = (req.query.order_id as string || '').trim()
@@ -1635,9 +1849,23 @@ app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => 
             }
           }
         }
-        // Clear customer cart
-        if (order.user_id) {
-          await execute('DELETE FROM cart_items WHERE user_id = $1', [order.user_id])
+        // Remove ONLY the purchased cart items from customer's persistent cart
+        if (order.user_id && Array.isArray(items)) {
+          for (const it of items) {
+            const prodId = it.product?.id || it.productId
+            const color = it.selectedColor || it.selected_color
+            if (prodId && color) {
+              await execute(
+                'DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2 AND selected_color = $3',
+                [order.user_id, prodId, color]
+              )
+            } else if (prodId) {
+              await execute(
+                'DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2',
+                [order.user_id, prodId]
+              )
+            }
+          }
         }
       }
 
@@ -1750,8 +1978,23 @@ app.post('/api/payments/cashfree/webhook', async (req: Request, res: Response) =
               }
             }
           }
-          if (order.user_id) {
-            await execute('DELETE FROM cart_items WHERE user_id = $1', [order.user_id])
+          // Remove ONLY purchased items from cart
+          if (order.user_id && Array.isArray(items)) {
+            for (const it of items) {
+              const prodId = it.product?.id || it.productId
+              const color = it.selectedColor || it.selected_color
+              if (prodId && color) {
+                await execute(
+                  'DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2 AND selected_color = $3',
+                  [order.user_id, prodId, color]
+                )
+              } else if (prodId) {
+                await execute(
+                  'DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2',
+                  [order.user_id, prodId]
+                )
+              }
+            }
           }
         }
       }
@@ -2638,35 +2881,45 @@ app.get('/api/admin/orders', verifyAdmin, async (_req: AuthenticatedRequest, res
     const rows = await query(
       `SELECT
         o.id, o.order_number, o.subtotal, o.discount, o.total,
-        o.status, o.payment_status, o.delivery_address_json, o.items_json, o.created_at,
-        u.id as user_id, u.name as customer_name, u.email as customer_email
+        o.assembly_charge, o.convenience_fee, o.gst,
+        o.coupon_code, o.coupon_discount_amount,
+        o.status, o.payment_status, o.payment_gateway, o.payment_order_id,
+        o.delivery_address_json, o.items_json, o.created_at,
+        u.id as user_id, u.name as customer_name, u.email as customer_email, u.phone as customer_phone
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       ORDER BY o.created_at DESC`
     )
 
-    const orders = rows.map((r) => ({
-      id: r.id,
-      orderNumber: r.order_number,
-      date: new Date(r.created_at).toLocaleDateString('en-IN', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }),
-      createdAt: r.created_at,
-      customer: {
-        id: r.user_id || '',
-        name: r.customer_name || 'Store Client',
-        email: r.customer_email || '',
-      },
-      items: safeParseJson(r.items_json, []),
-      subtotal: Number(r.subtotal),
-      discount: Number(r.discount || 0),
-      total: Number(r.total),
-      status: r.status,
-      paymentStatus: r.payment_status || 'pending',
-      deliveryAddress: safeParseJson(r.delivery_address_json, {}),
-    }))
+    const orders = rows.map((r) => {
+      const parsedAddr = safeParseJson<DeliveryAddressSnapshot>(r.delivery_address_json, {})
+      return {
+        id: r.id,
+        orderNumber: r.order_number,
+        date: new Date(r.created_at).toLocaleDateString('en-IN', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        createdAt: r.created_at,
+        customer: {
+          id: r.user_id || '',
+          name: r.customer_name || parsedAddr.fullName || 'Store Client',
+          email: r.customer_email || parsedAddr.email || '',
+          phone: r.customer_phone || parsedAddr.phone || '',
+        },
+        items: formatHistoricalItems(r.items_json),
+        subtotal: Number(r.subtotal),
+        discount: Number(r.discount || 0),
+        total: Number(r.total),
+        status: r.status || 'pending',
+        paymentStatus: r.payment_status || 'pending',
+        paymentGateway: r.payment_gateway || 'cashfree',
+        couponCode: r.coupon_code || null,
+        couponDiscountAmount: Number(r.coupon_discount_amount || 0),
+        deliveryAddress: parsedAddr,
+      }
+    })
 
     res.json(orders)
   } catch (error: any) {
@@ -2675,18 +2928,22 @@ app.get('/api/admin/orders', verifyAdmin, async (_req: AuthenticatedRequest, res
   }
 })
 
-// GET /api/admin/orders/:id - Single order detail with items
+// GET /api/admin/orders/:id - Single order detail with items and status history
 app.get('/api/admin/orders/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const id = String(req.params.id)
     const r = await queryOne(
       `SELECT
         o.id, o.order_number, o.subtotal, o.discount, o.total,
-        o.status, o.payment_status, o.delivery_address_json, o.items_json, o.created_at,
-        u.id as user_id, u.name as customer_name, u.email as customer_email
+        o.assembly_charge, o.convenience_fee, o.gst,
+        o.status, o.payment_status, o.payment_method, o.payment_gateway,
+        o.payment_order_id, o.payment_transaction_id, o.paid_at,
+        o.coupon_code, o.coupon_discount_type, o.coupon_discount_value, o.coupon_discount_amount,
+        o.delivery_address_json, o.items_json, o.created_at, o.updated_at,
+        u.id as user_id, u.name as customer_name, u.email as customer_email, u.phone as customer_phone
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      WHERE o.id = $1`,
+      WHERE o.id = $1 OR o.order_number = $1`,
       [id]
     )
 
@@ -2698,27 +2955,52 @@ app.get('/api/admin/orders/:id', verifyAdmin, async (req: AuthenticatedRequest, 
     // Historical items from order_items table if present, falling back to items_json
     const historicalItems = await query(
       `SELECT * FROM order_items WHERE order_id = $1 ORDER BY created_at ASC`,
-      [id]
+      [r.id]
     )
 
-    const items =
-      historicalItems.length > 0
-        ? historicalItems.map((item) => ({
-            id: item.id,
-            productId: item.product_id,
+    let formattedItems: any[] = []
+    if (historicalItems.length > 0) {
+      formattedItems = historicalItems.map((item) => {
+        const images = safeParseJson(item.images_json, [])
+        const firstValidImg = (typeof item.product_image === 'string' && item.product_image.trim())
+          ? item.product_image.trim()
+          : (images[0] || '')
+        return {
+          id: item.id,
+          productId: item.product_id,
+          name: item.name,
+          sku: item.sku,
+          slug: item.product_slug || '',
+          price: Number(item.price),
+          quantity: Number(item.quantity),
+          lineTotal: Number(item.price) * Number(item.quantity),
+          selectedColor: item.selected_color || '',
+          material: item.material || '',
+          finish: item.finish || '',
+          image: firstValidImg,
+          images: images.length > 0 ? images : (firstValidImg ? [firstValidImg] : []),
+          product: {
+            id: item.product_id,
             name: item.name,
             sku: item.sku,
-            price: Number(item.price),
-            quantity: Number(item.quantity),
-            selectedColor: item.selected_color,
-            product: {
-              id: item.product_id,
-              name: item.name,
-              sku: item.sku,
-              images: safeParseJson(item.images_json, []),
-            },
-          }))
-        : safeParseJson(r.items_json, [])
+            images: images.length > 0 ? images : (firstValidImg ? [firstValidImg] : []),
+          },
+        }
+      })
+    } else {
+      formattedItems = formatHistoricalItems(r.items_json)
+    }
+
+    // Status history
+    const statusHistory = await query(
+      `SELECT id, order_id, old_status, new_status, changed_by, changed_at
+       FROM order_status_history
+       WHERE order_id = $1
+       ORDER BY changed_at ASC`,
+      [r.id]
+    )
+
+    const parsedAddr = safeParseJson<DeliveryAddressSnapshot>(r.delivery_address_json, {})
 
     res.json({
       id: r.id,
@@ -2729,18 +3011,48 @@ app.get('/api/admin/orders/:id', verifyAdmin, async (req: AuthenticatedRequest, 
         year: 'numeric',
       }),
       createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      status: r.status || 'pending',
+      paymentStatus: r.payment_status || 'pending',
+      paymentGateway: r.payment_gateway || 'cashfree',
+      paymentOrderId: r.payment_order_id || null,
+      paymentTransactionId: r.payment_transaction_id || null,
+      paidAt: r.paid_at || null,
       customer: {
         id: r.user_id || '',
-        name: r.customer_name || 'Store Client',
-        email: r.customer_email || '',
+        name: r.customer_name || parsedAddr.fullName || 'Store Client',
+        email: r.customer_email || parsedAddr.email || '',
+        phone: r.customer_phone || parsedAddr.phone || '',
       },
-      items,
-      subtotal: Number(r.subtotal),
-      discount: Number(r.discount || 0),
-      total: Number(r.total),
-      status: r.status,
-      paymentStatus: r.payment_status || 'pending',
-      deliveryAddress: safeParseJson(r.delivery_address_json, {}),
+      deliveryAddress: {
+        fullName: parsedAddr.fullName || '',
+        phone: parsedAddr.phone || '',
+        address: parsedAddr.address || parsedAddr.street || '',
+        city: parsedAddr.city || '',
+        state: parsedAddr.state || '',
+        pinCode: parsedAddr.pinCode || parsedAddr.postalCode || '',
+        addressType: parsedAddr.addressType || 'Home',
+      },
+      items: formattedItems,
+      pricing: {
+        subtotal: Number(r.subtotal),
+        assemblyCharge: Number(r.assembly_charge || 0),
+        convenienceFee: Number(r.convenience_fee || 0),
+        gst: Number(r.gst || 0),
+        couponCode: r.coupon_code || null,
+        couponDiscountType: r.coupon_discount_type || null,
+        couponDiscountValue: r.coupon_discount_value != null ? Number(r.coupon_discount_value) : null,
+        couponDiscountAmount: Number(r.coupon_discount_amount || 0),
+        discount: Number(r.discount || 0),
+        total: Number(r.total),
+      },
+      statusHistory: statusHistory.map((sh) => ({
+        id: sh.id,
+        oldStatus: sh.old_status,
+        newStatus: sh.new_status,
+        changedBy: sh.changed_by,
+        changedAt: sh.changed_at,
+      })),
     })
   } catch (error: any) {
     console.error('Admin fetch order detail error:', error)
@@ -2748,31 +3060,432 @@ app.get('/api/admin/orders/:id', verifyAdmin, async (req: AuthenticatedRequest, 
   }
 })
 
-// PATCH /api/admin/orders/:id/status - Update order status
+// PATCH /api/admin/orders/:id/status - Update order status & persist in order_status_history
 app.patch('/api/admin/orders/:id/status', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const id = String(req.params.id)
     const { status } = req.body
 
-    const allowed = ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
-    if (!status || !allowed.includes(status)) {
+    const allowed = ['pending', 'confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered']
+    const normalizedStatus = status ? String(status).toLowerCase().trim() : ''
+
+    if (!normalizedStatus || !allowed.includes(normalizedStatus)) {
       res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` })
       return
     }
 
-    const existing = await queryOne('SELECT id FROM orders WHERE id = $1', [id])
+    const existing = await queryOne<{ id: string; status: string }>(
+      'SELECT id, status FROM orders WHERE id = $1',
+      [id]
+    )
     if (!existing) {
       res.status(404).json({ error: 'Order not found.' })
       return
     }
 
+    const oldStatus = existing.status || 'pending'
     const now = new Date()
-    await execute('UPDATE orders SET status = $1, updated_at = $2 WHERE id = $3', [status, now, id])
 
-    res.json({ success: true, status })
+    if (oldStatus !== normalizedStatus) {
+      const historyId = `osh_${crypto.randomUUID()}`
+      const adminName = req.user?.email || req.user?.name || 'Admin'
+      await execute(
+        `INSERT INTO order_status_history (id, order_id, old_status, new_status, changed_by, changed_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [historyId, existing.id, oldStatus, normalizedStatus, adminName, now]
+      )
+    }
+
+    await execute('UPDATE orders SET status = $1, updated_at = $2 WHERE id = $3', [
+      normalizedStatus,
+      now,
+      existing.id,
+    ])
+
+    res.json({ success: true, status: normalizedStatus, message: 'Order status updated successfully.' })
   } catch (error: any) {
     console.error('Admin update order status error:', error)
     res.status(500).json({ error: 'Failed to update order status.' })
+  }
+})
+
+// ==========================================
+// 9b. COUPONS MANAGEMENT & VALIDATION
+// ==========================================
+
+// POST /api/coupons/validate - Public / Checkout validation
+app.post('/api/coupons/validate', async (req: Request, res: Response) => {
+  try {
+    const { code, grandTotal, subtotal = 0, assemblyCharge = 0, convenienceFee = 0, gst = 0 } = req.body
+
+    if (!code || typeof code !== 'string' || !code.trim()) {
+      res.status(400).json({ valid: false, error: 'Coupon code is required.' })
+      return
+    }
+
+    const normalizedCode = code.trim().toUpperCase()
+    const coupon = await queryOne<any>(
+      'SELECT * FROM coupons WHERE code = $1 AND is_active = 1',
+      [normalizedCode]
+    )
+
+    if (!coupon) {
+      res.status(404).json({ valid: false, error: 'Invalid or inactive coupon code.' })
+      return
+    }
+
+    // Base total to calculate against
+    const baseTotal = grandTotal != null
+      ? Number(grandTotal)
+      : Math.round((Number(subtotal) + Number(assemblyCharge) + Number(convenienceFee) + Number(gst)) * 100) / 100
+
+    if (baseTotal <= 0) {
+      res.status(400).json({ valid: false, error: 'Order total must be greater than zero to apply coupon.' })
+      return
+    }
+
+    const discountType = String(coupon.discount_type).toLowerCase()
+    const discountValue = Number(coupon.discount_value)
+
+    let discountAmount = 0
+    if (discountType === 'percent') {
+      discountAmount = Math.round((baseTotal * (discountValue / 100)) * 100) / 100
+    } else {
+      discountAmount = Math.min(baseTotal, discountValue)
+    }
+
+    discountAmount = Math.min(baseTotal, Math.max(0, discountAmount))
+    const finalPayable = Math.max(0, Math.round((baseTotal - discountAmount) * 100) / 100)
+
+    res.json({
+      valid: true,
+      code: coupon.code,
+      discountType,
+      discountValue,
+      discountAmount,
+      finalPayable,
+      message: `Coupon "${coupon.code}" applied! You saved ₹${discountAmount.toLocaleString('en-IN')}`,
+    })
+  } catch (error: any) {
+    console.error('Coupon validation error:', error)
+    res.status(500).json({ valid: false, error: 'Failed to validate coupon.' })
+  }
+})
+
+// GET /api/admin/coupons - List all coupons
+app.get('/api/admin/coupons', verifyAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const rows = await query('SELECT * FROM coupons ORDER BY created_at DESC')
+    const coupons = rows.map((c) => ({
+      id: c.id,
+      code: c.code,
+      discountType: c.discount_type,
+      discountValue: Number(c.discount_value),
+      isActive: c.is_active === 1 || c.is_active === true,
+      createdAt: c.created_at,
+      updatedAt: c.updated_at,
+    }))
+    res.json(coupons)
+  } catch (error: any) {
+    console.error('Admin get coupons error:', error)
+    res.status(500).json({ error: 'Failed to fetch coupons.' })
+  }
+})
+
+// POST /api/admin/coupons - Create coupon
+app.post('/api/admin/coupons', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { code, discountType, discountValue, isActive = true } = req.body
+
+    if (!code || typeof code !== 'string' || !code.trim()) {
+      res.status(400).json({ error: 'Coupon code is required.' })
+      return
+    }
+
+    const normalizedCode = code.trim().toUpperCase()
+    const normType = String(discountType || '').toLowerCase().trim()
+
+    if (normType !== 'percent' && normType !== 'fixed') {
+      res.status(400).json({ error: 'Discount type must be either "percent" or "fixed".' })
+      return
+    }
+
+    const numValue = Number(discountValue)
+    if (isNaN(numValue) || numValue <= 0) {
+      res.status(400).json({ error: 'Discount value must be a positive number.' })
+      return
+    }
+
+    if (normType === 'percent' && numValue > 100) {
+      res.status(400).json({ error: 'Percentage discount cannot exceed 100%.' })
+      return
+    }
+
+    const existing = await queryOne('SELECT id FROM coupons WHERE code = $1', [normalizedCode])
+    if (existing) {
+      res.status(400).json({ error: `Coupon code "${normalizedCode}" already exists.` })
+      return
+    }
+
+    const id = `cpn_${crypto.randomUUID()}`
+    const activeInt = isActive ? 1 : 0
+    const now = new Date()
+
+    await execute(
+      `INSERT INTO coupons (id, code, discount_type, discount_value, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, normalizedCode, normType, numValue, activeInt, now, now]
+    )
+
+    const created = await queryOne('SELECT * FROM coupons WHERE id = $1', [id])
+    res.status(201).json({
+      success: true,
+      coupon: {
+        id: created.id,
+        code: created.code,
+        discountType: created.discount_type,
+        discountValue: Number(created.discount_value),
+        isActive: created.is_active === 1,
+        createdAt: created.created_at,
+        updatedAt: created.updated_at,
+      },
+    })
+  } catch (error: any) {
+    console.error('Admin create coupon error:', error)
+    res.status(500).json({ error: 'Failed to create coupon.' })
+  }
+})
+
+// PATCH /api/admin/coupons/:id - Update coupon
+app.patch('/api/admin/coupons/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    const existing = await queryOne<any>('SELECT * FROM coupons WHERE id = $1', [id])
+    if (!existing) {
+      res.status(404).json({ error: 'Coupon not found.' })
+      return
+    }
+
+    const { code, discountType, discountValue, isActive } = req.body
+
+    let normalizedCode = existing.code
+    if (code !== undefined) {
+      if (typeof code !== 'string' || !code.trim()) {
+        res.status(400).json({ error: 'Coupon code cannot be empty.' })
+        return
+      }
+      normalizedCode = code.trim().toUpperCase()
+      const dup = await queryOne('SELECT id FROM coupons WHERE code = $1 AND id != $2', [normalizedCode, id])
+      if (dup) {
+        res.status(400).json({ error: `Coupon code "${normalizedCode}" already in use.` })
+        return
+      }
+    }
+
+    let normType = existing.discount_type
+    if (discountType !== undefined) {
+      normType = String(discountType).toLowerCase().trim()
+      if (normType !== 'percent' && normType !== 'fixed') {
+        res.status(400).json({ error: 'Discount type must be "percent" or "fixed".' })
+        return
+      }
+    }
+
+    let numVal = Number(existing.discount_value)
+    if (discountValue !== undefined) {
+      numVal = Number(discountValue)
+      if (isNaN(numVal) || numVal <= 0) {
+        res.status(400).json({ error: 'Discount value must be positive.' })
+        return
+      }
+      if (normType === 'percent' && numVal > 100) {
+        res.status(400).json({ error: 'Percentage discount cannot exceed 100%.' })
+        return
+      }
+    }
+
+    let activeInt = existing.is_active
+    if (isActive !== undefined) {
+      activeInt = isActive ? 1 : 0
+    }
+
+    const now = new Date()
+    await execute(
+      `UPDATE coupons
+       SET code = $1, discount_type = $2, discount_value = $3, is_active = $4, updated_at = $5
+       WHERE id = $6`,
+      [normalizedCode, normType, numVal, activeInt, now, id]
+    )
+
+    const updated = await queryOne<any>('SELECT * FROM coupons WHERE id = $1', [id])
+    res.json({
+      success: true,
+      coupon: {
+        id: updated.id,
+        code: updated.code,
+        discountType: updated.discount_type,
+        discountValue: Number(updated.discount_value),
+        isActive: updated.is_active === 1,
+        createdAt: updated.created_at,
+        updatedAt: updated.updated_at,
+      },
+    })
+  } catch (error: any) {
+    console.error('Admin update coupon error:', error)
+    res.status(500).json({ error: 'Failed to update coupon.' })
+  }
+})
+
+// DELETE /api/admin/coupons/:id - Delete coupon
+app.delete('/api/admin/coupons/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    const existing = await queryOne('SELECT id, code FROM coupons WHERE id = $1', [id])
+    if (!existing) {
+      res.status(404).json({ error: 'Coupon not found.' })
+      return
+    }
+
+    await execute('DELETE FROM coupons WHERE id = $1', [id])
+    res.json({ success: true, message: 'Coupon deleted successfully.' })
+  } catch (error: any) {
+    console.error('Admin delete coupon error:', error)
+    res.status(500).json({ error: 'Failed to delete coupon.' })
+  }
+})
+
+// ==========================================
+// 9c. CONTACT / INQUIRY ENDPOINTS
+// ==========================================
+
+// POST /api/contact - Customer contact / about inquiry submission
+app.post('/api/contact', async (req: Request, res: Response) => {
+  try {
+    const { name, email, phone, subject, message } = req.body
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'Your name is required.' })
+      return
+    }
+
+    if (!email || typeof email !== 'string' || !email.trim() || !email.includes('@')) {
+      res.status(400).json({ error: 'A valid email address is required.' })
+      return
+    }
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      res.status(400).json({ error: 'Message content is required.' })
+      return
+    }
+
+    const id = `inq_${crypto.randomUUID()}`
+    const now = new Date()
+
+    await execute(
+      `INSERT INTO contact_inquiries (id, name, email, phone, subject, message, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'new', $7, $8)`,
+      [
+        id,
+        name.trim(),
+        email.trim().toLowerCase(),
+        phone ? String(phone).trim() : null,
+        subject ? String(subject).trim() : null,
+        message.trim(),
+        now,
+        now,
+      ]
+    )
+
+    res.status(201).json({
+      success: true,
+      message: 'Thank you for contacting GM Furniture. We have received your message and will get back to you soon.',
+    })
+  } catch (error: any) {
+    console.error('Contact submission error:', error)
+    res.status(500).json({ error: 'Failed to submit your inquiry. Please try again later.' })
+  }
+})
+
+// GET /api/admin/inquiries - List all contact inquiries
+app.get('/api/admin/inquiries', verifyAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const rows = await query('SELECT * FROM contact_inquiries ORDER BY created_at DESC')
+    const inquiries = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      phone: r.phone || '',
+      subject: r.subject || 'General Inquiry',
+      message: r.message,
+      status: r.status || 'new',
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }))
+    res.json(inquiries)
+  } catch (error: any) {
+    console.error('Admin get inquiries error:', error)
+    res.status(500).json({ error: 'Failed to fetch contact inquiries.' })
+  }
+})
+
+// GET /api/admin/inquiries/:id - Single inquiry detail
+app.get('/api/admin/inquiries/:id', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    const r = await queryOne<any>('SELECT * FROM contact_inquiries WHERE id = $1', [id])
+    if (!r) {
+      res.status(404).json({ error: 'Inquiry not found.' })
+      return
+    }
+
+    res.json({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      phone: r.phone || '',
+      subject: r.subject || 'General Inquiry',
+      message: r.message,
+      status: r.status || 'new',
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    })
+  } catch (error: any) {
+    console.error('Admin get single inquiry error:', error)
+    res.status(500).json({ error: 'Failed to fetch inquiry details.' })
+  }
+})
+
+// PATCH /api/admin/inquiries/:id/status - Update inquiry status
+app.patch('/api/admin/inquiries/:id/status', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = String(req.params.id)
+    const { status } = req.body
+
+    const allowed = ['new', 'read', 'resolved']
+    const normalizedStatus = status ? String(status).toLowerCase().trim() : ''
+
+    if (!normalizedStatus || !allowed.includes(normalizedStatus)) {
+      res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` })
+      return
+    }
+
+    const existing = await queryOne('SELECT id FROM contact_inquiries WHERE id = $1', [id])
+    if (!existing) {
+      res.status(404).json({ error: 'Inquiry not found.' })
+      return
+    }
+
+    const now = new Date()
+    await execute('UPDATE contact_inquiries SET status = $1, updated_at = $2 WHERE id = $3', [
+      normalizedStatus,
+      now,
+      id,
+    ])
+
+    res.json({ success: true, status: normalizedStatus, message: 'Inquiry status updated successfully.' })
+  } catch (error: any) {
+    console.error('Admin update inquiry status error:', error)
+    res.status(500).json({ error: 'Failed to update inquiry status.' })
   }
 })
 

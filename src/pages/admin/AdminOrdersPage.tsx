@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import { Search, Eye, ShoppingBag, RefreshCw, AlertCircle } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Search, Eye, ShoppingBag, RefreshCw, AlertCircle, ChevronRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 
@@ -8,15 +8,48 @@ interface AdminOrder {
   id: string
   orderNumber: string
   date: string
-  customer: { id: string; name: string; email: string }
-  items: any[]
-  subtotal: number
+  customer: { id: string; name: string; email: string; phone?: string }
   total: number
   status: string
+  paymentStatus: string
+}
+
+function getStatusBadge(status: string) {
+  const norm = (status || '').toLowerCase().trim()
+  switch (norm) {
+    case 'delivered':
+      return { label: 'Delivered', style: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+    case 'out_for_delivery':
+      return { label: 'Out for Delivery', style: 'bg-cyan-50 text-cyan-800 border-cyan-200' }
+    case 'in_transit':
+      return { label: 'In Transit', style: 'bg-purple-50 text-purple-800 border-purple-200' }
+    case 'shipped':
+      return { label: 'Shipped', style: 'bg-indigo-50 text-indigo-800 border-indigo-200' }
+    case 'confirmed':
+      return { label: 'Confirmed', style: 'bg-blue-50 text-blue-800 border-blue-200' }
+    case 'pending':
+    default:
+      return { label: 'Pending', style: 'bg-amber-50 text-amber-800 border-amber-200' }
+  }
+}
+
+function getPaymentBadge(status: string) {
+  const norm = (status || '').toLowerCase().trim()
+  switch (norm) {
+    case 'paid':
+    case 'success':
+      return { label: 'Paid', style: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+    case 'failed':
+      return { label: 'Failed', style: 'bg-rose-50 text-rose-700 border-rose-200' }
+    case 'pending':
+    default:
+      return { label: 'Pending', style: 'bg-amber-50 text-amber-700 border-amber-200' }
+  }
 }
 
 export const AdminOrdersPage: React.FC = () => {
   const { token } = useAuth()
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -35,14 +68,17 @@ export const AdminOrdersPage: React.FC = () => {
         throw new Error(d.error || 'Failed to load orders.')
       }
       setOrders(await res.json())
-    } catch (err: any) {
-      setError(err.message || 'Unable to connect to database.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unable to connect to database.'
+      setError(message)
     } finally {
       setIsLoading(false)
     }
   }, [token])
 
-  useEffect(() => { fetchOrders() }, [fetchOrders])
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
@@ -51,19 +87,10 @@ export const AdminOrdersPage: React.FC = () => {
         o.orderNumber.toLowerCase().includes(q) ||
         o.customer.name.toLowerCase().includes(q) ||
         o.customer.email.toLowerCase().includes(q)
-      const matchStatus = statusFilter === 'all' || o.status === statusFilter
+      const matchStatus = statusFilter === 'all' || o.status.toLowerCase() === statusFilter.toLowerCase()
       return matchSearch && matchStatus
     })
   }, [orders, searchQuery, statusFilter])
-
-  const statusStyle = (status: string) => {
-    switch (status) {
-      case 'delivered': return 'bg-emerald-50 text-emerald-800 border-emerald-200'
-      case 'shipped':   return 'bg-blue-50 text-blue-800 border-blue-200'
-      case 'cancelled': return 'bg-rose-50 text-rose-800 border-rose-200'
-      default:          return 'bg-zinc-100 text-zinc-800 border-zinc-200'
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -72,10 +99,10 @@ export const AdminOrdersPage: React.FC = () => {
         <div>
           <span className="editorial-badge text-muted">Fulfillment Register</span>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight mt-1">
-            Customer Commissions & Orders
+            Orders & Commissions
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            All orders from the database. Updated in real time.
+            Click any order to view complete order snapshots, items, delivery, and update fulfillment status.
           </p>
         </div>
         <button
@@ -106,11 +133,12 @@ export const AdminOrdersPage: React.FC = () => {
           className="h-9 px-3 bg-surface border border-border text-xs focus:border-foreground focus:outline-none cursor-pointer w-full sm:w-auto"
         >
           <option value="all">All Fulfillment Stages ({orders.length})</option>
+          <option value="pending">Pending</option>
           <option value="confirmed">Confirmed</option>
-          <option value="processing">Processing & QC</option>
-          <option value="shipped">Shipped In Transit</option>
-          <option value="delivered">Delivered & Assembled</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="shipped">Shipped</option>
+          <option value="in_transit">In Transit</option>
+          <option value="out_for_delivery">Out for Delivery</option>
+          <option value="delivered">Delivered</option>
         </select>
       </div>
 
@@ -126,7 +154,7 @@ export const AdminOrdersPage: React.FC = () => {
       )}
 
       {/* Table */}
-      <div className="bg-background border border-border overflow-x-auto">
+      <div className="bg-background border border-border overflow-x-auto shadow-sm">
         {isLoading ? (
           <div className="p-12 text-center">
             <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -148,42 +176,59 @@ export const AdminOrdersPage: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-border bg-surface text-muted uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 font-semibold">Order ID</th>
-                <th className="py-3 px-4 font-semibold">Customer</th>
-                <th className="py-3 px-4 font-semibold">Date</th>
-                <th className="py-3 px-4 font-semibold">Items</th>
-                <th className="py-3 px-4 font-semibold">Total</th>
-                <th className="py-3 px-4 font-semibold">Status</th>
-                <th className="py-3 px-4 font-semibold text-right">Action</th>
+                <th className="py-3.5 px-4 font-semibold">Order ID</th>
+                <th className="py-3.5 px-4 font-semibold">Customer</th>
+                <th className="py-3.5 px-4 font-semibold">Date</th>
+                <th className="py-3.5 px-4 font-semibold">Total</th>
+                <th className="py-3.5 px-4 font-semibold">Payment</th>
+                <th className="py-3.5 px-4 font-semibold">Fulfillment Status</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((ord) => (
-                <tr key={ord.id} className="hover:bg-surface/50 transition-colors">
-                  <td className="py-3 px-4 font-mono font-medium">{ord.orderNumber}</td>
-                  <td className="py-3 px-4">
-                    <span className="font-medium text-foreground block">{ord.customer.name}</span>
-                    <span className="text-[11px] text-muted block">{ord.customer.email}</span>
-                  </td>
-                  <td className="py-3 px-4 text-muted whitespace-nowrap">{ord.date}</td>
-                  <td className="py-3 px-4 font-mono">{ord.items.length} item{ord.items.length !== 1 ? 's' : ''}</td>
-                  <td className="py-3 px-4 font-semibold">{formatCurrency(ord.total)}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${statusStyle(ord.status)}`}>
-                      {ord.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <Link
-                      to={`/admin/orders/${ord.id}`}
-                      className="inline-flex items-center gap-1 text-xs text-foreground font-medium hover:underline p-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Manage</span>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((ord) => {
+                const orderBadge = getStatusBadge(ord.status)
+                const paymentBadge = getPaymentBadge(ord.paymentStatus)
+
+                return (
+                  <tr
+                    key={ord.id}
+                    onClick={() => navigate(`/admin/orders/${ord.id}`)}
+                    className="hover:bg-surface/70 transition-colors cursor-pointer group"
+                  >
+                    <td className="py-3.5 px-4 font-mono font-medium text-foreground">
+                      {ord.orderNumber}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="font-medium text-foreground block">{ord.customer.name}</span>
+                      <span className="text-[11px] text-muted block">{ord.customer.email}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-muted whitespace-nowrap">{ord.date}</td>
+                    <td className="py-3.5 px-4 font-semibold text-foreground">
+                      {formatCurrency(ord.total)}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${paymentBadge.style}`}>
+                        {paymentBadge.label}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider uppercase border ${orderBadge.style}`}>
+                        {orderBadge.label}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <Link
+                        to={`/admin/orders/${ord.id}`}
+                        className="inline-flex items-center gap-1 text-xs text-foreground font-medium hover:underline p-1 group-hover:text-foreground"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Manage</span>
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
@@ -191,3 +236,4 @@ export const AdminOrdersPage: React.FC = () => {
     </div>
   )
 }
+

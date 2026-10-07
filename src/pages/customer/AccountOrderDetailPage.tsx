@@ -11,9 +11,12 @@ import { API_BASE } from '@/lib/api'
 
 interface OrderItem {
   id?: string
+  productId?: string
   name: string
   sku?: string
+  slug?: string
   image?: string
+  images?: string[]
   price: number
   quantity: number
   selectedColor?: string
@@ -28,13 +31,19 @@ interface DatabaseOrder {
   status: string
   paymentStatus: string
   paymentMethod: string
+  couponCode?: string | null
+  couponDiscountType?: string | null
+  couponDiscountValue?: number | null
+  couponDiscountAmount?: number
   deliveryAddress: {
     fullName?: string
     phone?: string
+    address?: string
     addressLine?: string
     city?: string
     state?: string
     postalCode?: string
+    pincode?: string
   }
   items: OrderItem[]
   createdAt: string
@@ -110,30 +119,40 @@ export const AccountOrderDetailPage: React.FC = () => {
   })
 
   // Derive fulfillment milestones based on real database status
-  const statuses = ['confirmed', 'processing', 'shipped', 'delivered']
-  const currentIdx = statuses.indexOf(order.status.toLowerCase())
+  const statuses = ['pending', 'confirmed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered']
+  const currentIdx = statuses.indexOf((order.status || '').toLowerCase().trim())
   const activeIdx = currentIdx >= 0 ? currentIdx : 0
 
   const timeline = [
     {
-      status: 'Order Confirmed',
+      status: 'Order Placed',
       description: 'Your order was verified and logged into our system.',
       completed: activeIdx >= 0,
     },
     {
-      status: 'Atelier Production & Inspection',
-      description: 'Handcrafted solid wood joinery inspected for structural precision.',
+      status: 'Order Confirmed',
+      description: 'Payment confirmed; handcrafted production scheduled in our atelier.',
       completed: activeIdx >= 1,
     },
     {
       status: 'Dispatched for Delivery',
-      description: 'En route with specialized furniture transit handlers.',
+      description: 'Your furniture has been packed with protective wrap and dispatched.',
       completed: activeIdx >= 2,
     },
     {
-      status: 'Delivered & Assembled',
-      description: 'Direct doorstep delivery and complimentary white-glove assembly completed.',
+      status: 'In Transit',
+      description: 'En route with our specialized logistics transit fleet.',
       completed: activeIdx >= 3,
+    },
+    {
+      status: 'Out for Delivery',
+      description: 'Arriving at your doorstep with our white-glove delivery personnel.',
+      completed: activeIdx >= 4,
+    },
+    {
+      status: 'Delivered & Assembled',
+      description: 'Delivery and complimentary assembly completed successfully.',
+      completed: activeIdx >= 5,
     },
   ]
 
@@ -216,43 +235,73 @@ export const AccountOrderDetailPage: React.FC = () => {
           </h3>
 
           <div className="divide-y divide-border">
-            {order.items.map((item, idx) => (
-              <div key={idx} className="py-4 flex gap-4 items-center justify-between">
-                <div className="flex gap-3 items-center">
-                  {item.image && (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-14 h-16 object-cover border border-border shrink-0"
-                    />
-                  )}
-                  <div>
-                    <h4 className="text-xs font-medium text-foreground">{item.name}</h4>
-                    <p className="text-[11px] text-muted mt-0.5">
-                      Finish: {item.selectedColor || 'Natural'} • Qty: {item.quantity}
-                    </p>
-                    {item.sku && <p className="text-[10px] text-muted font-mono mt-0.5">SKU: {item.sku}</p>}
+            {order.items.map((item, idx) => {
+              const imageSrc = item.image || item.images?.[0]
+              return (
+                <div key={idx} className="py-4 flex gap-4 items-center justify-between">
+                  <div className="flex gap-3 items-center">
+                    {imageSrc ? (
+                      <img
+                        src={imageSrc}
+                        alt={item.name}
+                        className="w-14 h-16 object-cover border border-border shrink-0 bg-surface"
+                      />
+                    ) : (
+                      <div className="w-14 h-16 border border-border shrink-0 bg-surface flex items-center justify-center text-muted">
+                        <Package className="w-4 h-4 stroke-[1.2]" />
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground">{item.name}</h4>
+                      <p className="text-[11px] text-muted mt-0.5">
+                        Finish: {item.selectedColor || 'Standard'} • Qty: {item.quantity}
+                      </p>
+                      {item.sku && <p className="text-[10px] text-muted font-mono mt-0.5">SKU: {item.sku}</p>}
+                    </div>
                   </div>
-                </div>
 
-                <span className="text-xs font-semibold text-foreground">
-                  {formatCurrency(item.price * item.quantity)}
-                </span>
-              </div>
-            ))}
+                  <span className="text-xs font-semibold text-foreground">
+                    {formatCurrency(item.price * item.quantity)}
+                  </span>
+                </div>
+              )
+            })}
           </div>
 
           <div className="pt-4 border-t border-border space-y-2 text-xs">
             <div className="flex justify-between text-muted">
-              <span>Product Price</span>
+              <span>Product Subtotal</span>
               <span className="font-semibold text-foreground">{formatCurrency(order.subtotal)}</span>
             </div>
-            {order.discount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <span>Promotional Discount</span>
-                <span className="font-semibold">-{formatCurrency(order.discount)}</span>
+
+            {order.assemblyCharge !== undefined && order.assemblyCharge > 0 && (
+              <div className="flex justify-between text-muted">
+                <span>Assembly Charge</span>
+                <span className="font-semibold text-foreground">{formatCurrency(order.assemblyCharge)}</span>
               </div>
             )}
+
+            {order.convenienceFee !== undefined && order.convenienceFee > 0 && (
+              <div className="flex justify-between text-muted">
+                <span>Convenience Fee</span>
+                <span className="font-semibold text-foreground">{formatCurrency(order.convenienceFee)}</span>
+              </div>
+            )}
+
+            {order.gst !== undefined && order.gst > 0 && (
+              <div className="flex justify-between text-muted">
+                <span>GST on Convenience Fee</span>
+                <span className="font-semibold text-foreground">{formatCurrency(order.gst)}</span>
+              </div>
+            )}
+
+            {order.couponDiscountAmount && order.couponDiscountAmount > 0 ? (
+              <div className="flex justify-between text-emerald-600 font-medium">
+                <span>Coupon Discount ({order.couponCode || 'PROMO'})</span>
+                <span>-{formatCurrency(order.couponDiscountAmount)}</span>
+              </div>
+            ) : null}
+
             <div className="pt-2 border-t border-border flex justify-between items-baseline">
               <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 Total Paid

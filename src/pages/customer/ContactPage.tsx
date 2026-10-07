@@ -7,6 +7,8 @@ import { useToast } from '@/context/ToastContext'
 export const ContactPage: React.FC = () => {
   const { showToast } = useToast()
   const [submitted, setSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,10 +17,47 @@ export const ContactPage: React.FC = () => {
     message: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
-    showToast('Inquiry Received', 'Our support team will contact you within 24 hours.', 'success')
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      showToast('Validation Error', 'Please complete all required fields.', 'error')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      setErrorMessage(null)
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim() || undefined,
+          subject: formData.inquiryType,
+          message: formData.message.trim(),
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit inquiry.')
+
+      setSubmitted(true)
+      showToast('Inquiry Received', data.message || 'Thank you for contacting GM Furniture. We have received your message and will get back to you soon.', 'success')
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        inquiryType: 'furniture',
+        message: '',
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to send message.'
+      setErrorMessage(message)
+      showToast('Error', message, 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

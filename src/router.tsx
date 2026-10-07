@@ -42,6 +42,8 @@ import { AdminRoomsPage } from '@/pages/admin/AdminRoomsPage'
 import { AdminInventoryPage } from '@/pages/admin/AdminInventoryPage'
 import { AdminOrdersPage } from '@/pages/admin/AdminOrdersPage'
 import { AdminOrderDetailPage } from '@/pages/admin/AdminOrderDetailPage'
+import { AdminCouponsPage } from '@/pages/admin/AdminCouponsPage'
+import { AdminInquiriesPage } from '@/pages/admin/AdminInquiriesPage'
 import { AdminCustomersPage } from '@/pages/admin/AdminCustomersPage'
 import { AdminInvoicesPage } from '@/pages/admin/AdminInvoicesPage'
 import { AdminAnalyticsPage } from '@/pages/admin/AdminAnalyticsPage'
@@ -157,6 +159,8 @@ export const router = createBrowserRouter([
       { path: 'inventory', element: <AdminInventoryPage /> },
       { path: 'orders', element: <AdminOrdersPage /> },
       { path: 'orders/:id', element: <AdminOrderDetailPage /> },
+      { path: 'coupons', element: <AdminCouponsPage /> },
+      { path: 'inquiries', element: <AdminInquiriesPage /> },
       { path: 'customers', element: <AdminCustomersPage /> },
       { path: 'invoices', element: <AdminInvoicesPage /> },
       { path: 'analytics', element: <AdminAnalyticsPage /> },
