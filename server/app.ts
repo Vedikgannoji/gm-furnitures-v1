@@ -36,10 +36,28 @@ app.set('trust proxy', true)
  *   explicitly falls back to 'https://gmfurniture.vercel.app'.
  * - In local development, it defaults to 'http://localhost:5173'.
  */
-export function getPublicAppUrl(): string {
+export function getPublicAppUrl(req?: Request): string {
   const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV) || Boolean(process.env.VERCEL_URL)
   const isProd = process.env.NODE_ENV === 'production' || isVercel
   const configured = (process.env.APP_URL || '').trim().replace(/\/$/, '')
+
+  // 1. If request has a valid origin header, return to the exact same origin the user checked out from
+  if (req) {
+    try {
+      const rawOrigin = req.headers.origin || (typeof req.headers.referer === 'string' ? new URL(req.headers.referer).origin : '')
+      const origin = String(rawOrigin || '').trim().replace(/\/$/, '')
+      if (origin) {
+        if (isProd && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+          return origin
+        }
+        if (!isProd) {
+          return origin
+        }
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }
 
   if (isProd) {
     // In production/Vercel, NEVER allow localhost to silently leak into return URLs
@@ -1619,7 +1637,7 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       return
     }
 
-    const appUrl = getPublicAppUrl()
+    const appUrl = getPublicAppUrl(req)
     const returnUrl = `${appUrl}/checkout/payment-return?order_id={order_id}`
 
     // Safe diagnostic logging

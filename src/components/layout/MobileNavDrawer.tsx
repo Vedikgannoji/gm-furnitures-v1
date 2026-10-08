@@ -186,6 +186,16 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClos
         <div className="border-t border-border pt-4 flex flex-col space-y-3">
           {isAuthenticated ? (
             <>
+              {user?.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  onClick={onClose}
+                  className="flex items-center justify-between p-2.5 bg-foreground text-background text-xs uppercase tracking-wider font-semibold hover:bg-black/85 transition-colors shadow-sm mb-1"
+                >
+                  <span>Admin Management Console</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
               <Link
                 to="/account"
                 onClick={onClose}

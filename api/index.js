@@ -624,10 +624,25 @@ async function verifyAdmin(req, res, next) {
 dotenv3.config();
 var app = express();
 app.set("trust proxy", true);
-function getPublicAppUrl() {
+function getPublicAppUrl(req) {
   const isVercel = process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV) || Boolean(process.env.VERCEL_URL);
   const isProd = process.env.NODE_ENV === "production" || isVercel;
   const configured = (process.env.APP_URL || "").trim().replace(/\/$/, "");
+  if (req) {
+    try {
+      const rawOrigin = req.headers.origin || (typeof req.headers.referer === "string" ? new URL(req.headers.referer).origin : "");
+      const origin = String(rawOrigin || "").trim().replace(/\/$/, "");
+      if (origin) {
+        if (isProd && !origin.includes("localhost") && !origin.includes("127.0.0.1")) {
+          return origin;
+        }
+        if (!isProd) {
+          return origin;
+        }
+      }
+    } catch {
+    }
+  }
   if (isProd) {
     if (!configured || configured.includes("localhost") || configured.includes("127.0.0.1")) {
       return "https://gmfurniture.vercel.app";
@@ -1874,7 +1889,7 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
       });
       return;
     }
-    const appUrl = getPublicAppUrl();
+    const appUrl = getPublicAppUrl(req);
     const returnUrl = `${appUrl}/checkout/payment-return?order_id={order_id}`;
     console.log("[Cashfree] Order initialization diagnostic:", {
       appUrlConfigured: Boolean(process.env.APP_URL),

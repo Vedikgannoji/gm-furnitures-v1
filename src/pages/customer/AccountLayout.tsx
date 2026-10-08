@@ -36,6 +36,14 @@ export const AccountLayout: React.FC = () => {
             {user?.email}
           </p>
         </div>
+        {user?.role === 'admin' && (
+          <NavLink
+            to="/admin"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background text-xs uppercase tracking-wider font-semibold hover:bg-black/85 transition-colors self-start sm:self-auto shadow-sm"
+          >
+            <span>OPEN ADMIN PANEL &rarr;</span>
+          </NavLink>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">

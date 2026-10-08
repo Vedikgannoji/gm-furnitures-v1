@@ -28,23 +28,25 @@ export const AuthPage: React.FC = () => {
 
   /**
    * Compute the post-login destination based on the authenticated user's
-   * actual role and requested redirect. Customer destinations (e.g. /account/orders)
-   * are ALWAYS honored, even if the user happens to have admin privileges.
+   * actual role and requested redirect.
+   * - If an explicit customer destination was requested (e.g. /checkout, /account/orders), honour it.
+   * - Authenticated ADMIN users MUST be redirected to the Admin Panel (/admin).
+   * - Regular customers default to their customer Account page (/account).
    */
   function getRedirectDestination(loggedInUser: { role?: string }): string {
-    // 1. Explicit customer-page redirect (e.g. /account/orders, /checkout, /account) ALWAYS takes precedence
+    // 1. Explicit customer-page redirect (e.g. /account/orders, /checkout) ALWAYS takes precedence
     if (requestedRedirect && !requestedRedirect.startsWith('/admin')) {
       return requestedRedirect
     }
     // 2. Explicit admin redirect is allowed only if the verified role is admin
-    if (requestedRedirect && requestedRedirect.startsWith('/admin') && loggedInUser.role === 'admin') {
-      return requestedRedirect
+    if (requestedRedirect && requestedRedirect.startsWith('/admin')) {
+      return loggedInUser.role === 'admin' ? requestedRedirect : '/'
     }
-    // 3. Explicit admin portal login (/admin/login)
-    if (isAdminLogin && loggedInUser.role === 'admin') {
+    // 3. Authenticated ADMIN default: ALWAYS redirect to the Admin Panel (/admin)
+    if (loggedInUser.role === 'admin') {
       return '/admin'
     }
-    // 4. Default for customer storefront login
+    // 4. Authenticated Customer default: Customer Account (/account)
     return '/account'
   }
 

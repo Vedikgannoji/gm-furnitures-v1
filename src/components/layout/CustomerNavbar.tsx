@@ -278,6 +278,15 @@ export const CustomerNavbar: React.FC = () => {
             {/* Auth State & Action Icons */}
             {isAuthenticated && (
               <>
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-foreground text-background text-[10px] font-semibold uppercase tracking-widest hover:bg-black/85 transition-colors shadow-sm"
+                    title="Open Management Console"
+                  >
+                    <span>Admin</span>
+                  </Link>
+                )}
                 <Link
                   to="/account"
                   className="hidden lg:flex w-10 h-10 items-center justify-center text-foreground hover:opacity-70 transition-opacity rounded"
