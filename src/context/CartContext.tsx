@@ -5,13 +5,23 @@ import { useAuth } from './AuthContext'
 import { useSettings } from './SettingsContext'
 import { API_BASE } from '@/lib/api'
 
+export interface PendingCartAction {
+  productId: string
+  quantity: number
+  selectedColor?: string
+  timestamp: number
+}
+
+export const PENDING_CART_STORAGE_KEY = 'gm_pending_cart_action_v1'
+
 interface CartContextType {
   items: CartItem[]
-  addToCart: (product: Product, quantity?: number, color?: string) => void
+  addToCart: (product: Product, quantity?: number, color?: string) => Promise<void>
   removeFromCart: (productId: string, color?: string) => void
   updateQuantity: (productId: string, quantity: number, color?: string) => void
   clearCart: () => void
   refreshCart: () => Promise<void>
+  processPendingCartAction: (authToken?: string, userRole?: string) => Promise<boolean>
   cartCount: number
   subtotal: number
   assemblyCharge: number
@@ -31,11 +41,12 @@ const GUEST_CART_STORAGE_KEY = 'gm_furniture_guest_cart_v1'
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { showToast } = useToast()
-  const { token, isAuthenticated } = useAuth()
+  const { token, isAuthenticated, user } = useAuth()
   const { settings } = useSettings()
   const [items, setItems] = useState<CartItem[]>([])
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false)
   const [isLoadingCart, setIsLoadingCart] = useState(false)
+  const isProcessingPendingRef = React.useRef(false)
 
   // Fetch cart from database when authenticated
   const fetchDBCart = useCallback(async (authToken: string) => {
@@ -61,22 +72,135 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token, fetchDBCart])
 
+  /**
+   * Process and restore pending Add to Bag action after customer authentication.
+   * Admin accounts are strictly isolated and never receive pending cart actions.
+   */
+  const processPendingCartAction = useCallback(
+    async (authToken?: string, userRole?: string): Promise<boolean> => {
+      const effectiveRole = userRole || user?.role
+      if (effectiveRole === 'admin') {
+        return false
+      }
+
+      const tokenToUse =
+        authToken ||
+        token ||
+        (typeof window !== 'undefined' ? localStorage.getItem('gm_auth_token') : null)
+
+      if (!tokenToUse) {
+        return false
+      }
+
+      // Guard against race conditions and duplicate executions
+      if (isProcessingPendingRef.current) {
+        return false
+      }
+
+      const stored =
+        typeof window !== 'undefined'
+          ? localStorage.getItem(PENDING_CART_STORAGE_KEY)
+          : null
+      if (!stored) {
+        return false
+      }
+
+      let pending: PendingCartAction
+      try {
+        pending = JSON.parse(stored)
+      } catch {
+        localStorage.removeItem(PENDING_CART_STORAGE_KEY)
+        return false
+      }
+
+      if (!pending?.productId) {
+        localStorage.removeItem(PENDING_CART_STORAGE_KEY)
+        return false
+      }
+
+      // Expire stale pending actions older than 7 days
+      if (pending.timestamp && Date.now() - pending.timestamp > 7 * 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(PENDING_CART_STORAGE_KEY)
+        return false
+      }
+
+      isProcessingPendingRef.current = true
+
+      try {
+        const res = await fetch(`${API_BASE}/api/cart`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${tokenToUse}`,
+          },
+          body: JSON.stringify({
+            productId: pending.productId,
+            quantity: Math.max(1, pending.quantity || 1),
+            selectedColor: pending.selectedColor || 'Standard',
+          }),
+        })
+
+        const data = await res.json().catch(() => ({}))
+
+        if (res.ok) {
+          // Clear pending action ONLY after cart operation successfully completes
+          localStorage.removeItem(PENDING_CART_STORAGE_KEY)
+          await fetchDBCart(tokenToUse)
+          showToast('Added to Bag', 'Product added to your shopping bag.', 'success')
+          return true
+        } else {
+          // If server rejects with 400 or 404 (unavailable/out of stock/not found), clear stale pending action
+          if (res.status === 400 || res.status === 404) {
+            localStorage.removeItem(PENDING_CART_STORAGE_KEY)
+            showToast('Item Unavailable', data.error || "Couldn't add this item to your bag.", 'error')
+          } else {
+            showToast('Cart Error', "Couldn't add this item to your bag. Please try again.", 'error')
+          }
+          return false
+        }
+      } catch (err) {
+        console.error('Failed to process pending cart action:', err)
+        showToast('Cart Error', "Couldn't add this item to your bag. Please try again.", 'error')
+        return false
+      } finally {
+        isProcessingPendingRef.current = false
+      }
+    },
+    [token, user?.role, fetchDBCart, showToast]
+  )
+
   useEffect(() => {
     if (isAuthenticated && token) {
       fetchDBCart(token)
+      if (user?.role !== 'admin') {
+        processPendingCartAction(token, user?.role)
+      }
     } else {
       setItems([])
     }
-  }, [isAuthenticated, token, fetchDBCart])
+  }, [isAuthenticated, token, user?.role, fetchDBCart, processPendingCartAction])
 
   const addToCart = async (product: Product, quantity = 1, color?: string) => {
+    const selectedColor = color || (product.colors?.[0]?.name ?? 'Standard')
+
     if (!isAuthenticated || !token) {
+      // Preserve intended cart action before navigating to authentication
+      const pendingAction: PendingCartAction = {
+        productId: product.id,
+        quantity: Math.max(1, quantity),
+        selectedColor,
+        timestamp: Date.now(),
+      }
+      try {
+        localStorage.setItem(PENDING_CART_STORAGE_KEY, JSON.stringify(pendingAction))
+      } catch (err) {
+        console.error('Failed to preserve pending cart action:', err)
+      }
+
       showToast('Sign In Required', 'Please sign in to add items to your shopping bag.', 'info')
       window.location.href = '/auth'
       return
     }
-
-    const selectedColor = color || (product.colors?.[0]?.name ?? 'Standard')
 
     // Optimistic local update
     setItems((prev) => {
@@ -220,6 +344,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isCartDrawerOpen,
         setIsCartDrawerOpen,
         isLoadingCart,
+        processPendingCartAction,
       }}
     >
       {children}

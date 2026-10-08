@@ -741,10 +741,28 @@ app.post('/api/cart', verifyAuth, async (req: AuthenticatedRequest, res: Respons
       return
     }
 
-    // Verify product exists
-    const product = await queryOne('SELECT id FROM products WHERE id = $1', [productId])
+    const numQuantity = Math.max(1, Number(quantity) || 1)
+
+    // Verify product exists and is purchasable
+    const product = await queryOne<{
+      id: string
+      name: string
+      status?: string
+      stock?: number
+    }>('SELECT id, name, status, stock FROM products WHERE id = $1', [productId])
+
     if (!product) {
       res.status(404).json({ error: 'Product not found.' })
+      return
+    }
+
+    if (product.status && product.status !== 'published' && product.status !== 'active') {
+      res.status(400).json({ error: `"${product.name}" is currently unavailable for purchase.` })
+      return
+    }
+
+    if (product.stock !== undefined && product.stock !== null && product.stock <= 0) {
+      res.status(400).json({ error: `"${product.name}" is currently out of stock.` })
       return
     }
 
@@ -760,14 +778,14 @@ app.post('/api/cart', verifyAuth, async (req: AuthenticatedRequest, res: Respons
         `UPDATE cart_items
          SET quantity = quantity + $1, updated_at = $2
          WHERE id = $3`,
-        [Number(quantity), now, existing.id]
+        [numQuantity, now, existing.id]
       )
     } else {
       const cartItemId = `cart_${crypto.randomUUID()}`
       await execute(
         `INSERT INTO cart_items (id, user_id, product_id, quantity, selected_color, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [cartItemId, userId, productId, Number(quantity), selectedColor, now, now]
+        [cartItemId, userId, productId, numQuantity, selectedColor, now, now]
       )
     }
 

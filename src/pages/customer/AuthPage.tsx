@@ -4,6 +4,7 @@ import { Lock, Mail, User, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
+import { useCart } from '@/context/CartContext'
 import { GoogleLogin } from '@react-oauth/google'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
@@ -14,6 +15,7 @@ export const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const { showToast } = useToast()
   const { user, login, register, loginWithGoogle, logout, isAuthenticated, isLoggingOut } = useAuth()
+  const { processPendingCartAction } = useCart()
 
   const isAdminLogin = location.pathname.startsWith('/admin') || searchParams.get('redirect')?.startsWith('/admin') === true
   const requestedRedirect = searchParams.get('redirect') || ''
@@ -29,25 +31,24 @@ export const AuthPage: React.FC = () => {
   /**
    * Compute the post-login destination based on the authenticated user's
    * actual role and requested redirect.
-   * - If an explicit customer destination was requested (e.g. /checkout, /account/orders), honour it.
    * - Authenticated ADMIN users MUST be redirected to the Admin Panel (/admin).
-   * - Regular customers default to their customer Account page (/account).
+   * - Regular customers default to Homepage (/), NEVER /account.
    */
   function getRedirectDestination(loggedInUser: { role?: string }): string {
-    // 1. Explicit customer-page redirect (e.g. /account/orders, /checkout) ALWAYS takes precedence
-    if (requestedRedirect && !requestedRedirect.startsWith('/admin')) {
-      return requestedRedirect
-    }
-    // 2. Explicit admin redirect is allowed only if the verified role is admin
+    // 1. Explicit admin redirect is allowed only if the verified role is admin
     if (requestedRedirect && requestedRedirect.startsWith('/admin')) {
       return loggedInUser.role === 'admin' ? requestedRedirect : '/'
     }
-    // 3. Authenticated ADMIN default: ALWAYS redirect to the Admin Panel (/admin)
+    // 2. Authenticated ADMIN default: ALWAYS redirect to the Admin Panel (/admin)
     if (loggedInUser.role === 'admin') {
       return '/admin'
     }
-    // 4. Authenticated Customer default: Customer Account (/account)
-    return '/account'
+    // 3. Explicit customer-page redirect (e.g. /checkout) takes precedence if requested
+    if (requestedRedirect && !requestedRedirect.startsWith('/admin')) {
+      return requestedRedirect
+    }
+    // 4. Authenticated Customer default: Homepage (/) - NEVER /account
+    return '/'
   }
 
   // If already authenticated, redirect appropriately
@@ -94,12 +95,26 @@ export const AuthPage: React.FC = () => {
             setErrorMessage('Access denied. This account does not possess administrator privileges.')
           }
         } else {
-          showToast('Signed In', 'Welcome back.', 'success')
+          let wasAdded = false
+          if (loggedInUser.role !== 'admin') {
+            const activeToken = localStorage.getItem('gm_auth_token') || undefined
+            wasAdded = await processPendingCartAction(activeToken, loggedInUser.role)
+          }
+          if (!wasAdded) {
+            showToast('Signed In', 'Welcome back.', 'success')
+          }
           navigate(getRedirectDestination(loggedInUser), { replace: true })
         }
       } else if (tab === 'register') {
         const newUser = await register(name, email, password)
-        showToast('Account Created', 'Your account has been created.', 'success')
+        let wasAdded = false
+        if (newUser.role !== 'admin') {
+          const activeToken = localStorage.getItem('gm_auth_token') || undefined
+          wasAdded = await processPendingCartAction(activeToken, newUser.role)
+        }
+        if (!wasAdded) {
+          showToast('Account Created', 'Your account has been created.', 'success')
+        }
         navigate(getRedirectDestination(newUser), { replace: true })
       } else {
         showToast('Instructions Sent', 'If an account exists with this email, password reset instructions have been sent.', 'info')
@@ -131,7 +146,14 @@ export const AuthPage: React.FC = () => {
           setErrorMessage('Access denied. This Google account does not possess administrator privileges.')
         }
       } else {
-        showToast('Signed In', 'Signed in with Google.', 'success')
+        let wasAdded = false
+        if (loggedInUser.role !== 'admin') {
+          const activeToken = localStorage.getItem('gm_auth_token') || undefined
+          wasAdded = await processPendingCartAction(activeToken, loggedInUser.role)
+        }
+        if (!wasAdded) {
+          showToast('Signed In', 'Signed in with Google.', 'success')
+        }
         navigate(getRedirectDestination(loggedInUser), { replace: true })
       }
     } catch (err: any) {

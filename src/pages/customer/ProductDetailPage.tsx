@@ -24,6 +24,7 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { useCart } from '@/context/CartContext'
 import { useWishlist } from '@/context/WishlistContext'
 import { useToast } from '@/context/ToastContext'
+import { useAuth } from '@/context/AuthContext'
 
 const ProductDetailSkeleton: React.FC = () => (
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 sm:pb-16 animate-pulse">
@@ -86,6 +87,7 @@ export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { addToCart, setIsCartDrawerOpen } = useCart()
+  const { isAuthenticated } = useAuth()
   const { isInWishlist, toggleWishlist } = useWishlist()
   const { showToast } = useToast()
   const { products, isLoading: isCatalogLoading } = useProducts()
@@ -197,12 +199,16 @@ export const ProductDetailPage: React.FC = () => {
 
   const handleAddToCart = () => {
     addToCart(product, quantity, selectedColor)
-    setIsCartDrawerOpen(true)
+    if (isAuthenticated) {
+      setIsCartDrawerOpen(true)
+    }
   }
 
   const handleBuyNow = () => {
     addToCart(product, quantity, selectedColor)
-    navigate('/checkout')
+    if (isAuthenticated) {
+      navigate('/checkout')
+    }
   }
 
   const handleShare = () => {
