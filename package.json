@@ -12,6 +12,8 @@
     "dev:client": "vite",
     "build": "tsc -b && vite build && esbuild server/app.ts --bundle --platform=node --format=esm --outfile=api/index.js --packages=external",
     "db:migrate": "tsx scripts/migrate.ts",
+    "test": "tsx scripts/test-cashfree-gateway.ts && tsx scripts/test-api.ts",
+    "test:cashfree": "tsx scripts/test-cashfree-gateway.ts",
     "test:api": "tsx scripts/test-api.ts",
     "lint": "oxlint",
     "preview": "vite preview"

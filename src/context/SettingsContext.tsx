@@ -21,6 +21,7 @@ const defaultSettings: StoreSettings = {
   assemblyCharge: 3000,
   convenienceFeePercent: 0,
   gstPercent: 18,
+  cashfreeEnvironment: 'sandbox',
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -46,6 +47,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           assemblyCharge: Number(data.assemblyCharge !== undefined ? data.assemblyCharge : defaultSettings.assemblyCharge),
           convenienceFeePercent: Number(data.convenienceFeePercent !== undefined ? data.convenienceFeePercent : defaultSettings.convenienceFeePercent),
           gstPercent: Number(data.gstPercent !== undefined ? data.gstPercent : defaultSettings.gstPercent),
+          cashfreeEnvironment: data.cashfreeEnvironment || 'sandbox',
         })
       }
     } catch (err) {

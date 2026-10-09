@@ -37,7 +37,15 @@ export function getPool(): pg.Pool {
   return pool
 }
 
+type MockQueryHandler = (text: string, params: any[]) => Promise<any[]> | any[]
+let mockQueryHandler: MockQueryHandler | null = null
+
+export function setMockQueryHandler(handler: MockQueryHandler | null) {
+  mockQueryHandler = handler
+}
+
 export function hasDatabaseUrl(): boolean {
+  if (mockQueryHandler) return true
   const connectionString =
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
@@ -47,6 +55,9 @@ export function hasDatabaseUrl(): boolean {
 }
 
 export async function testDatabaseConnection(): Promise<{ ok: boolean; error?: string }> {
+  if (mockQueryHandler) {
+    return { ok: true }
+  }
   if (!hasDatabaseUrl()) {
     return { ok: false, error: 'DATABASE_URL is not set' }
   }
@@ -63,6 +74,10 @@ export async function testDatabaseConnection(): Promise<{ ok: boolean; error?: s
  * Execute a query returning an array of typed rows
  */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  if (mockQueryHandler) {
+    const res = await mockQueryHandler(text, params)
+    return (Array.isArray(res) ? res : []) as T[]
+  }
   if (!hasDatabaseUrl()) {
     throw new Error('Database is not configured. DATABASE_URL is missing.')
   }
@@ -83,6 +98,10 @@ export async function queryOne<T = any>(text: string, params: any[] = []): Promi
  * Execute a mutation query (INSERT, UPDATE, DELETE)
  */
 export async function execute(text: string, params: any[] = []): Promise<{ rowCount: number }> {
+  if (mockQueryHandler) {
+    const res = await mockQueryHandler(text, params)
+    return { rowCount: Array.isArray(res) ? res.length : (res ? 1 : 0) }
+  }
   if (!hasDatabaseUrl()) {
     throw new Error('Database is not configured. DATABASE_URL is missing.')
   }
@@ -94,6 +113,9 @@ export async function execute(text: string, params: any[] = []): Promise<{ rowCo
 let initPromise: Promise<void> | null = null
 
 export function ensureDatabaseInitialized(): Promise<void> {
+  if (mockQueryHandler) {
+    return Promise.resolve()
+  }
   if (!initPromise) {
     initPromise = initDatabase().catch((err) => {
       console.error('[Database] Initialization failed:', err)
@@ -215,6 +237,7 @@ export async function initDatabase(): Promise<void> {
       payment_transaction_id VARCHAR(255),
       payment_gateway VARCHAR(50) DEFAULT 'cashfree',
       payment_session_id VARCHAR(255),
+      payment_environment VARCHAR(20) NOT NULL DEFAULT 'sandbox',
       paid_at TIMESTAMPTZ,
       delivery_address_json TEXT NOT NULL,
       items_json TEXT NOT NULL,
@@ -282,6 +305,7 @@ export async function initDatabase(): Promise<void> {
       assembly_charge INTEGER NOT NULL DEFAULT 3000,
       convenience_fee_percent REAL NOT NULL DEFAULT 0,
       gst_percent REAL NOT NULL DEFAULT 18,
+      cashfree_environment VARCHAR(20) NOT NULL DEFAULT 'sandbox',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
@@ -329,12 +353,15 @@ export async function initDatabase(): Promise<void> {
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255)',
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT \'cashfree\'',
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255)',
+    'ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_environment VARCHAR(20) NOT NULL DEFAULT \'sandbox\'',
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ',
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100)',
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_type VARCHAR(50)',
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_value NUMERIC(12, 2)',
     'ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(12, 2) DEFAULT 0',
     'CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id)',
+    'CREATE INDEX IF NOT EXISTS idx_orders_payment_environment ON orders(payment_environment)',
+    'ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS cashfree_environment VARCHAR(20) NOT NULL DEFAULT \'sandbox\'',
     'ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_slug VARCHAR(255)',
     'ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_image TEXT',
     'ALTER TABLE order_items ADD COLUMN IF NOT EXISTS material VARCHAR(255)',
@@ -631,13 +658,13 @@ export async function seedInitialTaxonomyAndSettings(): Promise<void> {
       `INSERT INTO store_settings (
         id, store_name, brand_tagline, support_email, support_phone,
         registered_address, gstin, pan, currency,
-        assembly_charge, convenience_fee_percent, gst_percent, updated_at
+        assembly_charge, convenience_fee_percent, gst_percent, cashfree_environment, updated_at
       ) VALUES (
         'default', 'GM Furniture', 'Handcrafted Solid Wood Furniture for Modern Living',
         'support@gmfurniture.in', '+91 (011) 4920-8000',
         'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
         '36AFNPV7079J1ZG', 'AAACG1234F', 'INR (₹)',
-        3000, 0, 18, NOW()
+        3000, 0, 18, 'sandbox', NOW()
       )`
     )
   }

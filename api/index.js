@@ -1,8 +1,8 @@
 // server/app.ts
 import express from "express";
 import cors from "cors";
-import dotenv3 from "dotenv";
-import crypto2 from "node:crypto";
+import dotenv4 from "dotenv";
+import crypto3 from "node:crypto";
 
 // server/db.ts
 import pg from "pg";
@@ -29,11 +29,16 @@ function getPool() {
   }
   return pool;
 }
+var mockQueryHandler = null;
 function hasDatabaseUrl() {
+  if (mockQueryHandler) return true;
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || "";
   return connectionString.trim().length > 0;
 }
 async function testDatabaseConnection() {
+  if (mockQueryHandler) {
+    return { ok: true };
+  }
   if (!hasDatabaseUrl()) {
     return { ok: false, error: "DATABASE_URL is not set" };
   }
@@ -46,6 +51,10 @@ async function testDatabaseConnection() {
   }
 }
 async function query(text, params = []) {
+  if (mockQueryHandler) {
+    const res = await mockQueryHandler(text, params);
+    return Array.isArray(res) ? res : [];
+  }
   if (!hasDatabaseUrl()) {
     throw new Error("Database is not configured. DATABASE_URL is missing.");
   }
@@ -58,6 +67,10 @@ async function queryOne(text, params = []) {
   return rows.length > 0 ? rows[0] : null;
 }
 async function execute(text, params = []) {
+  if (mockQueryHandler) {
+    const res = await mockQueryHandler(text, params);
+    return { rowCount: Array.isArray(res) ? res.length : res ? 1 : 0 };
+  }
   if (!hasDatabaseUrl()) {
     throw new Error("Database is not configured. DATABASE_URL is missing.");
   }
@@ -67,6 +80,9 @@ async function execute(text, params = []) {
 }
 var initPromise = null;
 function ensureDatabaseInitialized() {
+  if (mockQueryHandler) {
+    return Promise.resolve();
+  }
   if (!initPromise) {
     initPromise = initDatabase().catch((err) => {
       console.error("[Database] Initialization failed:", err);
@@ -181,6 +197,7 @@ async function initDatabase() {
       payment_transaction_id VARCHAR(255),
       payment_gateway VARCHAR(50) DEFAULT 'cashfree',
       payment_session_id VARCHAR(255),
+      payment_environment VARCHAR(20) NOT NULL DEFAULT 'sandbox',
       paid_at TIMESTAMPTZ,
       delivery_address_json TEXT NOT NULL,
       items_json TEXT NOT NULL,
@@ -248,6 +265,7 @@ async function initDatabase() {
       assembly_charge INTEGER NOT NULL DEFAULT 3000,
       convenience_fee_percent REAL NOT NULL DEFAULT 0,
       gst_percent REAL NOT NULL DEFAULT 18,
+      cashfree_environment VARCHAR(20) NOT NULL DEFAULT 'sandbox',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
@@ -293,12 +311,15 @@ async function initDatabase() {
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(255)",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50) DEFAULT 'cashfree'",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_session_id VARCHAR(255)",
+    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_environment VARCHAR(20) NOT NULL DEFAULT 'sandbox'",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100)",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_type VARCHAR(50)",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_value NUMERIC(12, 2)",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(12, 2) DEFAULT 0",
     "CREATE INDEX IF NOT EXISTS idx_orders_payment_order_id ON orders(payment_order_id)",
+    "CREATE INDEX IF NOT EXISTS idx_orders_payment_environment ON orders(payment_environment)",
+    "ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS cashfree_environment VARCHAR(20) NOT NULL DEFAULT 'sandbox'",
     "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_slug VARCHAR(255)",
     "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_image TEXT",
     "ALTER TABLE order_items ADD COLUMN IF NOT EXISTS material VARCHAR(255)",
@@ -500,13 +521,13 @@ async function seedInitialTaxonomyAndSettings() {
       `INSERT INTO store_settings (
         id, store_name, brand_tagline, support_email, support_phone,
         registered_address, gstin, pan, currency,
-        assembly_charge, convenience_fee_percent, gst_percent, updated_at
+        assembly_charge, convenience_fee_percent, gst_percent, cashfree_environment, updated_at
       ) VALUES (
         'default', 'GM Furniture', 'Handcrafted Solid Wood Furniture for Modern Living',
         'support@gmfurniture.in', '+91 (011) 4920-8000',
         'Studio GM, Sector 44, Institutional Area, Gurugram, Haryana 122003, India',
         '36AFNPV7079J1ZG', 'AAACG1234F', 'INR (\u20B9)',
-        3000, 0, 18, NOW()
+        3000, 0, 18, 'sandbox', NOW()
       )`
     );
   }
@@ -620,10 +641,213 @@ async function verifyAdmin(req, res, next) {
   });
 }
 
-// server/app.ts
+// server/cashfree.ts
+import crypto2 from "node:crypto";
+import dotenv3 from "dotenv";
 dotenv3.config();
+var CASHFREE_SANDBOX_BASE_URL = "https://sandbox.cashfree.com/pg";
+var CASHFREE_PRODUCTION_BASE_URL = "https://api.cashfree.com/pg";
+var CASHFREE_API_VERSION = "2023-08-01";
+function isTestCredential(id) {
+  if (!id) return false;
+  const trimmed = id.trim();
+  return trimmed.startsWith("TEST") || trimmed.toLowerCase().startsWith("test_") || trimmed.toLowerCase().includes("_test_");
+}
+function isTestSecret(secret) {
+  if (!secret) return false;
+  const trimmed = secret.trim();
+  return trimmed.startsWith("cfsk_ma_test_") || trimmed.toLowerCase().includes("_test_");
+}
+function sanitizeEnvironment(raw) {
+  const normalized = (raw || "").trim().toLowerCase();
+  if (normalized === "production") {
+    return "production";
+  }
+  return "sandbox";
+}
+function getCashfreeCredentialsForEnv(env) {
+  if (env === "production") {
+    const dedicatedId2 = (process.env.CASHFREE_PRODUCTION_CLIENT_ID || process.env.CASHFREE_PROD_CLIENT_ID || "").trim();
+    const dedicatedSecret2 = (process.env.CASHFREE_PRODUCTION_CLIENT_SECRET || process.env.CASHFREE_PROD_CLIENT_SECRET || "").trim();
+    const generalId2 = (process.env.CASHFREE_CLIENT_ID || "").trim();
+    const generalSecret2 = (process.env.CASHFREE_CLIENT_SECRET || "").trim();
+    const globalEnv2 = (process.env.CASHFREE_ENVIRONMENT || "").trim().toLowerCase();
+    let clientId2 = dedicatedId2;
+    let clientSecret2 = dedicatedSecret2;
+    if (!clientId2 && globalEnv2 === "production" && !isTestCredential(generalId2)) {
+      clientId2 = generalId2;
+    }
+    if (!clientSecret2 && globalEnv2 === "production" && !isTestSecret(generalSecret2)) {
+      clientSecret2 = generalSecret2;
+    }
+    if (isTestCredential(clientId2) || isTestSecret(clientSecret2)) {
+      return {
+        clientId: "",
+        clientSecret: "",
+        isConfigured: false
+      };
+    }
+    const isConfigured2 = Boolean(clientId2 && clientSecret2);
+    return { clientId: clientId2, clientSecret: clientSecret2, isConfigured: isConfigured2 };
+  }
+  const dedicatedId = (process.env.CASHFREE_SANDBOX_CLIENT_ID || "").trim();
+  const dedicatedSecret = (process.env.CASHFREE_SANDBOX_CLIENT_SECRET || "").trim();
+  const generalId = (process.env.CASHFREE_CLIENT_ID || "").trim();
+  const generalSecret = (process.env.CASHFREE_CLIENT_SECRET || "").trim();
+  const globalEnv = (process.env.CASHFREE_ENVIRONMENT || "").trim().toLowerCase();
+  let clientId = dedicatedId;
+  let clientSecret = dedicatedSecret;
+  if (!clientId) {
+    if (isTestCredential(generalId) || globalEnv !== "production") {
+      clientId = generalId;
+    }
+  }
+  if (!clientSecret) {
+    if (isTestSecret(generalSecret) || globalEnv !== "production") {
+      clientSecret = generalSecret;
+    }
+  }
+  const isConfigured = Boolean(clientId && clientSecret);
+  return { clientId, clientSecret, isConfigured };
+}
+function getCashfreeConfigForEnv(env) {
+  const isProduction = env === "production";
+  const baseUrl = isProduction ? CASHFREE_PRODUCTION_BASE_URL : CASHFREE_SANDBOX_BASE_URL;
+  const ordersUrl = `${baseUrl}/orders`;
+  const { clientId, clientSecret, isConfigured } = getCashfreeCredentialsForEnv(env);
+  return {
+    env,
+    isProduction,
+    baseUrl,
+    ordersUrl,
+    clientId,
+    clientSecret,
+    apiVersion: CASHFREE_API_VERSION,
+    isConfigured
+  };
+}
+function getCashfreeStatusReport(activeEnv) {
+  const sandboxCreds = getCashfreeCredentialsForEnv("sandbox");
+  const prodCreds = getCashfreeCredentialsForEnv("production");
+  const switchPasswordConfigured = Boolean(
+    (process.env.CASHFREE_ENV_SWITCH_PASSWORD || "").trim()
+  );
+  return {
+    currentEnvironment: activeEnv,
+    sandboxConfigured: sandboxCreds.isConfigured,
+    productionConfigured: prodCreds.isConfigured,
+    switchPasswordConfigured
+  };
+}
+function verifyCashfreeWebhookSignature(rawBody, signature, timestamp, clientSecret) {
+  if (!signature || !timestamp || !clientSecret) {
+    return false;
+  }
+  try {
+    const generated = crypto2.createHmac("sha256", clientSecret).update(timestamp + rawBody).digest("base64");
+    const sigBuf = Buffer.from(signature);
+    const genBuf = Buffer.from(generated);
+    if (sigBuf.length !== genBuf.length) {
+      return false;
+    }
+    return crypto2.timingSafeEqual(sigBuf, genBuf);
+  } catch {
+    return false;
+  }
+}
+var rateLimitMap = /* @__PURE__ */ new Map();
+var MAX_FAILED_ATTEMPTS = 5;
+var LOCKOUT_DURATION_MS = 15 * 60 * 1e3;
+function checkRateLimit(key) {
+  const now = Date.now();
+  const record = rateLimitMap.get(key);
+  if (!record) {
+    return { allowed: true };
+  }
+  if (record.lockedUntil > now) {
+    return {
+      allowed: false,
+      remainingWaitMs: record.lockedUntil - now
+    };
+  }
+  if (record.lockedUntil > 0 && record.lockedUntil <= now) {
+    rateLimitMap.delete(key);
+    return { allowed: true };
+  }
+  return { allowed: true };
+}
+function recordFailedPasswordAttempt(key) {
+  const now = Date.now();
+  const record = rateLimitMap.get(key) || { failedAttempts: 0, lockedUntil: 0 };
+  record.failedAttempts += 1;
+  if (record.failedAttempts >= MAX_FAILED_ATTEMPTS) {
+    record.lockedUntil = now + LOCKOUT_DURATION_MS;
+  }
+  rateLimitMap.set(key, record);
+}
+function resetPasswordRateLimit(key) {
+  rateLimitMap.delete(key);
+}
+function verifyEnvSwitchPassword(candidatePassword, rateLimitKey) {
+  const rateLimit = checkRateLimit(rateLimitKey);
+  if (!rateLimit.allowed) {
+    const minutesLeft = Math.ceil((rateLimit.remainingWaitMs || 0) / 6e4);
+    return {
+      valid: false,
+      error: `Too many failed password attempts. Please wait ${minutesLeft} minute(s) before trying again.`,
+      status: 429
+    };
+  }
+  const expectedPassword = (process.env.CASHFREE_ENV_SWITCH_PASSWORD || "").trim();
+  if (!expectedPassword) {
+    return {
+      valid: false,
+      error: "CASHFREE_ENV_SWITCH_PASSWORD is not configured in the server environment. Please configure CASHFREE_ENV_SWITCH_PASSWORD=CASHFREE before switching environments.",
+      status: 500
+    };
+  }
+  if (typeof candidatePassword !== "string" || !candidatePassword) {
+    recordFailedPasswordAttempt(rateLimitKey);
+    return {
+      valid: false,
+      error: "Incorrect password. Environment unchanged.",
+      status: 401
+    };
+  }
+  const candidateBuf = Buffer.from(candidatePassword.trim());
+  const expectedBuf = Buffer.from(expectedPassword);
+  const isMatch = candidateBuf.length === expectedBuf.length && crypto2.timingSafeEqual(candidateBuf, expectedBuf);
+  if (!isMatch) {
+    recordFailedPasswordAttempt(rateLimitKey);
+    return {
+      valid: false,
+      error: "Incorrect password. Environment unchanged.",
+      status: 401
+    };
+  }
+  resetPasswordRateLimit(rateLimitKey);
+  return { valid: true, status: 200 };
+}
+
+// server/app.ts
+dotenv4.config();
 var app = express();
 app.set("trust proxy", true);
+async function getActiveCashfreeEnvironment() {
+  try {
+    if (hasDatabaseUrl()) {
+      const row = await queryOne(
+        "SELECT cashfree_environment FROM store_settings WHERE id = $1",
+        ["default"]
+      );
+      if (row?.cashfree_environment) {
+        return sanitizeEnvironment(row.cashfree_environment);
+      }
+    }
+  } catch {
+  }
+  return sanitizeEnvironment(process.env.CASHFREE_ENVIRONMENT);
+}
 function getPublicAppUrl(req) {
   const isVercel = process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV) || Boolean(process.env.VERCEL_URL);
   const isProd = process.env.NODE_ENV === "production" || isVercel;
@@ -645,7 +869,7 @@ function getPublicAppUrl(req) {
   }
   if (isProd) {
     if (!configured || configured.includes("localhost") || configured.includes("127.0.0.1")) {
-      return "https://gmfurniture.vercel.app";
+      return "https://gmfurniture.in";
     }
     return configured;
   }
@@ -653,6 +877,8 @@ function getPublicAppUrl(req) {
 }
 var allowedOrigins = [
   getPublicAppUrl(),
+  "https://gmfurniture.in",
+  "https://www.gmfurniture.in",
   "https://gmfurniture.vercel.app",
   "https://gm-furnitures.vercel.app",
   "http://localhost:5173",
@@ -757,7 +983,9 @@ app.get("/api", (_req, res) => {
 });
 app.get("/api/health", async (_req, res) => {
   const dbTest = await testDatabaseConnection();
-  const cf = getCashfreeConfig();
+  const activeEnv = await getActiveCashfreeEnvironment();
+  const cf = getCashfreeConfigForEnv(activeEnv);
+  const cfStatus = getCashfreeStatusReport(activeEnv);
   const publicAppUrl = getPublicAppUrl();
   res.json({
     status: dbTest.ok ? "ok" : "degraded",
@@ -771,8 +999,11 @@ app.get("/api/health", async (_req, res) => {
       sampleReturnUrl: `${publicAppUrl}/checkout/payment-return?order_id={order_id}`
     },
     cashfree: {
-      environment: cf.env,
-      configured: Boolean(cf.clientId && cf.clientSecret)
+      environment: activeEnv,
+      configured: cf.isConfigured,
+      sandboxConfigured: cfStatus.sandboxConfigured,
+      productionConfigured: cfStatus.productionConfigured,
+      switchPasswordConfigured: cfStatus.switchPasswordConfigured
     },
     database: {
       configured: hasDatabaseUrl(),
@@ -827,7 +1058,7 @@ app.post("/api/auth/register", async (req, res) => {
       return;
     }
     const passwordHash = await hashPassword(password);
-    const userId = `usr_${crypto2.randomUUID()}`;
+    const userId = `usr_${crypto3.randomUUID()}`;
     const now = /* @__PURE__ */ new Date();
     await execute(
       `INSERT INTO users (id, name, email, password_hash, provider, role, created_at, updated_at)
@@ -907,7 +1138,7 @@ app.post("/api/auth/google", async (req, res) => {
       [normalizedEmail]
     );
     if (!userRow) {
-      const userId = `usr_${crypto2.randomUUID()}`;
+      const userId = `usr_${crypto3.randomUUID()}`;
       await execute(
         `INSERT INTO users (id, name, email, provider, provider_id, role, avatar_url, created_at, updated_at)
          VALUES ($1, $2, $3, 'google', $4, 'customer', $5, $6, $7)`,
@@ -1021,7 +1252,8 @@ app.get("/api/settings", async (_req, res) => {
         currency: "INR (\u20B9)",
         assemblyCharge: 3e3,
         convenienceFeePercent: 0,
-        gstPercent: 18
+        gstPercent: 18,
+        cashfreeEnvironment: "sandbox"
       });
       return;
     }
@@ -1036,7 +1268,8 @@ app.get("/api/settings", async (_req, res) => {
       currency: row.currency,
       assemblyCharge: Number(row.assembly_charge !== void 0 ? row.assembly_charge : 3e3),
       convenienceFeePercent: Number(row.convenience_fee_percent !== void 0 ? row.convenience_fee_percent : 0),
-      gstPercent: Number(row.gst_percent !== void 0 ? row.gst_percent : 18)
+      gstPercent: Number(row.gst_percent !== void 0 ? row.gst_percent : 18),
+      cashfreeEnvironment: row.cashfree_environment || "sandbox"
     });
   } catch (error) {
     console.error("Fetch settings error:", error);
@@ -1234,7 +1467,7 @@ app.post("/api/cart", verifyAuth, async (req, res) => {
         [numQuantity, now, existing.id]
       );
     } else {
-      const cartItemId = `cart_${crypto2.randomUUID()}`;
+      const cartItemId = `cart_${crypto3.randomUUID()}`;
       await execute(
         `INSERT INTO cart_items (id, user_id, product_id, quantity, selected_color, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -1299,7 +1532,7 @@ app.post("/api/cart/merge", verifyAuth, async (req, res) => {
             [Number(item.quantity || 1), now, existing.id]
           );
         } else {
-          const cartItemId = `cart_${crypto2.randomUUID()}`;
+          const cartItemId = `cart_${crypto3.randomUUID()}`;
           await execute(
             `INSERT INTO cart_items (id, user_id, product_id, quantity, selected_color, created_at, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -1340,7 +1573,7 @@ app.post("/api/wishlist", verifyAuth, async (req, res) => {
       res.status(400).json({ error: "productId is required." });
       return;
     }
-    const id = `wish_${crypto2.randomUUID()}`;
+    const id = `wish_${crypto3.randomUUID()}`;
     const now = /* @__PURE__ */ new Date();
     await execute(
       `INSERT INTO wishlist_items (id, user_id, product_id, created_at)
@@ -1407,7 +1640,7 @@ app.post("/api/addresses", verifyAuth, async (req, res) => {
       return;
     }
     const now = /* @__PURE__ */ new Date();
-    const addressId = `addr_${crypto2.randomUUID()}`;
+    const addressId = `addr_${crypto3.randomUUID()}`;
     if (isDefault) {
       await execute("UPDATE addresses SET is_default = 0 WHERE user_id = $1", [userId]);
     }
@@ -1593,7 +1826,7 @@ app.post("/api/orders", verifyAuth, async (req, res) => {
       res.status(400).json({ error: "Order must contain items and a delivery address." });
       return;
     }
-    const orderId = `ord_${crypto2.randomUUID()}`;
+    const orderId = `ord_${crypto3.randomUUID()}`;
     const orderNumber = `GM-${(/* @__PURE__ */ new Date()).getFullYear()}-${Math.floor(1e5 + Math.random() * 9e5)}`;
     const now = /* @__PURE__ */ new Date();
     await execute(
@@ -1623,7 +1856,7 @@ app.post("/api/orders", verifyAuth, async (req, res) => {
       ]
     );
     for (const item of items) {
-      const orderItemId = `item_${crypto2.randomUUID()}`;
+      const orderItemId = `item_${crypto3.randomUUID()}`;
       const prodId = item.product?.id || item.productId || null;
       let prodName = item.product?.name || item.name || "Bespoke Furniture Piece";
       let prodSku = item.product?.sku || item.sku || "GM-SKU";
@@ -1723,14 +1956,9 @@ app.post("/api/orders/verify-payment", verifyAuth, async (req, res) => {
     res.status(500).json({ error: "Payment verification failed." });
   }
 });
-function getCashfreeConfig() {
-  const env = (process.env.CASHFREE_ENVIRONMENT || "sandbox").toLowerCase().trim();
-  const isProduction = env === "production";
-  const baseUrl = isProduction ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
-  const clientId = (process.env.CASHFREE_CLIENT_ID || "").trim();
-  const clientSecret = (process.env.CASHFREE_CLIENT_SECRET || "").trim();
-  const apiVersion = "2023-08-01";
-  return { env, isProduction, baseUrl, clientId, clientSecret, apiVersion };
+async function getCashfreeConfig() {
+  const activeEnv = await getActiveCashfreeEnvironment();
+  return getCashfreeConfigForEnv(activeEnv);
 }
 app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => {
   try {
@@ -1825,12 +2053,20 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
       }
     }
     const grandTotal = Math.max(0, Math.round((baseGrandTotal - couponDiscountAmount) * 100) / 100);
-    const internalOrderId = `ord_${crypto2.randomUUID()}`;
+    const activeEnv = await getActiveCashfreeEnvironment();
+    const cf = getCashfreeConfigForEnv(activeEnv);
+    if (!cf.isConfigured) {
+      console.warn(`[Cashfree] Credentials are not configured on the server for ${activeEnv} mode.`);
+      res.status(500).json({
+        error: `Cashfree payment gateway credentials are not configured on the server for ${activeEnv} mode. Please configure credentials in your environment variables.`
+      });
+      return;
+    }
+    const internalOrderId = `ord_${crypto3.randomUUID()}`;
     const orderNumber = `GM-${(/* @__PURE__ */ new Date()).getFullYear()}-${Math.floor(1e5 + Math.random() * 9e5)}`;
     const dateStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, "");
-    const shortId = crypto2.randomUUID().replace(/-/g, "").slice(0, 8);
+    const shortId = crypto3.randomUUID().replace(/-/g, "").slice(0, 8);
     const cfOrderId = `GMF_${dateStr}_${shortId}`;
-    const now = /* @__PURE__ */ new Date();
     await execute(
       `INSERT INTO orders (
         id, order_number, user_id, subtotal, discount, assembly_charge, convenience_fee,
@@ -1838,11 +2074,11 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
         status, payment_status, payment_method, payment_gateway,
         payment_order_id, delivery_address_json, items_json,
         coupon_code, coupon_discount_type, coupon_discount_value, coupon_discount_amount,
-        created_at, updated_at
+        payment_environment, created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
         'pending', 'pending', 'cashfree', 'cashfree',
-        $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
+        $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
       )`,
       [
         internalOrderId,
@@ -1862,11 +2098,12 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
         appliedCouponCode,
         couponDiscountType,
         couponDiscountValue,
-        couponDiscountAmount
+        couponDiscountAmount,
+        activeEnv
       ]
     );
     for (const it of verifiedItems) {
-      const orderItemId = `item_${crypto2.randomUUID()}`;
+      const orderItemId = `item_${crypto3.randomUUID()}`;
       await execute(
         `INSERT INTO order_items (
           id, order_id, product_id, name, sku, price, quantity, selected_color,
@@ -1890,21 +2127,14 @@ app.post("/api/payments/cashfree/create-order", verifyAuth, async (req, res) => 
         ]
       );
     }
-    const cf = getCashfreeConfig();
-    if (!cf.clientId || !cf.clientSecret) {
-      console.warn("[Cashfree] CASHFREE_CLIENT_ID or CASHFREE_CLIENT_SECRET is not configured.");
-      res.status(500).json({
-        error: "Cashfree payment gateway credentials are not configured on the server. Please set CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET."
-      });
-      return;
-    }
     const appUrl = getPublicAppUrl(req);
     const returnUrl = `${appUrl}/checkout/payment-return?order_id={order_id}`;
     console.log("[Cashfree] Order initialization diagnostic:", {
       appUrlConfigured: Boolean(process.env.APP_URL),
       appUrlValue: appUrl,
       nodeEnv: process.env.NODE_ENV || "production",
-      cashfreeEnvironment: cf.env
+      cashfreeEnvironment: cf.env,
+      endpoint: cf.ordersUrl
     });
     console.log(`Cashfree return URL:
 ${returnUrl}`);
@@ -1987,6 +2217,7 @@ function formatOrderFull(ord) {
     paymentStatus: ord.payment_status,
     paymentMethod: ord.payment_method,
     paymentGateway: ord.payment_gateway,
+    paymentEnvironment: ord.payment_environment || "sandbox",
     paymentOrderId: ord.payment_order_id,
     paymentTransactionId: ord.payment_transaction_id,
     couponCode: ord.coupon_code || null,
@@ -2022,12 +2253,13 @@ app.get("/api/payments/cashfree/status", async (req, res) => {
       });
       return;
     }
-    const cf = getCashfreeConfig();
-    if (!cf.clientId || !cf.clientSecret) {
+    const orderEnv = sanitizeEnvironment(order.payment_environment);
+    const cf = getCashfreeConfigForEnv(orderEnv);
+    if (!cf.isConfigured) {
       res.json({
         success: false,
         paymentStatus: "PENDING",
-        message: "Cashfree credentials not configured.",
+        message: `Cashfree credentials for ${orderEnv} mode are not configured on the server.`,
         order: formatOrderFull(order)
       });
       return;
@@ -2048,6 +2280,13 @@ app.get("/api/payments/cashfree/status", async (req, res) => {
     if (Array.isArray(payments) && payments.length > 0) {
       const successPayment = payments.find((p) => p.payment_status === "SUCCESS");
       if (successPayment) {
+        const paidAmount = successPayment.payment_amount != null ? Number(successPayment.payment_amount) : null;
+        const expectedTotal = Number(order.total);
+        if (paidAmount !== null && !isNaN(paidAmount) && Math.abs(paidAmount - expectedTotal) > 1) {
+          console.error(`[Cashfree Security] Payment amount mismatch: paid=${paidAmount}, expected=${expectedTotal}`);
+          res.status(400).json({ error: "Payment amount mismatch detected." });
+          return;
+        }
         isSuccess = true;
         isPending = false;
         transactionId = String(successPayment.cf_payment_id || successPayment.bank_reference || "");
@@ -2071,6 +2310,13 @@ app.get("/api/payments/cashfree/status", async (req, res) => {
       if (orderRes.ok) {
         const cfOrder = await orderRes.json();
         if (cfOrder?.order_status === "PAID") {
+          const cfAmount = cfOrder.order_amount != null ? Number(cfOrder.order_amount) : null;
+          const expectedTotal = Number(order.total);
+          if (cfAmount !== null && !isNaN(cfAmount) && Math.abs(cfAmount - expectedTotal) > 1) {
+            console.error(`[Cashfree Security] Order amount mismatch: paid=${cfAmount}, expected=${expectedTotal}`);
+            res.status(400).json({ error: "Payment amount mismatch detected." });
+            return;
+          }
           isSuccess = true;
           isPending = false;
         } else if (cfOrder?.order_status === "EXPIRED") {
@@ -2154,19 +2400,10 @@ app.get("/api/payments/cashfree/status", async (req, res) => {
 });
 app.post("/api/payments/cashfree/webhook", async (req, res) => {
   try {
-    const cf = getCashfreeConfig();
     const signature = req.headers["x-webhook-signature"];
     const timestamp = req.headers["x-webhook-timestamp"];
     const rawBody = req.rawBody || JSON.stringify(req.body);
-    if (cf.clientSecret && signature && timestamp) {
-      const generatedSignature = crypto2.createHmac("sha256", cf.clientSecret).update(timestamp + rawBody).digest("base64");
-      if (signature !== generatedSignature) {
-        console.warn("[Cashfree Webhook] Invalid webhook signature detected.");
-        res.status(400).json({ error: "Invalid webhook signature." });
-        return;
-      }
-    }
-    const payload = req.body;
+    const payload = req.body || {};
     const eventType = payload.type || payload.event;
     const orderData = payload.data?.order || payload.order;
     const paymentData = payload.data?.payment || payload.payment;
@@ -2175,12 +2412,24 @@ app.post("/api/payments/cashfree/webhook", async (req, res) => {
       res.status(200).json({ status: "ignored_missing_order_id" });
       return;
     }
+    const order = await queryOne(
+      "SELECT * FROM orders WHERE payment_order_id = $1 OR id = $1",
+      [cfOrderId]
+    );
+    const orderEnv = sanitizeEnvironment(
+      order?.payment_environment || await getActiveCashfreeEnvironment()
+    );
+    const cf = getCashfreeConfigForEnv(orderEnv);
+    if (cf.clientSecret && signature && timestamp) {
+      const isValid = verifyCashfreeWebhookSignature(rawBody, signature, timestamp, cf.clientSecret);
+      if (!isValid) {
+        console.warn("[Cashfree Webhook] Invalid webhook signature detected.");
+        res.status(400).json({ error: "Invalid webhook signature." });
+        return;
+      }
+    }
     const isPaid = eventType === "PAYMENT_SUCCESS_WEBHOOK" || eventType === "ORDER_PAID" || paymentData?.payment_status === "SUCCESS";
     if (isPaid) {
-      const order = await queryOne(
-        "SELECT * FROM orders WHERE payment_order_id = $1 OR id = $1",
-        [cfOrderId]
-      );
       if (order && order.payment_status !== "paid") {
         const txId = String(paymentData?.cf_payment_id || paymentData?.bank_reference || "webhook_verified");
         const now = /* @__PURE__ */ new Date();
@@ -2236,6 +2485,95 @@ app.post("/api/payments/cashfree/webhook", async (req, res) => {
   } catch (error) {
     console.error("[Cashfree Webhook] Error:", error);
     res.status(500).json({ error: "Webhook processing failed." });
+  }
+});
+app.get("/api/admin/cashfree/status", verifyAdmin, async (_req, res) => {
+  try {
+    const activeEnv = await getActiveCashfreeEnvironment();
+    const statusReport = getCashfreeStatusReport(activeEnv);
+    let pendingOrdersCount = 0;
+    if (hasDatabaseUrl()) {
+      const pendingRow = await queryOne(
+        "SELECT COUNT(*) as count FROM orders WHERE payment_status = 'pending'"
+      );
+      pendingOrdersCount = Number(pendingRow?.count || 0);
+    }
+    res.json({
+      environment: activeEnv,
+      sandboxConfigured: statusReport.sandboxConfigured,
+      productionConfigured: statusReport.productionConfigured,
+      switchPasswordConfigured: statusReport.switchPasswordConfigured,
+      pendingOrdersCount
+    });
+  } catch (error) {
+    console.error("Fetch Cashfree admin status error:", error);
+    res.status(500).json({ error: "Failed to retrieve Cashfree status." });
+  }
+});
+app.put("/api/admin/cashfree/environment", verifyAdmin, async (req, res) => {
+  try {
+    const { environment, password } = req.body;
+    const rawIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+    const rateLimitKey = `${req.user?.id || "admin"}_${rawIp}`;
+    const pwdCheck = verifyEnvSwitchPassword(password, rateLimitKey);
+    if (!pwdCheck.valid) {
+      res.status(pwdCheck.status).json({ error: pwdCheck.error });
+      return;
+    }
+    if (!environment || environment !== "sandbox" && environment !== "production") {
+      res.status(400).json({
+        error: 'Invalid environment. Allowed values are "sandbox" or "production".'
+      });
+      return;
+    }
+    const targetEnv = environment;
+    const targetConfig = getCashfreeConfigForEnv(targetEnv);
+    if (!targetConfig.isConfigured) {
+      if (targetEnv === "production") {
+        res.status(400).json({
+          error: "Cannot switch to Production: Cashfree Production credentials (CASHFREE_PRODUCTION_CLIENT_ID and CASHFREE_PRODUCTION_CLIENT_SECRET, or CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET) are not configured on the server. Please configure them in your environment variables before enabling Live Mode."
+        });
+      } else {
+        res.status(400).json({
+          error: "Cannot switch to Sandbox: Cashfree Sandbox credentials (CASHFREE_SANDBOX_CLIENT_ID and CASHFREE_SANDBOX_CLIENT_SECRET, or CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET) are not configured on the server."
+        });
+      }
+      return;
+    }
+    const currentEnv = await getActiveCashfreeEnvironment();
+    if (currentEnv !== targetEnv && hasDatabaseUrl()) {
+      const currentConfig = getCashfreeConfigForEnv(currentEnv);
+      const pendingOrders = await queryOne(
+        "SELECT COUNT(*) as count FROM orders WHERE payment_status = 'pending' AND payment_environment = $1 AND created_at >= NOW() - INTERVAL '30 minutes'",
+        [currentEnv]
+      );
+      const recentPendingCount = Number(pendingOrders?.count || 0);
+      if (recentPendingCount > 0 && !currentConfig.isConfigured) {
+        res.status(409).json({
+          error: `Cannot switch environment: There are ${recentPendingCount} pending payment(s) created in ${currentEnv} mode that cannot be reconciled without ${currentEnv} credentials.`
+        });
+        return;
+      }
+    }
+    if (hasDatabaseUrl()) {
+      await execute(
+        `INSERT INTO store_settings (id, cashfree_environment, updated_at)
+         VALUES ('default', $1, NOW())
+         ON CONFLICT (id) DO UPDATE SET
+           cashfree_environment = EXCLUDED.cashfree_environment,
+           updated_at = NOW()`,
+        [targetEnv]
+      );
+    }
+    console.log(`[Cashfree Security] Payment environment successfully switched to "${targetEnv}" by admin ${req.user?.email}`);
+    res.json({
+      success: true,
+      environment: targetEnv,
+      message: `Cashfree environment successfully updated to ${targetEnv === "production" ? "Production (Live)" : "Sandbox (Test)"} mode.`
+    });
+  } catch (error) {
+    console.error("Switch Cashfree environment error:", error);
+    res.status(500).json({ error: error.message || "Failed to update Cashfree environment." });
   }
 });
 app.get("/api/admin/products", verifyAdmin, async (_req, res) => {
@@ -3186,7 +3524,7 @@ app.patch("/api/admin/orders/:id/status", verifyAdmin, async (req, res) => {
     const oldStatus = existing.status || "pending";
     const now = /* @__PURE__ */ new Date();
     if (oldStatus !== normalizedStatus) {
-      const historyId = `osh_${crypto2.randomUUID()}`;
+      const historyId = `osh_${crypto3.randomUUID()}`;
       const adminName = req.user?.email || req.user?.name || "Admin";
       await execute(
         `INSERT INTO order_status_history (id, order_id, old_status, new_status, changed_by, changed_at)
@@ -3295,7 +3633,7 @@ app.post("/api/admin/coupons", verifyAdmin, async (req, res) => {
       res.status(400).json({ error: `Coupon code "${normalizedCode}" already exists.` });
       return;
     }
-    const id = `cpn_${crypto2.randomUUID()}`;
+    const id = `cpn_${crypto3.randomUUID()}`;
     const activeInt = isActive ? 1 : 0;
     const now = /* @__PURE__ */ new Date();
     await execute(
@@ -3422,7 +3760,7 @@ app.post("/api/contact", async (req, res) => {
       res.status(400).json({ error: "Message content is required." });
       return;
     }
-    const id = `inq_${crypto2.randomUUID()}`;
+    const id = `inq_${crypto3.randomUUID()}`;
     const now = /* @__PURE__ */ new Date();
     await execute(
       `INSERT INTO contact_inquiries (id, name, email, phone, subject, message, status, created_at, updated_at)
@@ -3797,5 +4135,7 @@ var app_default = app;
 export {
   app,
   app_default as default,
+  getActiveCashfreeEnvironment,
+  getCashfreeConfig,
   getPublicAppUrl
 };

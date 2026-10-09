@@ -19,6 +19,15 @@ import {
   verifyGoogleToken,
   AuthenticatedRequest,
 } from './auth'
+import {
+  CashfreeEnvironment,
+  CashfreeConfig,
+  getCashfreeConfigForEnv,
+  getCashfreeStatusReport,
+  verifyCashfreeWebhookSignature,
+  verifyEnvSwitchPassword,
+  sanitizeEnvironment,
+} from './cashfree'
 
 dotenv.config()
 
@@ -28,12 +37,33 @@ const app = express()
 app.set('trust proxy', true)
 
 /**
+ * Resolves the currently active Cashfree payment environment.
+ * Checks PostgreSQL store_settings first, then falls back to CASHFREE_ENVIRONMENT.
+ */
+export async function getActiveCashfreeEnvironment(): Promise<CashfreeEnvironment> {
+  try {
+    if (hasDatabaseUrl()) {
+      const row = await queryOne<{ cashfree_environment?: string }>(
+        'SELECT cashfree_environment FROM store_settings WHERE id = $1',
+        ['default']
+      )
+      if (row?.cashfree_environment) {
+        return sanitizeEnvironment(row.cashfree_environment)
+      }
+    }
+  } catch {
+    // Database may be initializing or unreachable
+  }
+  return sanitizeEnvironment(process.env.CASHFREE_ENVIRONMENT)
+}
+
+/**
  * Resolves the public application base URL for Cashfree redirects and notifications.
  *
  * Rules:
  * - In production or when deployed on Vercel (VERCEL=1 or VERCEL_ENV or NODE_ENV=production),
  *   localhost is strictly disallowed. If APP_URL is missing or contains localhost, it
- *   explicitly falls back to 'https://gmfurniture.vercel.app'.
+ *   explicitly falls back to 'https://gmfurniture.in' or 'https://gmfurniture.vercel.app'.
  * - In local development, it defaults to 'http://localhost:5173'.
  */
 export function getPublicAppUrl(req?: Request): string {
@@ -62,7 +92,7 @@ export function getPublicAppUrl(req?: Request): string {
   if (isProd) {
     // In production/Vercel, NEVER allow localhost to silently leak into return URLs
     if (!configured || configured.includes('localhost') || configured.includes('127.0.0.1')) {
-      return 'https://gmfurniture.vercel.app'
+      return 'https://gmfurniture.in'
     }
     return configured
   }
@@ -71,9 +101,11 @@ export function getPublicAppUrl(req?: Request): string {
   return configured || 'http://localhost:5173'
 }
 
-// Allow Vercel frontend origin plus localhost for development
+// Allow production custom domain, Vercel frontend origins, and localhost for development
 const allowedOrigins = [
   getPublicAppUrl(),
+  'https://gmfurniture.in',
+  'https://www.gmfurniture.in',
   'https://gmfurniture.vercel.app',
   'https://gm-furnitures.vercel.app',
   'http://localhost:5173',
@@ -200,7 +232,9 @@ app.get('/api', (_req: Request, res: Response) => {
 
 app.get('/api/health', async (_req: Request, res: Response) => {
   const dbTest = await testDatabaseConnection()
-  const cf = getCashfreeConfig()
+  const activeEnv = await getActiveCashfreeEnvironment()
+  const cf = getCashfreeConfigForEnv(activeEnv)
+  const cfStatus = getCashfreeStatusReport(activeEnv)
   const publicAppUrl = getPublicAppUrl()
 
   res.json({
@@ -215,8 +249,11 @@ app.get('/api/health', async (_req: Request, res: Response) => {
       sampleReturnUrl: `${publicAppUrl}/checkout/payment-return?order_id={order_id}`,
     },
     cashfree: {
-      environment: cf.env,
-      configured: Boolean(cf.clientId && cf.clientSecret),
+      environment: activeEnv,
+      configured: cf.isConfigured,
+      sandboxConfigured: cfStatus.sandboxConfigured,
+      productionConfigured: cfStatus.productionConfigured,
+      switchPasswordConfigured: cfStatus.switchPasswordConfigured,
     },
     database: {
       configured: hasDatabaseUrl(),
@@ -530,6 +567,7 @@ app.get('/api/settings', async (_req: Request, res: Response) => {
         assemblyCharge: 3000,
         convenienceFeePercent: 0,
         gstPercent: 18,
+        cashfreeEnvironment: 'sandbox',
       })
       return
     }
@@ -546,6 +584,7 @@ app.get('/api/settings', async (_req: Request, res: Response) => {
       assemblyCharge: Number(row.assembly_charge !== undefined ? row.assembly_charge : 3000),
       convenienceFeePercent: Number(row.convenience_fee_percent !== undefined ? row.convenience_fee_percent : 0),
       gstPercent: Number(row.gst_percent !== undefined ? row.gst_percent : 18),
+      cashfreeEnvironment: row.cashfree_environment || 'sandbox',
     })
   } catch (error: any) {
     console.error('Fetch settings error:', error)
@@ -1419,14 +1458,9 @@ app.post('/api/orders/verify-payment', verifyAuth, async (req: AuthenticatedRequ
 // 6b. CASHFREE PAYMENT GATEWAY INTEGRATION
 // ==========================================
 
-function getCashfreeConfig() {
-  const env = (process.env.CASHFREE_ENVIRONMENT || 'sandbox').toLowerCase().trim()
-  const isProduction = env === 'production'
-  const baseUrl = isProduction ? 'https://api.cashfree.com/pg' : 'https://sandbox.cashfree.com/pg'
-  const clientId = (process.env.CASHFREE_CLIENT_ID || '').trim()
-  const clientSecret = (process.env.CASHFREE_CLIENT_SECRET || '').trim()
-  const apiVersion = '2023-08-01'
-  return { env, isProduction, baseUrl, clientId, clientSecret, apiVersion }
+export async function getCashfreeConfig(): Promise<CashfreeConfig> {
+  const activeEnv = await getActiveCashfreeEnvironment()
+  return getCashfreeConfigForEnv(activeEnv)
 }
 
 // POST /api/payments/cashfree/create-order
@@ -1574,15 +1608,26 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
 
     const grandTotal = Math.max(0, Math.round((baseGrandTotal - couponDiscountAmount) * 100) / 100)
 
+    // Resolve the active Cashfree environment and credentials
+    const activeEnv = await getActiveCashfreeEnvironment()
+    const cf = getCashfreeConfigForEnv(activeEnv)
+
+    if (!cf.isConfigured) {
+      console.warn(`[Cashfree] Credentials are not configured on the server for ${activeEnv} mode.`)
+      res.status(500).json({
+        error: `Cashfree payment gateway credentials are not configured on the server for ${activeEnv} mode. Please configure credentials in your environment variables.`,
+      })
+      return
+    }
+
     // Unique IDs
     const internalOrderId = `ord_${crypto.randomUUID()}`
     const orderNumber = `GM-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
     const shortId = crypto.randomUUID().replace(/-/g, '').slice(0, 8)
     const cfOrderId = `GMF_${dateStr}_${shortId}`
-    const now = new Date()
 
-    // 1. Create internal pending order (stock is NOT decremented yet)
+    // 1. Create internal pending order recording the environment used (stock is NOT decremented yet)
     await execute(
       `INSERT INTO orders (
         id, order_number, user_id, subtotal, discount, assembly_charge, convenience_fee,
@@ -1590,11 +1635,11 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
         status, payment_status, payment_method, payment_gateway,
         payment_order_id, delivery_address_json, items_json,
         coupon_code, coupon_discount_type, coupon_discount_value, coupon_discount_amount,
-        created_at, updated_at
+        payment_environment, created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
         'pending', 'pending', 'cashfree', 'cashfree',
-        $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
+        $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
       )`,
       [
         internalOrderId,
@@ -1615,6 +1660,7 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
         couponDiscountType,
         couponDiscountValue,
         couponDiscountAmount,
+        activeEnv,
       ]
     )
 
@@ -1645,30 +1691,18 @@ app.post('/api/payments/cashfree/create-order', verifyAuth, async (req: Authenti
       )
     }
 
-    // 3. Create Cashfree Order via official API
-    const cf = getCashfreeConfig()
-    if (!cf.clientId || !cf.clientSecret) {
-      console.warn('[Cashfree] CASHFREE_CLIENT_ID or CASHFREE_CLIENT_SECRET is not configured.')
-      res.status(500).json({
-        error: 'Cashfree payment gateway credentials are not configured on the server. Please set CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET.',
-      })
-      return
-    }
-
+    // 3. Create Cashfree Order via environment-specific API endpoint
     const appUrl = getPublicAppUrl(req)
     const returnUrl = `${appUrl}/checkout/payment-return?order_id={order_id}`
 
-    // Safe diagnostic logging
     console.log('[Cashfree] Order initialization diagnostic:', {
       appUrlConfigured: Boolean(process.env.APP_URL),
       appUrlValue: appUrl,
       nodeEnv: process.env.NODE_ENV || 'production',
       cashfreeEnvironment: cf.env,
+      endpoint: cf.ordersUrl,
     })
 
-    // Explicit logging requirement:
-    // Cashfree return URL:
-    // <generated URL>
     console.log(`Cashfree return URL:\n${returnUrl}`)
 
     const cfPayload = {
@@ -1758,6 +1792,7 @@ function formatOrderFull(ord: any) {
     paymentStatus: ord.payment_status,
     paymentMethod: ord.payment_method,
     paymentGateway: ord.payment_gateway,
+    paymentEnvironment: ord.payment_environment || 'sandbox',
     paymentOrderId: ord.payment_order_id,
     paymentTransactionId: ord.payment_transaction_id,
     couponCode: ord.coupon_code || null,
@@ -1774,8 +1809,8 @@ function formatOrderFull(ord: any) {
 }
 
 // GET /api/payments/cashfree/status?order_id=...
-// Queries database & verifies payment with Cashfree API.
-// Atomically transitions order to 'paid', decrements stock, and removes purchased cart items.
+// Queries database & verifies payment with Cashfree API using the order's RECORDED environment.
+// Atomically transitions order to 'paid', decrements stock exactly once, and removes purchased cart items.
 app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => {
   try {
     const orderIdParam = (req.query.order_id as string || '').trim()
@@ -1794,7 +1829,7 @@ app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => 
       return
     }
 
-    // 1. If already marked paid in DB, return immediately
+    // 1. If already marked paid in DB, return immediately (Idempotency)
     if (order.payment_status === 'paid') {
       res.json({
         success: true,
@@ -1804,13 +1839,14 @@ app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => 
       return
     }
 
-    // 2. Query live payment status from Cashfree
-    const cf = getCashfreeConfig()
-    if (!cf.clientId || !cf.clientSecret) {
+    // 2. Query live payment status from Cashfree using the ORDER's original payment environment
+    const orderEnv = sanitizeEnvironment(order.payment_environment)
+    const cf = getCashfreeConfigForEnv(orderEnv)
+    if (!cf.isConfigured) {
       res.json({
         success: false,
         paymentStatus: 'PENDING',
-        message: 'Cashfree credentials not configured.',
+        message: `Cashfree credentials for ${orderEnv} mode are not configured on the server.`,
         order: formatOrderFull(order),
       })
       return
@@ -1837,6 +1873,15 @@ app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => 
     if (Array.isArray(payments) && payments.length > 0) {
       const successPayment = payments.find((p: any) => p.payment_status === 'SUCCESS')
       if (successPayment) {
+        // Cryptographic/Gateway amount integrity verification
+        const paidAmount = successPayment.payment_amount != null ? Number(successPayment.payment_amount) : null
+        const expectedTotal = Number(order.total)
+        if (paidAmount !== null && !isNaN(paidAmount) && Math.abs(paidAmount - expectedTotal) > 1) {
+          console.error(`[Cashfree Security] Payment amount mismatch: paid=${paidAmount}, expected=${expectedTotal}`)
+          res.status(400).json({ error: 'Payment amount mismatch detected.' })
+          return
+        }
+
         isSuccess = true
         isPending = false
         transactionId = String(successPayment.cf_payment_id || successPayment.bank_reference || '')
@@ -1861,6 +1906,13 @@ app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => 
       if (orderRes.ok) {
         const cfOrder = (await orderRes.json()) as any
         if (cfOrder?.order_status === 'PAID') {
+          const cfAmount = cfOrder.order_amount != null ? Number(cfOrder.order_amount) : null
+          const expectedTotal = Number(order.total)
+          if (cfAmount !== null && !isNaN(cfAmount) && Math.abs(cfAmount - expectedTotal) > 1) {
+            console.error(`[Cashfree Security] Order amount mismatch: paid=${cfAmount}, expected=${expectedTotal}`)
+            res.status(400).json({ error: 'Payment amount mismatch detected.' })
+            return
+          }
           isSuccess = true
           isPending = false
         } else if (cfOrder?.order_status === 'EXPIRED') {
@@ -1955,29 +2007,14 @@ app.get('/api/payments/cashfree/status', async (req: Request, res: Response) => 
 })
 
 // POST /api/payments/cashfree/webhook
-// Idempotent webhook listener with HMAC signature verification
+// Idempotent webhook listener with constant-time HMAC signature verification
 app.post('/api/payments/cashfree/webhook', async (req: Request, res: Response) => {
   try {
-    const cf = getCashfreeConfig()
     const signature = req.headers['x-webhook-signature'] as string | undefined
     const timestamp = req.headers['x-webhook-timestamp'] as string | undefined
     const rawBody = (req as any).rawBody || JSON.stringify(req.body)
 
-    // Verify signature if secret and headers are provided
-    if (cf.clientSecret && signature && timestamp) {
-      const generatedSignature = crypto
-        .createHmac('sha256', cf.clientSecret)
-        .update(timestamp + rawBody)
-        .digest('base64')
-
-      if (signature !== generatedSignature) {
-        console.warn('[Cashfree Webhook] Invalid webhook signature detected.')
-        res.status(400).json({ error: 'Invalid webhook signature.' })
-        return
-      }
-    }
-
-    const payload = req.body
+    const payload = req.body || {}
     const eventType = payload.type || payload.event
     const orderData = payload.data?.order || payload.order
     const paymentData = payload.data?.payment || payload.payment
@@ -1988,17 +2025,33 @@ app.post('/api/payments/cashfree/webhook', async (req: Request, res: Response) =
       return
     }
 
+    // Query order to resolve the environment under which it was created
+    const order = await queryOne<any>(
+      'SELECT * FROM orders WHERE payment_order_id = $1 OR id = $1',
+      [cfOrderId]
+    )
+
+    const orderEnv = sanitizeEnvironment(
+      order?.payment_environment || (await getActiveCashfreeEnvironment())
+    )
+    const cf = getCashfreeConfigForEnv(orderEnv)
+
+    // Verify webhook signature if secret and headers are provided
+    if (cf.clientSecret && signature && timestamp) {
+      const isValid = verifyCashfreeWebhookSignature(rawBody, signature, timestamp, cf.clientSecret)
+      if (!isValid) {
+        console.warn('[Cashfree Webhook] Invalid webhook signature detected.')
+        res.status(400).json({ error: 'Invalid webhook signature.' })
+        return
+      }
+    }
+
     const isPaid =
       eventType === 'PAYMENT_SUCCESS_WEBHOOK' ||
       eventType === 'ORDER_PAID' ||
       paymentData?.payment_status === 'SUCCESS'
 
     if (isPaid) {
-      const order = await queryOne<any>(
-        'SELECT * FROM orders WHERE payment_order_id = $1 OR id = $1',
-        [cfOrderId]
-      )
-
       if (order && order.payment_status !== 'paid') {
         const txId = String(paymentData?.cf_payment_id || paymentData?.bank_reference || 'webhook_verified')
         const now = new Date()
@@ -2067,6 +2120,121 @@ app.post('/api/payments/cashfree/webhook', async (req: Request, res: Response) =
   } catch (error: any) {
     console.error('[Cashfree Webhook] Error:', error)
     res.status(500).json({ error: 'Webhook processing failed.' })
+  }
+})
+
+// ==========================================
+// 6c. ADMIN CASHFREE GATEWAY CONTROLS (verifyAdmin Protected)
+// ==========================================
+
+// GET /api/admin/cashfree/status - Get Cashfree configuration status without credentials
+app.get('/api/admin/cashfree/status', verifyAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const activeEnv = await getActiveCashfreeEnvironment()
+    const statusReport = getCashfreeStatusReport(activeEnv)
+
+    let pendingOrdersCount = 0
+    if (hasDatabaseUrl()) {
+      const pendingRow = await queryOne<{ count: string | number }>(
+        "SELECT COUNT(*) as count FROM orders WHERE payment_status = 'pending'"
+      )
+      pendingOrdersCount = Number(pendingRow?.count || 0)
+    }
+
+    res.json({
+      environment: activeEnv,
+      sandboxConfigured: statusReport.sandboxConfigured,
+      productionConfigured: statusReport.productionConfigured,
+      switchPasswordConfigured: statusReport.switchPasswordConfigured,
+      pendingOrdersCount,
+    })
+  } catch (error: any) {
+    console.error('Fetch Cashfree admin status error:', error)
+    res.status(500).json({ error: 'Failed to retrieve Cashfree status.' })
+  }
+})
+
+// PUT /api/admin/cashfree/environment - Switch Sandbox Mode ON/OFF with password confirmation
+app.put('/api/admin/cashfree/environment', verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { environment, password } = req.body
+    const rawIp = (req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown').split(',')[0].trim()
+    const rateLimitKey = `${req.user?.id || 'admin'}_${rawIp}`
+
+    // 1. Validate password on server using CASHFREE_ENV_SWITCH_PASSWORD
+    const pwdCheck = verifyEnvSwitchPassword(password, rateLimitKey)
+    if (!pwdCheck.valid) {
+      res.status(pwdCheck.status).json({ error: pwdCheck.error })
+      return
+    }
+
+    // 2. Validate requested environment against strict allowlist
+    if (!environment || (environment !== 'sandbox' && environment !== 'production')) {
+      res.status(400).json({
+        error: 'Invalid environment. Allowed values are "sandbox" or "production".',
+      })
+      return
+    }
+
+    const targetEnv: CashfreeEnvironment = environment
+
+    // 3. Validate credentials exist before permitting switch to the target environment
+    const targetConfig = getCashfreeConfigForEnv(targetEnv)
+    if (!targetConfig.isConfigured) {
+      if (targetEnv === 'production') {
+        res.status(400).json({
+          error:
+            'Cannot switch to Production: Cashfree Production credentials (CASHFREE_PRODUCTION_CLIENT_ID and CASHFREE_PRODUCTION_CLIENT_SECRET, or CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET) are not configured on the server. Please configure them in your environment variables before enabling Live Mode.',
+        })
+      } else {
+        res.status(400).json({
+          error:
+            'Cannot switch to Sandbox: Cashfree Sandbox credentials (CASHFREE_SANDBOX_CLIENT_ID and CASHFREE_SANDBOX_CLIENT_SECRET, or CASHFREE_CLIENT_ID and CASHFREE_CLIENT_SECRET) are not configured on the server.',
+        })
+      }
+      return
+    }
+
+    // 4. In-flight payments check / safeguard:
+    // If there are recent pending payments in the current environment, ensure its credentials remain available
+    const currentEnv = await getActiveCashfreeEnvironment()
+    if (currentEnv !== targetEnv && hasDatabaseUrl()) {
+      const currentConfig = getCashfreeConfigForEnv(currentEnv)
+      const pendingOrders = await queryOne<{ count: string | number }>(
+        "SELECT COUNT(*) as count FROM orders WHERE payment_status = 'pending' AND payment_environment = $1 AND created_at >= NOW() - INTERVAL '30 minutes'",
+        [currentEnv]
+      )
+      const recentPendingCount = Number(pendingOrders?.count || 0)
+      if (recentPendingCount > 0 && !currentConfig.isConfigured) {
+        res.status(409).json({
+          error: `Cannot switch environment: There are ${recentPendingCount} pending payment(s) created in ${currentEnv} mode that cannot be reconciled without ${currentEnv} credentials.`,
+        })
+        return
+      }
+    }
+
+    // 5. Persist to PostgreSQL store_settings
+    if (hasDatabaseUrl()) {
+      await execute(
+        `INSERT INTO store_settings (id, cashfree_environment, updated_at)
+         VALUES ('default', $1, NOW())
+         ON CONFLICT (id) DO UPDATE SET
+           cashfree_environment = EXCLUDED.cashfree_environment,
+           updated_at = NOW()`,
+        [targetEnv]
+      )
+    }
+
+    console.log(`[Cashfree Security] Payment environment successfully switched to "${targetEnv}" by admin ${req.user?.email}`)
+
+    res.json({
+      success: true,
+      environment: targetEnv,
+      message: `Cashfree environment successfully updated to ${targetEnv === 'production' ? 'Production (Live)' : 'Sandbox (Test)'} mode.`,
+    })
+  } catch (error: any) {
+    console.error('Switch Cashfree environment error:', error)
+    res.status(500).json({ error: error.message || 'Failed to update Cashfree environment.' })
   }
 })
 

@@ -204,5 +204,14 @@ export interface StoreSettings {
   assemblyCharge: number
   convenienceFeePercent: number
   gstPercent: number
+  cashfreeEnvironment?: 'sandbox' | 'production'
+}
+
+export interface CashfreeGatewayStatus {
+  environment: 'sandbox' | 'production'
+  sandboxConfigured: boolean
+  productionConfigured: boolean
+  switchPasswordConfigured: boolean
+  pendingOrdersCount?: number
 }
 
